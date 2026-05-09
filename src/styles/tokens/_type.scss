@@ -1,0 +1,22 @@
+$font-display: "Fraunces", "Tobias", "Migra", "Playfair Display", Georgia, serif;
+$font-sans:    "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+$font-mono:    "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+// Modular scale (clamp() responsive)
+$fs-display-xl: clamp(3rem, 12vw, 9.5rem);   // hero headlines
+$fs-display-lg: clamp(2.4rem, 8vw, 6rem);
+$fs-display-md: clamp(2rem, 5.5vw, 4rem);
+$fs-h1:         clamp(2rem, 4.5vw, 3.25rem);
+$fs-h2:         clamp(1.5rem, 3vw, 2.25rem);
+$fs-h3:         clamp(1.25rem, 2vw, 1.625rem);
+$fs-body:       clamp(1rem, 1.05vw, 1.0625rem);
+$fs-small:      0.875rem;
+$fs-eyebrow:    0.75rem;
+
+// Tracking / leading
+$leading-tight: 1.02;
+$leading-snug:  1.15;
+$leading-body:  1.55;
+$leading-loose: 1.75;
+$tracking-eyebrow: 0.16em;
+$tracking-display: -0.02em;

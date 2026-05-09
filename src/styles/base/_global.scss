@@ -1,0 +1,88 @@
+@use "../tokens/colors" as *;
+@use "../tokens/type" as *;
+@use "../tokens/space" as *;
+@use "../mixins/responsive" as *;
+
+:root {
+  color-scheme: dark;
+  --bg: #{$ink-1000};
+  --surface: #{$ink-900};
+  --surface-2: #{$ink-800};
+  --surface-3: #{$ink-700};
+  --fg: #{$ink-100};
+  --fg-muted: #{$ink-300};
+  --fg-faint: #{$ink-400};
+  --accent: #{$brand-orange};
+  --accent-deep: #{$brand-orange-deep};
+  --accent-soft: #{$brand-orange-soft};
+  --border: #{rgba($ink-100, 0.08)};
+  --border-strong: #{rgba($ink-100, 0.16)};
+  --gutter: #{$gutter};
+  --container: #{$container-max};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-pill: #{$radius-pill};
+}
+
+body {
+  font-family: $font-sans;
+  font-size: $fs-body;
+  line-height: $leading-body;
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: "ss01", "cv11";
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: $fs-eyebrow;
+  letter-spacing: $tracking-eyebrow;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+
+  &::before {
+    content: "";
+    width: 18px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.6;
+  }
+}
+
+.section {
+  padding-block: clamp(4rem, 10vw, 9rem);
+  position: relative;
+}
+
+// Lenis smooth-scroll classes
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-scrolling iframe { pointer-events: none; }
+
+// Scroll reveal initial state
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  will-change: transform, opacity;
+}
+
+@include reduced-motion {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-reveal] { opacity: 1; transform: none; }
+}

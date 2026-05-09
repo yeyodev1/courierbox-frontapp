@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" fill="none" aria-label="Courier Box">
+  <title>Courier Box</title>
+  <g fill="currentColor">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M48 12 L84 32 L84 64 L48 84 L12 64 L12 32 Z M28 40 L28 56 L48 68 L62 60 L52 56 L38 62 L38 46 L52 40 L62 36 L48 28 Z"/>
+  </g>
+  <g fill="currentColor" font-family="Inter Tight, sans-serif" font-weight="700" font-size="42" letter-spacing="-1">
+    <text x="108" y="62">COURIER</text>
+    <text x="320" y="62" opacity="0.6">BOX</text>
+  </g>
+</svg>

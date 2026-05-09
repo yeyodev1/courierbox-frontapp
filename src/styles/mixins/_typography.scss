@@ -1,0 +1,55 @@
+@use "../tokens/type" as *;
+
+@mixin display-xl {
+  font-family: $font-display;
+  font-weight: 500;
+  font-size: $fs-display-xl;
+  line-height: $leading-tight;
+  letter-spacing: $tracking-display;
+}
+
+@mixin display-lg {
+  font-family: $font-display;
+  font-weight: 500;
+  font-size: $fs-display-lg;
+  line-height: $leading-tight;
+  letter-spacing: $tracking-display;
+}
+
+@mixin display-md {
+  font-family: $font-display;
+  font-weight: 500;
+  font-size: $fs-display-md;
+  line-height: $leading-snug;
+  letter-spacing: $tracking-display;
+}
+
+@mixin sans-h2 {
+  font-family: $font-sans;
+  font-weight: 600;
+  font-size: $fs-h2;
+  line-height: $leading-snug;
+  letter-spacing: -0.01em;
+}
+
+@mixin sans-body {
+  font-family: $font-sans;
+  font-weight: 400;
+  font-size: $fs-body;
+  line-height: $leading-body;
+}
+
+@mixin eyebrow {
+  font-family: $font-sans;
+  font-weight: 500;
+  font-size: $fs-eyebrow;
+  line-height: 1;
+  letter-spacing: $tracking-eyebrow;
+  text-transform: uppercase;
+}
+
+@mixin mono {
+  font-family: $font-mono;
+  font-weight: 400;
+  letter-spacing: 0;
+}
