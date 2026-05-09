@@ -1,35 +1,62 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
-const routes: Array<RouteRecordRaw> = [
+const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    name: 'Home',
-    component: () => import('../views/HomeView.vue'),
-    meta: { title: 'Home' },
+    path: "/",
+    name: "Home",
+    component: () => import("@/views/HomeView.vue"),
+    meta: { title: "Courier Box · Tu paquete, nuestra red" },
   },
-]
+  {
+    path: "/servicios",
+    name: "Services",
+    component: () => import("@/views/ServicesView.vue"),
+    meta: { title: "Servicios · Courier Box" },
+  },
+  {
+    path: "/rastrear",
+    name: "Tracking",
+    component: () => import("@/views/TrackingView.vue"),
+    meta: { title: "Rastrear envío · Courier Box" },
+  },
+  {
+    path: "/rastrear/:codigo",
+    name: "TrackingDetail",
+    component: () => import("@/views/TrackingView.vue"),
+    meta: { title: "Rastrear envío · Courier Box" },
+  },
+  {
+    path: "/nosotros",
+    name: "About",
+    component: () => import("@/views/AboutView.vue"),
+    meta: { title: "Nosotros · Courier Box" },
+  },
+  {
+    path: "/contacto",
+    name: "Contact",
+    component: () => import("@/views/ContactView.vue"),
+    meta: { title: "Contacto · Courier Box" },
+  },
+  {
+    path: "/:pathMatch(.*)*",
+    redirect: "/",
+  },
+];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior() {
-    return { left: 0, top: 0, behavior: 'smooth' }
+  scrollBehavior(_to, _from, saved) {
+    if (saved) return saved;
+    return { left: 0, top: 0, behavior: "instant" as ScrollBehavior };
   },
-})
+});
 
-router.beforeEach((to, _from, next) => {
-  const hasToken = !!localStorage.getItem('access_token')
-  const requiresAuth = to.matched.some((record) => record.meta?.requiresAuth)
-
-  if (requiresAuth && !hasToken) {
-    return next({ path: '/login', replace: true })
+router.afterEach((to) => {
+  if (typeof document !== "undefined") {
+    const title = (to.meta?.title as string) || "Courier Box";
+    document.title = title;
   }
+});
 
-  if (to.path === '/login' && hasToken) {
-    return next({ path: '/', replace: true })
-  }
-
-  next()
-})
-
-export default router
+export default router;

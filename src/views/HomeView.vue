@@ -1,25 +1,28 @@
 <script setup lang="ts">
-import HeroSection from '@/components/HeroSection.vue';
-import FooterSection from '@/components/FooterSection.vue';
+import HeroAwwwards from "@/components/sections/HeroAwwwards.vue";
+import ServicesSection from "@/components/sections/ServicesSection.vue";
+import ProcessSection from "@/components/sections/ProcessSection.vue";
+import CoverageSection from "@/components/sections/CoverageSection.vue";
+import TrustSection from "@/components/sections/TrustSection.vue";
+import CtaFinal from "@/components/sections/CtaFinal.vue";
+import { useGsapReveal } from "@/composables/useGsapReveal";
+
+useGsapReveal();
 </script>
 
 <template>
-  <div class="home-view">
-    <main>
-      <HeroSection />
-    </main>
-    <FooterSection />
-  </div>
+  <main class="home">
+    <HeroAwwwards />
+    <ServicesSection />
+    <ProcessSection />
+    <CoverageSection />
+    <TrustSection />
+    <CtaFinal />
+  </main>
 </template>
 
-<style lang="scss" scoped>
-.home-view {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  
-  main {
-    flex: 1;
-  }
+<style scoped lang="scss">
+.home {
+  position: relative;
 }
 </style>
