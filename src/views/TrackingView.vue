@@ -99,11 +99,15 @@ watch(() => route.params.codigo, loadFromRoute);
     radial-gradient(60% 50% at 0% 0%, rgba($brand-orange, 0.12), transparent 60%),
     $ink-1000;
   min-height: 100vh;
+  overflow-x: clip;
 
   &__inner {
     display: grid;
     gap: 1.5rem;
     max-width: 920px;
+    min-width: 0;
+    width: 100%;
+    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
   }
 
   &__head {

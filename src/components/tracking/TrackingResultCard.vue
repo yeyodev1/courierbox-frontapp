@@ -189,12 +189,14 @@ function copyCodigo() {
 .card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 32px;
+  border-radius: clamp(20px, 4vw, 32px);
   background:
     radial-gradient(120% 80% at 100% 0%, rgba($brand-orange, 0.10), transparent 55%),
     var(--surface-2);
   overflow: hidden;
   isolation: isolate;
+  min-width: 0;
+  max-width: 100%;
   animation: cardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 
   > * { animation: stagger 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
@@ -207,7 +209,7 @@ function copyCodigo() {
   > *:nth-child(7) { animation-delay: 0.65s; }
 
   &__section {
-    padding: clamp(1.5rem, 3vw, 2.5rem);
+    padding: clamp(1.25rem, 3vw, 2.5rem);
     border-top: 1px solid var(--border);
 
     &--pipeline { padding-block: clamp(1.5rem, 3vw, 2rem); }
@@ -242,10 +244,11 @@ function copyCodigo() {
 /* HERO ───────────────────────────────────────────── */
 .hero {
   position: relative;
-  padding: clamp(1.75rem, 4vw, 3rem);
+  padding: clamp(1.25rem, 4vw, 3rem);
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
+  min-width: 0;
 
   @include lg {
     grid-template-columns: 1.4fr 1fr;
@@ -350,6 +353,7 @@ function copyCodigo() {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
+    min-width: 0;
     @include lg { grid-template-columns: 1fr; gap: 0.75rem; }
   }
 
@@ -360,6 +364,7 @@ function copyCodigo() {
     background: var(--surface);
     display: grid;
     gap: 0.35rem;
+    min-width: 0;
 
     &-label {
       font-size: 0.7rem;
@@ -371,10 +376,11 @@ function copyCodigo() {
     &-value {
       font-family: "Fraunces", serif;
       font-weight: 500;
-      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-size: clamp(1.25rem, 5vw, 2rem);
       line-height: 1;
       color: var(--fg);
       letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
       em {
         font-style: normal;
         font-size: 0.55em;
@@ -430,16 +436,17 @@ function copyCodigo() {
 
 /* COST ───────────────────────────────────────────── */
 .cost {
-  margin: 0 clamp(1rem, 2vw, 1.5rem);
+  margin-inline: clamp(1.25rem, 3vw, 1.5rem);
   margin-top: -1rem;
   background:
     linear-gradient(140deg, rgba($brand-orange, 0.14), transparent 70%),
     var(--surface);
   border: 1px solid rgba($brand-orange, 0.3);
   border-radius: 24px;
-  padding: clamp(1.5rem, 3vw, 2rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
   position: relative;
   z-index: 2;
+  min-width: 0;
 
   &__head {
     display: flex;
@@ -478,6 +485,8 @@ function copyCodigo() {
     gap: 1rem;
     padding-block: 0.5rem;
     color: var(--fg-muted);
+    flex-wrap: wrap;
+    min-width: 0;
 
     span em {
       font-style: normal;
