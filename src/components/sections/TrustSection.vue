@@ -3,11 +3,18 @@ import { onMounted } from "vue";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-const stats = [
-  { num: 12, suffix: "+", label: "Años en operación", sub: "Desde 2012" },
+type Stat = {
+  num: number;
+  suffix: string;
+  label: string;
+  sub: string;
+  format?: "plain";
+};
+
+const stats: Stat[] = [
+  { num: 2016, suffix: "", label: "Operando desde", sub: "Una década moviendo cargas", format: "plain" },
   { num: 4800, suffix: "+", label: "Paquetes mensuales", sub: "Promedio 2025" },
-  { num: 99.4, suffix: "%", label: "Entregas a tiempo", sub: "Métrica interna" },
-  { num: 4.9, suffix: "/5", label: "Rating de clientes", sub: "Más de 2.300 reseñas" },
+  { num: 4.5, suffix: "/5", label: "Rating de clientes", sub: "Más de 2.300 reseñas" },
 ];
 
 const els: (HTMLElement | null)[] = [];
@@ -30,7 +37,13 @@ onMounted(() => {
       ease: "expo.out",
       onUpdate: () => {
         const isFloat = target.num % 1 !== 0;
-        el.textContent = isFloat ? obj.v.toFixed(1) : Math.round(obj.v).toLocaleString("es-EC");
+        if (isFloat) {
+          el.textContent = obj.v.toFixed(1);
+        } else if (target.format === "plain") {
+          el.textContent = Math.round(obj.v).toString();
+        } else {
+          el.textContent = Math.round(obj.v).toLocaleString("es-EC");
+        }
       },
       scrollTrigger: { trigger: el, start: "top 85%", once: true },
     });
@@ -82,13 +95,14 @@ onMounted(() => {
 
   &__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1px;
     background: var(--border);
     border-radius: 24px;
     overflow: hidden;
     border: 1px solid var(--border);
-    @include md { grid-template-columns: repeat(4, 1fr); }
+    @include sm { grid-template-columns: 1fr 1fr; }
+    @include md { grid-template-columns: repeat(3, 1fr); }
   }
 }
 

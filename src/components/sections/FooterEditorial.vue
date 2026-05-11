@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
 import BrandMark from "@/components/ui/BrandMark.vue";
+import {
+  WHATSAPP_DISPLAY,
+  whatsappUrl,
+  SUPPORT_EMAIL,
+  SUPPORT_EMAIL_URL,
+} from "@/config/contact";
 
 const year = new Date().getFullYear();
+const waLink = whatsappUrl();
 </script>
 
 <template>
@@ -10,34 +17,36 @@ const year = new Date().getFullYear();
     <div class="container footer__inner">
       <div class="footer__brand">
         <BrandMark :size="44" with-word />
-        <p>Tu paquete. Nuestra red. Sin intermediarios.</p>
+        <p>Tú solo pide. Nosotros nos encargamos del resto.</p>
       </div>
 
       <nav class="footer__nav">
         <div>
           <h4>Producto</h4>
           <RouterLink to="/servicios">Servicios</RouterLink>
+          <RouterLink to="/cotizar">Cotizar envío</RouterLink>
           <RouterLink to="/rastrear">Rastrear envío</RouterLink>
           <RouterLink to="/nosotros">Sobre nosotros</RouterLink>
         </div>
         <div>
           <h4>Soporte</h4>
           <RouterLink to="/contacto">Contacto</RouterLink>
-          <a href="https://wa.me/593999999999">WhatsApp</a>
-          <a href="mailto:hola@courierbox.ec">hola@courierbox.ec</a>
+          <a :href="waLink" target="_blank" rel="noopener">WhatsApp {{ WHATSAPP_DISPLAY }}</a>
+          <a :href="SUPPORT_EMAIL_URL">{{ SUPPORT_EMAIL }}</a>
         </div>
         <div>
           <h4>Operación</h4>
-          <span>Hub Miami · 24/7</span>
-          <span>Quito · Av. Eloy Alfaro</span>
-          <span>Guayaquil · Kennedy Norte</span>
+          <span>USA · Medley, FL</span>
+          <span>USA Express · Pembroke Pines, FL</span>
+          <span>España · Madrid</span>
+          <span>Ecuador · Guayaquil &amp; Quito</span>
         </div>
       </nav>
     </div>
 
     <div class="container footer__bar">
       <span>© {{ year }} Courier Box · Todos los derechos reservados</span>
-      <span class="footer__bar-meta">Operado por nuestro equipo en Ecuador & Miami</span>
+      <span class="footer__bar-meta">Operado por nuestro equipo en Ecuador, Estados Unidos y España</span>
     </div>
 
     <div class="footer__big" aria-hidden="true">COURIER · BOX</div>

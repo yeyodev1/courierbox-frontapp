@@ -18,9 +18,9 @@ useGsapReveal();
       <article class="about__col" data-reveal-group>
         <h2 data-reveal>Operamos cada eslabón</h2>
         <p data-reveal>
-          Tenemos bodega propia en Miami, equipo aduanal en Ecuador, sistemas internos
-          de tracking y rutas de última milla con personal de planta. No subcontratamos
-          la promesa que te hacemos.
+          Tenemos bodegas propias en Miami y Madrid, equipo logístico en Ecuador,
+          sistemas internos de tracking y rutas de última milla con personal de planta.
+          No subcontratamos la promesa que te hacemos.
         </p>
         <p data-reveal>
           Eso significa que cuando te decimos que tu paquete llega el martes,

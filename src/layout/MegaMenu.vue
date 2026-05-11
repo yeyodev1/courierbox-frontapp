@@ -2,6 +2,12 @@
 import { ref, watch, onBeforeUnmount, computed, nextTick } from "vue";
 import { gsap } from "gsap";
 import { useRoute } from "vue-router";
+import {
+  WHATSAPP_DISPLAY,
+  whatsappUrl,
+  SUPPORT_EMAIL,
+  SUPPORT_EMAIL_URL,
+} from "@/config/contact";
 
 interface Props { open: boolean }
 const props = defineProps<Props>();
@@ -10,12 +16,15 @@ const emit = defineEmits<{ close: [] }>();
 const route = useRoute();
 
 const links = [
-  { num: "01", to: "/", label: "Inicio", kicker: "Tu paquete, nuestra red", art: "home" },
-  { num: "02", to: "/servicios", label: "Servicios", kicker: "Door-to-door · Apple · Empresas", art: "services" },
-  { num: "03", to: "/rastrear", label: "Rastrear", kicker: "Estado en vivo de tu envío", art: "track" },
-  { num: "04", to: "/nosotros", label: "Nosotros", kicker: "Operamos cada eslabón", art: "about" },
-  { num: "05", to: "/contacto", label: "Contacto", kicker: "Respuesta en minutos", art: "contact" },
+  { num: "01", to: "/", label: "Inicio", kicker: "Tú pides, nosotros del resto", art: "home" },
+  { num: "02", to: "/servicios", label: "Servicios", kicker: "USA · España → Ecuador", art: "services" },
+  { num: "03", to: "/cotizar", label: "Cotizar", kicker: "Calcula tu envío en segundos", art: "quote" },
+  { num: "04", to: "/rastrear", label: "Rastrear", kicker: "Estado en vivo de tu envío", art: "track" },
+  { num: "05", to: "/nosotros", label: "Nosotros", kicker: "Operamos cada eslabón", art: "about" },
+  { num: "06", to: "/contacto", label: "Contacto", kicker: "Respuesta en minutos", art: "contact" },
 ];
+
+const waLink = whatsappUrl();
 
 const activeArt = ref<string>(links[0]?.art ?? "home");
 
@@ -147,6 +156,7 @@ const currentPath = computed(() => route.path);
                     <div class="art__glyph" aria-hidden="true">
                       <span v-if="activeArt === 'home'">●</span>
                       <span v-else-if="activeArt === 'services'">◇</span>
+                      <span v-else-if="activeArt === 'quote'">$</span>
                       <span v-else-if="activeArt === 'track'">↗</span>
                       <span v-else-if="activeArt === 'about'">⌬</span>
                       <span v-else>✉</span>
@@ -164,14 +174,15 @@ const currentPath = computed(() => route.path);
           <footer class="mega__meta">
             <div class="mega-meta-item">
               <span class="meta-eyebrow">Hablar ahora</span>
-              <a href="https://wa.me/593999999999">WhatsApp +593 99 999 9999</a>
-              <a href="mailto:hola@courierbox.ec">hola@courierbox.ec</a>
+              <a :href="waLink" target="_blank" rel="noopener">WhatsApp {{ WHATSAPP_DISPLAY }}</a>
+              <a :href="SUPPORT_EMAIL_URL">{{ SUPPORT_EMAIL }}</a>
+              <span>Atención desde Ecuador</span>
             </div>
             <div class="mega-meta-item">
               <span class="meta-eyebrow">Operación</span>
-              <span>Quito · Av. Eloy Alfaro</span>
-              <span>Guayaquil · Kennedy Norte</span>
-              <span>Miami · Hub 24/7</span>
+              <span>USA · Medley &amp; Pembroke Pines, FL</span>
+              <span>España · Madrid</span>
+              <span>Ecuador · Guayaquil &amp; Quito</span>
             </div>
             <div class="mega-meta-item">
               <span class="meta-eyebrow">Síguenos</span>

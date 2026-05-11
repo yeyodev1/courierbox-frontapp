@@ -13,7 +13,7 @@ const steps = [
   {
     n: "03",
     title: "Embarcamos",
-    body: "Consolidación, pesaje, etiquetado y aduana. Visible en tiempo real.",
+    body: "Consolidación, pesaje y etiquetado en bodega. Visible en tiempo real.",
   },
   {
     n: "04",

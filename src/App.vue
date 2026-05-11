@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import SiteNav from "@/layout/SiteNav.vue";
 import FooterEditorial from "@/components/sections/FooterEditorial.vue";
+import WhatsAppFab from "@/components/ui/WhatsAppFab.vue";
 import { useLenis } from "@/composables/useLenis";
 
 useLenis();
@@ -15,6 +16,7 @@ useLenis();
       </Transition>
     </RouterView>
     <FooterEditorial />
+    <WhatsAppFab />
   </div>
 </template>
 

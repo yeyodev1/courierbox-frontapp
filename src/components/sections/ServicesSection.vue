@@ -6,7 +6,7 @@ const services = [
   {
     tag: "01 · Door-to-door",
     title: "Importación puerta a puerta",
-    body: "Compras en USA y nosotros nos encargamos de todo: bodega, pesaje, aduana y entrega final.",
+    body: "Compras en USA o España y nosotros nos encargamos de todo: bodega, pesaje y entrega final.",
     bullets: ["Casillero virtual gratis", "Foto de cada paquete", "Seguro contra daños"],
   },
   {

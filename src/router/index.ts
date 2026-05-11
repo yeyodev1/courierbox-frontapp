@@ -5,13 +5,19 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "Home",
     component: () => import("@/views/HomeView.vue"),
-    meta: { title: "Courier Box · Tu paquete, nuestra red" },
+    meta: { title: "Courier Box · Tú pides, nosotros del resto" },
   },
   {
     path: "/servicios",
     name: "Services",
     component: () => import("@/views/ServicesView.vue"),
     meta: { title: "Servicios · Courier Box" },
+  },
+  {
+    path: "/cotizar",
+    name: "Quote",
+    component: () => import("@/views/QuoteView.vue"),
+    meta: { title: "Cotizar envío · Courier Box" },
   },
   {
     path: "/rastrear",

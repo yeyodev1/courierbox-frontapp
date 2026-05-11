@@ -1,49 +1,40 @@
 <script setup lang="ts">
-import MarkSvg from "@/assets/logo/courierbox-mark.svg?raw";
+import logoImage from "@/assets/logo/image.png";
 
-interface Props {
-  size?: number | string;
-  withWord?: boolean;
-}
-withDefaults(defineProps<Props>(), { size: 36, withWord: false });
+const props = defineProps({
+  size: {
+    type: [Number, String],
+    default: 36,
+  },
+  withWord: {
+    type: Boolean,
+    default: false,
+  },
+});
 </script>
 
 <template>
-  <span class="brand">
-    <span class="brand__mark" :style="{ width: typeof $props.size === 'number' ? `${$props.size}px` : $props.size, height: typeof $props.size === 'number' ? `${$props.size}px` : $props.size }" v-html="MarkSvg" />
-    <span v-if="withWord" class="brand__word">
-      Courier <strong>Box</strong>
-    </span>
-  </span>
+  <div class="brand">
+    <img
+      :src="logoImage"
+      alt="Courier Box"
+      class="brand__logo"
+      :style="{ height: typeof props.size === 'number' ? `${props.size}px` : props.size }"
+    />
+  </div>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  color: var(--fg);
+  user-select: none;
 
-  &__mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent);
-    flex-shrink: 0;
-
-    :deep(svg) {
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  &__word {
-    font-family: "Inter Tight", sans-serif;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    font-size: 1rem;
-
-    strong { font-weight: 700; color: var(--accent); }
+  &__logo {
+    width: auto;
+    max-width: 100%;
+    display: block;
+    object-fit: contain;
   }
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const cities = [
-  { name: "Quito", x: 50, y: 32, hub: true },
   { name: "Guayaquil", x: 32, y: 60, hub: true },
+  { name: "Quito", x: 50, y: 32, hub: true },
   { name: "Cuenca", x: 44, y: 72 },
   { name: "Manta", x: 22, y: 50 },
   { name: "Loja", x: 50, y: 86 },
@@ -17,16 +17,16 @@ const cities = [
       <div class="coverage__copy" data-reveal-group>
         <span class="eyebrow" data-reveal>Cobertura</span>
         <h2 class="coverage__title" data-reveal>
-          Una red que llega a <em>cada provincia</em> del Ecuador.
+          Enviamos a <em>todo el Ecuador</em>, desde USA y España.
         </h2>
         <p class="coverage__lead" data-reveal>
-          Hubs en Quito y Guayaquil, ruta directa Miami → Ecuador y mensajería propia
-          en las principales ciudades. Si está en el mapa, llegamos.
+          Hubs en Guayaquil y Quito, rutas directas USA → Ecuador y España → Ecuador.
+          Si está en el mapa, llegamos.
         </p>
         <ul class="coverage__list" data-reveal>
-          <li>Hub Miami · 24/7</li>
-          <li>Aduana propia · Trámites en 48h</li>
-          <li>Distribución nacional · Última milla</li>
+          <li>Ruta directa USA → Ecuador</li>
+          <li>Ruta directa España → Ecuador</li>
+          <li>Envío a cualquier ciudad del país</li>
         </ul>
       </div>
 

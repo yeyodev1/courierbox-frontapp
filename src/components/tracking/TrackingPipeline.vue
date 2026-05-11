@@ -8,7 +8,7 @@ const stages = [
   { key: "creado", label: "Recibido", short: "01" },
   { key: "en_bodega_miami", label: "Bodega Miami", short: "02" },
   { key: "en_transito", label: "En tránsito", short: "03" },
-  { key: "en_aduana", label: "Aduana", short: "04" },
+  { key: "en_aduana", label: "Importación", short: "04" },
   { key: "en_distribucion", label: "Distribución", short: "05" },
   { key: "entregado", label: "Entregado", short: "06" },
 ] as const;

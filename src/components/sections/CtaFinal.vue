@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import AppButton from "@/components/ui/AppButton.vue";
+import { whatsappUrl } from "@/config/contact";
+
+const waLink = whatsappUrl("Hola Courier Box, quiero cotizar un envío");
 </script>
 
 <template>
@@ -7,22 +10,18 @@ import AppButton from "@/components/ui/AppButton.vue";
     <div class="container">
       <div class="cta__inner" data-reveal-group>
         <h2 class="cta__title" data-reveal>
-          Mueve algo importante. <em>Lo gestionamos nosotros.</em>
+          Tú solo pide. <em>Nosotros nos encargamos del resto.</em>
         </h2>
         <p class="cta__lead" data-reveal>
-          Cotización personalizada en menos de 5 minutos. Sin compromiso.
+          Tu paquete sin procesos, registros ni trámites adicionales.
+          Cotización en menos de 5 minutos.
         </p>
         <div class="cta__actions" data-reveal>
-          <AppButton as="router-link" to="/contacto" variant="primary" size="lg">
+          <AppButton as="router-link" to="/cotizar" variant="primary" size="lg">
             Cotizar mi envío
           </AppButton>
-          <AppButton
-            as="a"
-            href="https://wa.me/593999999999?text=Hola%20Courier%20Box%2C%20quiero%20cotizar"
-            variant="outline"
-            size="lg"
-          >
-            Hablar por WhatsApp
+          <AppButton as="a" :href="waLink" target="_blank" rel="noopener" variant="outline" size="lg">
+            Te atendemos ya
           </AppButton>
         </div>
       </div>

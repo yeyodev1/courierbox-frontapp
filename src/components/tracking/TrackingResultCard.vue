@@ -6,8 +6,22 @@ import TrackingTimeline from "./TrackingTimeline.vue";
 import TrackingPipeline from "./TrackingPipeline.vue";
 import TrackingGallery from "./TrackingGallery.vue";
 import type { TrackingResult } from "@/services/tracking";
+import { sanitizeText } from "@/utils/sanitizeTracking";
+import { whatsappUrl } from "@/config/contact";
 
 const props = defineProps<{ data: TrackingResult }>();
+
+const safeDescripcion = computed(() => sanitizeText(props.data.descripcion, null));
+const safeNotes = computed(() => sanitizeText(props.data.notes, null));
+const safeConsignee = computed(() => {
+  const raw = sanitizeText(props.data.consignee, null);
+  if (!raw) return props.data.codigo;
+  return /consignatario/i.test(raw) ? props.data.codigo : raw;
+});
+
+const waLink = computed(() =>
+  whatsappUrl(`Hola, consulta sobre tracking ${props.data.codigo}`),
+);
 
 const tone = computed(() => {
   switch (props.data.estado) {
@@ -102,15 +116,15 @@ function copyCodigo() {
     <section class="card__section info-grid">
       <div class="info-cell">
         <span class="info-cell__label">Para</span>
-        <strong>{{ data.notes ?? "—" }}</strong>
+        <strong>{{ safeNotes ?? data.wr ?? "—" }}</strong>
       </div>
       <div class="info-cell info-cell--wide">
-        <span class="info-cell__label">Consignatario</span>
-        <strong>{{ data.consignee ?? "—" }}</strong>
+        <span class="info-cell__label">Tracking</span>
+        <strong>{{ safeConsignee ?? "—" }}</strong>
       </div>
       <div class="info-cell">
         <span class="info-cell__label">Descripción</span>
-        <strong>{{ data.descripcion ?? "—" }}</strong>
+        <strong>{{ safeDescripcion ?? "—" }}</strong>
       </div>
     </section>
 
@@ -169,7 +183,9 @@ function copyCodigo() {
       </div>
       <AppButton
         as="a"
-        :href="`https://wa.me/593999999999?text=Hola,%20consulta%20sobre%20tracking%20${data.codigo}`"
+        :href="waLink"
+        target="_blank"
+        rel="noopener"
         variant="primary"
         size="md"
       >

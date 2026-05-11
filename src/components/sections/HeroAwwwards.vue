@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppInput from "@/components/ui/AppInput.vue";
 import AppBadge from "@/components/ui/AppBadge.vue";
+import { whatsappUrl } from "@/config/contact";
 
 const codigo = ref("");
 const router = useRouter();
@@ -13,6 +14,10 @@ const submit = () => {
   if (!c) return;
   router.push({ name: "TrackingDetail", params: { codigo: c } });
 };
+
+const waLink = whatsappUrl(
+  "Hola Courier Box, quiero que me atiendan ya. Necesito información sobre mis envíos.",
+);
 </script>
 
 <template>
@@ -22,21 +27,40 @@ const submit = () => {
 
     <div class="container hero__inner">
       <div class="hero__topline">
-        <AppBadge tone="brand" pulse>Operación 24/7 · Quito · Guayaquil · Miami</AppBadge>
+        <AppBadge tone="brand" pulse>Operación 24/7 · Guayaquil · Miami · España</AppBadge>
       </div>
 
       <h1 class="hero__headline">
-        <span class="line">Tu paquete.</span>
+        <span class="line">Tú te encargas de comprar.</span>
         <span class="line">
-          <em>Nuestra</em> red.
+          <em>Nosotros</em> del resto.
         </span>
-        <span class="line line--accent">Sin intermediarios.</span>
+        <span class="line line--accent">Sin trámites.</span>
       </h1>
 
       <p class="hero__lead">
-        Compramos, recibimos en nuestra bodega de Miami, despachamos por nuestros
-        corredores y te lo entregamos en la puerta. Cada paso lo gestionamos nosotros.
+        Tus compras desde Estados Unidos y Europa, sin casilleros extraños,
+        trámites ni procesos adicionales.
       </p>
+      <p class="hero__sublead">
+        ¿No quieres comprar tú? También lo hacemos por ti.
+      </p>
+
+      <div class="hero__cta">
+        <AppButton
+          as="a"
+          :href="waLink"
+          target="_blank"
+          rel="noopener"
+          variant="primary"
+          size="lg"
+        >
+          Te atendemos ya
+        </AppButton>
+        <AppButton as="router-link" to="/cotizar" variant="outline" size="lg">
+          Cotiza tu envío
+        </AppButton>
+      </div>
 
       <form class="hero__track" @submit.prevent="submit">
         <AppInput
@@ -60,12 +84,12 @@ const submit = () => {
 
       <div class="hero__meta">
         <div class="meta">
-          <span class="meta__num">+12</span>
-          <span class="meta__label">años moviendo cargas</span>
+          <span class="meta__num">2016</span>
+          <span class="meta__label">operando desde</span>
         </div>
         <div class="meta">
-          <span class="meta__num">~96h</span>
-          <span class="meta__label">Miami → tu puerta</span>
+          <span class="meta__num">USA · ESP</span>
+          <span class="meta__label">rutas directas a Ecuador</span>
         </div>
         <div class="meta">
           <span class="meta__num">100%</span>
@@ -132,6 +156,22 @@ const submit = () => {
     color: var(--fg-muted);
     font-size: clamp(1rem, 1.4vw, 1.25rem);
     line-height: 1.55;
+  }
+
+  &__sublead {
+    max-width: 56ch;
+    color: var(--fg-faint);
+    font-size: clamp(0.9rem, 1.1vw, 1rem);
+    line-height: 1.5;
+    font-style: italic;
+    margin-top: -0.5rem;
+  }
+
+  &__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
   }
 
   &__track {

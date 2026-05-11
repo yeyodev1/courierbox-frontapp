@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { TrackingEvento } from "@/services/tracking";
+import { sanitizeText } from "@/utils/sanitizeTracking";
 
 const props = defineProps<{ eventos: TrackingEvento[] }>();
 
@@ -32,16 +33,14 @@ function fmt(e: TrackingEvento): { date: string; time: string | null } {
 }
 
 function cleanDescripcion(e: TrackingEvento): string {
-  const accion = (e.accion ?? "").trim();
-  const desc = (e.descripcion ?? "").trim();
-  // si descripcion ya repite la accion, quita el duplicado
+  const accion = sanitizeText(e.accion ?? "", "") ?? "";
+  const desc = sanitizeText(e.descripcion ?? "", "") ?? "";
   if (accion && desc.startsWith(accion)) {
     const tail = desc.slice(accion.length).replace(/^\s*[—-]\s*/, "").trim();
     if (!tail || tail === accion) return accion;
-    if (tail === accion) return accion;
     return `${accion} — ${tail}`;
   }
-  return desc || accion;
+  return desc || accion || "Actualización registrada";
 }
 </script>
 
