@@ -57,7 +57,7 @@ const userToDelete = ref<any>(null);
 const calculateTotals = () => {
   const total = displayAmount.value || 0;
   const cents = Math.round(total * 100);
-  
+
   // Payphone expects these in cents
   paymentForm.value.amount = cents;
   paymentForm.value.amountWithoutTax = cents;
@@ -164,11 +164,11 @@ const handleUpdateUser = async () => {
     const payload: any = { ...editUserForm.value };
     if (!payload.password) delete payload.password;
     await adminApi.updateUser(editingUserId.value, payload);
-    
+
     toastStore.showNotification(`Datos de ${editUserForm.value.name} guardados correctamente.`, 'success');
     updateSuccess.value = true;
     await fetchUsers();
-    
+
     setTimeout(() => {
       updateSuccess.value = false;
       cancelEditUser();
@@ -653,6 +653,7 @@ onMounted(() => {
   opacity: 0.4;
   pointer-events: none;
 }
+
 .shape-1 {
   width: 500px;
   height: 500px;
@@ -660,6 +661,7 @@ onMounted(() => {
   top: -150px;
   right: -150px;
 }
+
 .shape-2 {
   width: 600px;
   height: 600px;
@@ -667,6 +669,7 @@ onMounted(() => {
   bottom: -200px;
   left: -200px;
 }
+
 .shape-3 {
   width: 300px;
   height: 300px;
@@ -730,7 +733,7 @@ onMounted(() => {
       font-weight: 700;
       letter-spacing: -0.01em;
     }
-    
+
     .subtitle {
       font-size: 0.8rem;
       color: $muted-dark;
@@ -795,7 +798,9 @@ onMounted(() => {
     align-items: center;
     gap: 0.6rem;
 
-    svg { opacity: 0.7; }
+    svg {
+      opacity: 0.7;
+    }
 
     &:hover {
       color: $fg-dark;
@@ -807,7 +812,10 @@ onMounted(() => {
       color: $brand-orange;
       border: 1px solid rgba($brand-orange, 0.3);
 
-      svg { opacity: 1; stroke: $brand-orange; }
+      svg {
+        opacity: 1;
+        stroke: $brand-orange;
+      }
     }
   }
 }
@@ -891,7 +899,7 @@ onMounted(() => {
         color: $ink-400;
         font-weight: 600;
       }
-      
+
       .required-tag {
         color: $signal-red;
         font-weight: bold;
@@ -899,7 +907,8 @@ onMounted(() => {
       }
     }
 
-    input, .custom-select {
+    input,
+    .custom-select {
       background: rgba($ink-1000, 0.5);
       border: 1px solid rgba($ink-400, 0.4);
       color: $fg-dark;
@@ -909,7 +918,9 @@ onMounted(() => {
       transition: all 0.3s ease;
       width: 100%;
 
-      &::placeholder { color: $ink-500; }
+      &::placeholder {
+        color: $ink-500;
+      }
 
       &:focus {
         outline: none;
@@ -929,8 +940,10 @@ onMounted(() => {
 
     .input-with-icon {
       position: relative;
-      
-      span, .input-icon, i.input-icon {
+
+      span,
+      .input-icon,
+      i.input-icon {
         position: absolute;
         left: 1rem;
         top: 50%;
@@ -941,11 +954,11 @@ onMounted(() => {
         transition: color 0.3s ease;
       }
 
-      input { 
-        padding-left: 2.75rem; 
-        
-        &:focus + .input-icon, 
-        &:focus ~ .input-icon {
+      input {
+        padding-left: 2.75rem;
+
+        &:focus+.input-icon,
+        &:focus~.input-icon {
           color: $brand-orange;
         }
       }
@@ -960,7 +973,7 @@ onMounted(() => {
 
   .select-wrapper {
     position: relative;
-    
+
     .custom-select {
       appearance: none;
       padding-right: 2.5rem;
@@ -1004,14 +1017,21 @@ onMounted(() => {
     box-shadow: 0 4px 12px rgba($brand-orange, 0.3);
   }
 
-  &:disabled { opacity: 0.7; cursor: not-allowed; }
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
 
   &.success-state {
-    background: #2BBB92; /* Verde éxito */
+    background: #2BBB92;
+    /* Verde éxito */
     pointer-events: none;
     box-shadow: 0 4px 12px rgba(#2BBB92, 0.3);
-    
-    i { margin-right: 0.5rem; font-size: 1.1rem; }
+
+    i {
+      margin-right: 0.5rem;
+      font-size: 1.1rem;
+    }
   }
 
   .loader {
@@ -1038,7 +1058,8 @@ onMounted(() => {
   border-collapse: collapse;
   min-width: 500px;
 
-  th, td {
+  th,
+  td {
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid rgba($ink-400, 0.15);
@@ -1052,14 +1073,17 @@ onMounted(() => {
     font-weight: 600;
   }
 
-  .text-right { text-align: right; }
-  
+  .text-right {
+    text-align: right;
+  }
+
   .cell-title {
     font-weight: 600;
     font-size: 0.95rem;
     color: $fg-dark;
     margin-bottom: 0.2rem;
   }
+
   .cell-subtitle {
     font-size: 0.8rem;
     color: $ink-400;
@@ -1075,7 +1099,9 @@ onMounted(() => {
     color: $ink-300;
   }
 
-  tr:last-child td { border-bottom: none; }
+  tr:last-child td {
+    border-bottom: none;
+  }
 }
 
 /* Badges */
@@ -1088,18 +1114,36 @@ onMounted(() => {
   letter-spacing: 0.05em;
   display: inline-block;
 
-  &.pending { background: rgba(#FFB347, 0.15); color: #FFB347; border: 1px solid rgba(#FFB347, 0.3); }
-  &.paid { background: rgba(#2BBB92, 0.15); color: #2BBB92; border: 1px solid rgba(#2BBB92, 0.3); }
-  &.canceled { background: rgba(#E5484D, 0.15); color: #E5484D; border: 1px solid rgba(#E5484D, 0.3); }
+  &.pending {
+    background: rgba(#FFB347, 0.15);
+    color: #FFB347;
+    border: 1px solid rgba(#FFB347, 0.3);
+  }
+
+  &.paid {
+    background: rgba(#2BBB92, 0.15);
+    color: #2BBB92;
+    border: 1px solid rgba(#2BBB92, 0.3);
+  }
+
+  &.canceled {
+    background: rgba(#E5484D, 0.15);
+    color: #E5484D;
+    border: 1px solid rgba(#E5484D, 0.3);
+  }
 }
 
 .role-badge {
   @extend .status-badge;
-  background: rgba($ink-400, 0.2); 
-  color: $ink-200; 
+  background: rgba($ink-400, 0.2);
+  color: $ink-200;
   border: 1px solid rgba($ink-400, 0.3);
 
-  &.admin { background: rgba($signal-blue, 0.15); color: #6db6ff; border-color: rgba($signal-blue, 0.3); }
+  &.admin {
+    background: rgba($signal-blue, 0.15);
+    color: #6db6ff;
+    border-color: rgba($signal-blue, 0.3);
+  }
 }
 
 /* User Info Layout */
@@ -1153,12 +1197,16 @@ onMounted(() => {
     border-color: rgba($brand-orange, 0.3);
     color: $brand-orange;
 
-    &:hover { background: rgba($brand-orange, 0.25); color: $brand-orange-soft; }
+    &:hover {
+      background: rgba($brand-orange, 0.25);
+      color: $brand-orange-soft;
+    }
   }
 }
 
 /* States */
-.loading-state, .empty-state {
+.loading-state,
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1167,8 +1215,15 @@ onMounted(() => {
   text-align: center;
   color: $ink-400;
 
-  svg { opacity: 0.5; margin-bottom: 1rem; }
-  p { margin: 0; font-size: 0.9rem; }
+  svg {
+    opacity: 0.5;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
 }
 
 .error-message {
@@ -1184,14 +1239,20 @@ onMounted(() => {
 }
 
 @keyframes rotation {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
@@ -1204,7 +1265,10 @@ onMounted(() => {
   gap: 1rem;
   margin-top: 0.5rem;
 }
-.flex-1 { flex: 1; }
+
+.flex-1 {
+  flex: 1;
+}
 
 .cancel-btn {
   background: transparent;
@@ -1215,7 +1279,7 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  
+
   &:hover {
     background: rgba($ink-500, 0.2);
     color: $fg-dark;
@@ -1235,7 +1299,10 @@ onMounted(() => {
 
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba($ink-1000, 0.8);
   backdrop-filter: blur(8px);
   z-index: 100;
@@ -1264,13 +1331,16 @@ onMounted(() => {
 
     &.with-subtitle {
       align-items: flex-start;
+
       .header-titles {
         text-align: left;
       }
     }
 
-    h3 { margin: 0; }
-    
+    h3 {
+      margin: 0;
+    }
+
     .modal-subtitle {
       font-size: 0.85rem;
       color: $ink-400;
@@ -1290,7 +1360,9 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
 
-    &:hover { color: $fg-dark; }
+    &:hover {
+      color: $fg-dark;
+    }
   }
 
   h3 {
@@ -1335,7 +1407,9 @@ onMounted(() => {
     cursor: pointer;
     transition: all 0.2s;
 
-    &:hover { background: darken($signal-red, 10%); }
+    &:hover {
+      background: darken($signal-red, 10%);
+    }
   }
 }
 </style>
