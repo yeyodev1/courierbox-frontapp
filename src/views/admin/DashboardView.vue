@@ -557,14 +557,14 @@ onMounted(() => {
           <div class="modal-header">
             <h3>Editar Miembro</h3>
             <button @click="cancelEditUser" class="close-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
           <form @submit.prevent="handleUpdateUser" class="premium-form text-left">
             <div class="form-group full-width">
               <label>Nombre Completo *</label>
               <div class="input-with-icon">
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <i class="fa-solid fa-user input-icon"></i>
                 <input type="text" v-model="editUserForm.name" required placeholder="Ej. Ana Lucía" />
               </div>
             </div>
@@ -572,7 +572,7 @@ onMounted(() => {
             <div class="form-group full-width">
               <label>Correo Electrónico *</label>
               <div class="input-with-icon">
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <i class="fa-solid fa-envelope input-icon"></i>
                 <input type="email" v-model="editUserForm.email" required placeholder="ejemplo@courierbox.com" />
               </div>
             </div>
@@ -580,7 +580,7 @@ onMounted(() => {
             <div class="form-group full-width">
               <label>Contraseña (Opcional para mantener)</label>
               <div class="input-with-icon">
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <i class="fa-solid fa-lock input-icon"></i>
                 <input type="password" v-model="editUserForm.password" placeholder="********" />
               </div>
             </div>
@@ -593,7 +593,7 @@ onMounted(() => {
                   <option value="user">Usuario Regular</option>
                 </select>
                 <div class="select-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  <i class="fa-solid fa-chevron-down"></i>
                 </div>
               </div>
             </div>
@@ -901,12 +901,13 @@ onMounted(() => {
     .input-with-icon {
       position: relative;
       
-      span, .input-icon {
+      span, .input-icon, i.input-icon {
         position: absolute;
         left: 1rem;
         top: 50%;
         transform: translateY(-50%);
         color: $ink-400;
+        font-size: 1rem;
         font-weight: 600;
         transition: color 0.3s ease;
       }
@@ -1237,6 +1238,7 @@ onMounted(() => {
     border: none;
     color: $ink-400;
     cursor: pointer;
+    font-size: 1.25rem;
     transition: color 0.2s;
     display: flex;
     align-items: center;
