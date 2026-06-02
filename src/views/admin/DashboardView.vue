@@ -224,6 +224,16 @@ const copyToClipboard = async (text: string) => {
   }
 };
 
+const showLogoutModal = ref(false);
+
+const confirmLogout = () => {
+  showLogoutModal.value = true;
+};
+
+const executeLogout = () => {
+  authStore.logout();
+};
+
 onMounted(() => {
   fetchPayments();
   fetchUsers();
@@ -246,12 +256,8 @@ onMounted(() => {
             <p class="subtitle">Courier Box</p>
           </div>
         </div>
-        <button @click="authStore.logout" class="logout-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
+        <button @click="confirmLogout" class="logout-btn">
+          <i class="fa-solid fa-right-from-bracket"></i>
           Cerrar Sesión
         </button>
       </header>
@@ -261,21 +267,13 @@ onMounted(() => {
           <button 
             :class="['tab-btn', { active: activeTab === 'payments' }]" 
             @click="activeTab = 'payments'">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-              <line x1="1" y1="10" x2="23" y2="10"></line>
-            </svg>
+            <i class="fa-solid fa-link"></i>
             Links de Pago
           </button>
           <button 
             :class="['tab-btn', { active: activeTab === 'users' }]" 
             @click="activeTab = 'users'">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
+            <i class="fa-solid fa-users"></i>
             Gestión de Usuarios
           </button>
         </div>
@@ -289,10 +287,7 @@ onMounted(() => {
                 <section class="glass-card generator-section">
                   <div class="card-header">
                     <div class="icon-wrapper">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                      </svg>
+                      <i class="fa-solid fa-plus"></i>
                     </div>
                     <h2>Generar Nuevo Link</h2>
                   </div>
@@ -326,7 +321,7 @@ onMounted(() => {
                     </div>
 
                     <div v-if="errorPayment" class="error-message">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      <i class="fa-solid fa-circle-exclamation"></i>
                       {{ errorPayment }}
                     </div>
 
@@ -341,13 +336,7 @@ onMounted(() => {
                 <section class="glass-card history-section">
                   <div class="card-header">
                     <div class="icon-wrapper">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                      </svg>
+                      <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     <h2>Historial Reciente</h2>
                   </div>
@@ -358,7 +347,7 @@ onMounted(() => {
                       <p>Cargando datos...</p>
                     </div>
                     <div v-else-if="payments.length === 0" class="empty-state">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      <i class="fa-solid fa-inbox fa-3x"></i>
                       <p>No hay links generados aún.</p>
                     </div>
                     <table v-else class="premium-table">
@@ -385,13 +374,13 @@ onMounted(() => {
                           <td><span :class="['status-badge', payment.status === 'paid' || payment.status === 'approved' ? 'paid' : payment.status]">{{ payment.status === 'paid' || payment.status === 'approved' ? 'Pagado' : payment.status === 'pending' ? 'Pendiente' : payment.status === 'canceled' ? 'Cancelado' : payment.status }}</span></td>
                           <td class="actions">
                             <a :href="payment.paymentLink" target="_blank" class="action-btn" title="Abrir Link">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                              <i class="fa-solid fa-up-right-from-square"></i>
                             </a>
                             <button @click="copyToClipboard(payment.paymentLink)" class="action-btn copy" title="Copiar Link">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                              <i class="fa-regular fa-copy"></i>
                             </button>
                             <button v-if="payment.status !== 'paid' && payment.status !== 'approved'" @click="confirmDeletePayment(payment)" class="action-btn delete-btn" title="Eliminar Link">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              <i class="fa-regular fa-trash-can"></i>
                             </button>
                           </td>
                         </tr>
@@ -409,9 +398,7 @@ onMounted(() => {
                 <section class="glass-card generator-section">
                   <div class="card-header">
                     <div class="icon-wrapper">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line>
-                      </svg>
+                      <i class="fa-solid fa-user-plus"></i>
                     </div>
                     <h2>Registrar Miembro</h2>
                   </div>
@@ -442,13 +429,13 @@ onMounted(() => {
                           <option value="user">Usuario Regular</option>
                         </select>
                         <div class="select-icon">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                          <i class="fa-solid fa-chevron-down"></i>
                         </div>
                       </div>
                     </div>
 
                     <div v-if="errorUser" class="error-message">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      <i class="fa-solid fa-circle-exclamation"></i>
                       {{ errorUser }}
                     </div>
 
@@ -465,9 +452,7 @@ onMounted(() => {
                 <section class="glass-card history-section">
                   <div class="card-header">
                     <div class="icon-wrapper">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                      </svg>
+                      <i class="fa-solid fa-users-viewfinder"></i>
                     </div>
                     <h2>Equipo Registrado</h2>
                   </div>
@@ -478,7 +463,7 @@ onMounted(() => {
                       <p>Cargando datos...</p>
                     </div>
                     <div v-else-if="users.length === 0" class="empty-state">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      <i class="fa-solid fa-inbox fa-3x"></i>
                       <p>No hay usuarios registrados aún.</p>
                     </div>
                     <table v-else class="premium-table">
@@ -505,10 +490,10 @@ onMounted(() => {
                           <td class="date-col">{{ new Date(user.createdAt).toLocaleDateString() }}</td>
                           <td class="actions">
                             <button @click="startEditUser(user)" class="action-btn" title="Editar">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                              <i class="fa-solid fa-pen"></i>
                             </button>
                             <button v-if="user._id !== authStore.currentUser?.userId" @click="confirmDeleteUser(user)" class="action-btn delete-btn" title="Eliminar">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              <i class="fa-regular fa-trash-can"></i>
                             </button>
                           </td>
                         </tr>
@@ -528,7 +513,7 @@ onMounted(() => {
       <div v-if="showDeleteModal" class="modal-overlay">
         <div class="modal-content glass-card">
           <div class="modal-icon warning">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
           </div>
           <h3>Confirmar Eliminación</h3>
           <p>¿Estás seguro de que deseas eliminar al usuario <strong>{{ userToDelete?.name }}</strong>? Esta acción no se puede deshacer.</p>
@@ -545,7 +530,7 @@ onMounted(() => {
       <div v-if="showDeletePaymentModal" class="modal-overlay">
         <div class="modal-content glass-card">
           <div class="modal-icon warning">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
           </div>
           <h3>Confirmar Eliminación</h3>
           <p>¿Estás seguro de que deseas eliminar el link de pago <strong>{{ paymentToDelete?.reference }}</strong>? Esta acción no se puede deshacer.</p>
@@ -617,6 +602,23 @@ onMounted(() => {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal de Confirmación para Cerrar Sesión -->
+    <transition name="fade">
+      <div v-if="showLogoutModal" class="modal-overlay">
+        <div class="modal-content glass-card">
+          <div class="modal-icon warning">
+            <i class="fa-solid fa-right-from-bracket fa-lg"></i>
+          </div>
+          <h3>Cerrar Sesión</h3>
+          <p>¿Estás seguro de que deseas cerrar sesión?</p>
+          <div class="modal-actions">
+            <button @click="showLogoutModal = false" class="cancel-btn">Cancelar</button>
+            <button @click="executeLogout" class="delete-confirm-btn">Sí, cerrar sesión</button>
+          </div>
         </div>
       </div>
     </transition>
