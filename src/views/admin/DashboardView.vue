@@ -341,6 +341,9 @@ onMounted(() => {
                     <h2>Historial Reciente</h2>
                   </div>
                   
+                  <div class="mobile-scroll-hint">
+                    <i class="fa-solid fa-arrows-left-right"></i> Desliza para ver más
+                  </div>
                   <div class="table-container">
                     <div v-if="loadingPayments" class="loading-state">
                       <span class="loader"></span>
@@ -373,12 +376,12 @@ onMounted(() => {
                           <td class="amount">${{ (payment.amount / 100).toFixed(2) }}</td>
                           <td><span :class="['status-badge', payment.status === 'paid' || payment.status === 'approved' ? 'paid' : payment.status]">{{ payment.status === 'paid' || payment.status === 'approved' ? 'Pagado' : payment.status === 'pending' ? 'Pendiente' : payment.status === 'canceled' ? 'Cancelado' : payment.status }}</span></td>
                           <td class="actions">
-                            <a :href="payment.paymentLink" target="_blank" class="action-btn" title="Abrir Link">
-                              <i class="fa-solid fa-up-right-from-square"></i>
-                            </a>
                             <button @click="copyToClipboard(payment.paymentLink)" class="action-btn copy" title="Copiar Link">
                               <i class="fa-regular fa-copy"></i>
                             </button>
+                            <a :href="payment.paymentLink" target="_blank" class="action-btn" title="Abrir Link">
+                              <i class="fa-solid fa-up-right-from-square"></i>
+                            </a>
                             <button v-if="payment.status !== 'paid' && payment.status !== 'approved'" @click="confirmDeletePayment(payment)" class="action-btn delete-btn" title="Eliminar Link">
                               <i class="fa-regular fa-trash-can"></i>
                             </button>
@@ -457,6 +460,9 @@ onMounted(() => {
                     <h2>Equipo Registrado</h2>
                   </div>
 
+                  <div class="mobile-scroll-hint">
+                    <i class="fa-solid fa-arrows-left-right"></i> Desliza para ver más
+                  </div>
                   <div class="table-container">
                     <div v-if="loadingUsers" class="loading-state">
                       <span class="loader"></span>
@@ -698,6 +704,12 @@ onMounted(() => {
   box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+
+  @media (max-width: 640px) {
+    padding: 1.25rem;
+    border-radius: 16px;
+  }
 }
 
 /* Header */
@@ -709,6 +721,14 @@ onMounted(() => {
   border-radius: 0 0 24px 24px;
   border-top: none;
   margin-bottom: 2rem;
+  gap: 1rem;
+
+  @media (max-width: 640px) {
+    padding: 1rem;
+    flex-direction: column;
+    text-align: center;
+    border-radius: 0 0 16px 16px;
+  }
 
   .brand {
     display: flex;
@@ -726,6 +746,7 @@ onMounted(() => {
       border-radius: 12px;
       font-weight: 800;
       font-size: 1.25rem;
+      flex-shrink: 0;
     }
 
     h1 {
@@ -776,6 +797,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  box-sizing: border-box;
+
+  @media (max-width: 640px) {
+    padding: 0 1rem 2rem;
+    gap: 1.5rem;
+  }
 }
 
 /* Tabs */
@@ -785,6 +812,10 @@ onMounted(() => {
   padding: 0.5rem;
   border-radius: 16px;
   align-self: center;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
 
   .tab-btn {
     background: transparent;
@@ -1049,10 +1080,39 @@ onMounted(() => {
 }
 
 /* Tables */
+.mobile-scroll-hint {
+  display: none;
+  font-size: 0.8rem;
+  color: $brand-orange;
+  text-align: center;
+  padding-bottom: 0.5rem;
+  font-weight: 600;
+
+  i {
+    margin-right: 0.25rem;
+    animation: slide-left-right 1.5s ease-in-out infinite;
+  }
+
+  @media (max-width: 640px) {
+    display: block;
+  }
+}
+
+@keyframes slide-left-right {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
 .table-container {
   overflow-x: auto;
-  margin: 0 -1rem;
-  padding: 0 1rem;
+  margin: 0 -2rem;
+  padding: 0 2rem;
+  -webkit-overflow-scrolling: touch;
+
+  @media (max-width: 640px) {
+    margin: 0 -1.25rem;
+    padding: 0 1.25rem;
+  }
 }
 
 .premium-table {
@@ -1266,6 +1326,14 @@ onMounted(() => {
   display: flex;
   gap: 1rem;
   margin-top: 0.5rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    
+    .cancel-btn, .submit-btn {
+      width: 100%;
+    }
+  }
 }
 
 .flex-1 {
@@ -1400,6 +1468,10 @@ onMounted(() => {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+
   .delete-confirm-btn {
     background: $signal-red;
     color: white;
@@ -1408,6 +1480,7 @@ onMounted(() => {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    padding: 1rem;
 
     &:hover {
       background: darken($signal-red, 10%);
