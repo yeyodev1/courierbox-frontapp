@@ -148,6 +148,14 @@ const handleFilterChange = () => {
       <main class="dashboard-main">
         <DateFilter v-model="dateRange" @change="handleFilterChange" />
 
+        <!-- Info Banner for Clarity -->
+        <div class="data-notice">
+          <div class="notice-icon"><i class="fa-solid fa-circle-info"></i></div>
+          <div class="notice-text">
+            <strong>Alcance de los datos:</strong> Estas métricas analizan en tiempo real las últimas 500 conversaciones del CRM para garantizar la máxima velocidad. Si filtras por un rango muy antiguo, es posible que no haya datos si las 500 recientes son más nuevas.
+          </div>
+        </div>
+
         <div class="grid-layout">
           <!-- Resumen de Hoy -->
           <section class="glass-card full-width today-card">
@@ -188,8 +196,8 @@ const handleFilterChange = () => {
                 <i class="fa-regular fa-calendar-days"></i>
               </div>
               <div>
-                <h2>Métricas del Período</h2>
-                <p class="section-subtitle">Basado en el filtro de fechas (por defecto últimos 7 días)</p>
+                <h2>Métricas del Período Seleccionado</h2>
+                <p class="section-subtitle">Muestra los totales dentro de las fechas elegidas en el calendario</p>
               </div>
             </div>
             
@@ -428,6 +436,31 @@ const handleFilterChange = () => {
 
 <style lang="scss" scoped>
 @use '@/styles/tokens/colors' as *;
+
+/* Data Notice Banner */
+.data-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba($brand-orange, 0.1);
+  border: 1px solid rgba($brand-orange, 0.3);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  color: #FFB067;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.notice-icon i {
+  font-size: 1.25rem;
+  color: $brand-orange;
+  margin-top: 0.1rem;
+}
+.notice-text strong {
+  color: #fff;
+  font-weight: 600;
+}
 
 .dashboard-layout {
   position: relative;
