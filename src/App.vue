@@ -2,6 +2,7 @@
 import SiteNav from "@/layout/SiteNav.vue";
 import FooterEditorial from "@/components/sections/FooterEditorial.vue";
 import WhatsAppFab from "@/components/ui/WhatsAppFab.vue";
+import AppPreloader from "@/components/ui/AppPreloader.vue";
 import { useLenis } from "@/composables/useLenis";
 import { useToastStore } from "@/stores/toast.store";
 import { onMounted, onUnmounted } from "vue";
@@ -26,6 +27,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <AppPreloader v-if="!$route.path.startsWith('/admin') && !$route.path.startsWith('/login')" />
   <div class="app">
     <SiteNav v-if="!$route.meta.hideNavigation" />
     <RouterView v-slot="{ Component, route }">
