@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "Admin Dashboard · Courier Box", requiresAuth: true, hideNavigation: true },
   },
   {
+    path: "/admin/metrics",
+    name: "AdminMetrics",
+    component: () => import("@/views/admin/MetricsView.vue"),
+    meta: { title: "Métricas GHL · Courier Box", requiresAuth: true, hideNavigation: true },
+  },
+  {
     path: "/:pathMatch(.*)*",
     redirect: "/",
   },

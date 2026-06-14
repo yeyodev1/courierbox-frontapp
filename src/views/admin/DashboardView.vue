@@ -3,10 +3,12 @@ import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
 import { useToastStore } from '@/stores/toast.store';
 import { adminApi } from '@/services/admin.api';
+import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const toastStore = useToastStore();
-const activeTab = ref<'payments' | 'users'>('payments');
+const router = useRouter();
+const activeTab = ref<'payments' | 'users' | 'tracking'>('payments');
 
 // Payments State
 const payments = ref<any[]>([]);
@@ -25,6 +27,27 @@ const paymentForm = ref({
 });
 
 const displayAmount = ref<number | null>(null);
+
+// Tracking State
+import { fetchTracking, type TrackingResult } from '@/services/tracking';
+const trackingCode = ref('');
+const loadingTracking = ref(false);
+const trackingData = ref<TrackingResult | null>(null);
+const trackingError = ref('');
+
+const handleSearchTracking = async () => {
+  if (!trackingCode.value.trim()) return;
+  loadingTracking.value = true;
+  trackingError.value = '';
+  trackingData.value = null;
+  try {
+    trackingData.value = await fetchTracking(trackingCode.value.trim());
+  } catch (err: any) {
+    trackingError.value = err.response?.data?.message || err.message || 'Error al buscar el código de tracking';
+  } finally {
+    loadingTracking.value = false;
+  }
+};
 
 // Users State
 const users = ref<any[]>([]);
@@ -256,10 +279,16 @@ onMounted(() => {
             <p class="subtitle">Courier Box</p>
           </div>
         </div>
-        <button @click="confirmLogout" class="logout-btn">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          Cerrar Sesión
-        </button>
+        <div class="header-actions" style="display: flex; gap: 1rem;">
+          <button @click="router.push({ name: 'AdminMetrics' })" class="metrics-btn" style="background: rgba(255, 115, 0, 0.1); color: #ff7300; border: 1px solid rgba(255, 115, 0, 0.2); padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-chart-pie"></i>
+            Ver Métricas GHL
+          </button>
+          <button @click="confirmLogout" class="logout-btn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Cerrar Sesión
+          </button>
+        </div>
       </header>
 
       <main class="dashboard-main">
@@ -275,6 +304,12 @@ onMounted(() => {
             @click="activeTab = 'users'">
             <i class="fa-solid fa-users"></i>
             Gestión de Usuarios
+          </button>
+          <button 
+            :class="['tab-btn', { active: activeTab === 'tracking' }]" 
+            @click="activeTab = 'tracking'">
+            <i class="fa-solid fa-magnifying-glass-location"></i>
+            Tracking Interno
           </button>
         </div>
 
@@ -508,6 +543,97 @@ onMounted(() => {
                   </div>
                 </section>
               </div>
+            </div>
+
+            <!-- TRACKING TAB -->
+            <div v-else-if="activeTab === 'tracking'" key="tracking" class="tab-content tracking-tab">
+              <section class="glass-card tracking-search-section">
+                <div class="card-header">
+                  <div class="icon-wrapper">
+                    <i class="fa-solid fa-magnifying-glass-location"></i>
+                  </div>
+                  <h2>Consulta de Tracking Interno</h2>
+                </div>
+                <form @submit.prevent="handleSearchTracking" class="premium-form tracking-form">
+                  <div class="form-row" style="align-items: flex-end;">
+                    <div class="form-group flex-1">
+                      <label>Código de Tracking o WR *</label>
+                      <input type="text" v-model="trackingCode" required placeholder="Ingrese el código..." />
+                    </div>
+                    <button type="submit" :disabled="loadingTracking || !trackingCode.trim()" class="submit-btn" style="min-width: 150px; margin-bottom: 0;">
+                      <span v-if="!loadingTracking">Buscar</span>
+                      <span v-else class="loader"></span>
+                    </button>
+                  </div>
+                  <div v-if="trackingError" class="error-message" style="margin-top: 1rem;">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    {{ trackingError }}
+                  </div>
+                </form>
+
+                <div v-if="trackingData" class="tracking-result-card" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
+                  <h3 style="margin-bottom: 1rem; color: #ff7300;">Detalles del Envío</h3>
+                  
+                  <div class="grid-layout" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div class="stat-box" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                      <span style="font-size: 0.8rem; color: #aaa;">Estado</span>
+                      <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">{{ trackingData.estadoLabel }}</div>
+                    </div>
+                    <div class="stat-box" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                      <span style="font-size: 0.8rem; color: #aaa;">WR</span>
+                      <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">{{ trackingData.wr || 'N/A' }}</div>
+                    </div>
+                    <div class="stat-box" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                      <span style="font-size: 0.8rem; color: #aaa;">Peso (Lb)</span>
+                      <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">{{ trackingData.pesoLb ?? 'N/A' }}</div>
+                    </div>
+                    <div class="stat-box" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                      <span style="font-size: 0.8rem; color: #aaa;">Consignatario</span>
+                      <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">{{ trackingData.consignee || 'N/A' }}</div>
+                    </div>
+                  </div>
+
+                  <div v-if="trackingData.costo" style="margin-bottom: 2rem;">
+                    <h4 style="margin-bottom: 0.5rem; color: #fff;">Costos</h4>
+                    <table class="premium-table" style="background: transparent;">
+                      <thead>
+                        <tr>
+                          <th>Flete</th>
+                          <th>Arancel</th>
+                          <th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>${{ trackingData.costo.flete }}</td>
+                          <td>${{ trackingData.costo.arancel }}</td>
+                          <td style="font-weight: bold; color: #ff7300;">${{ trackingData.costo.total }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div v-if="trackingData.eventos && trackingData.eventos.length > 0" style="margin-bottom: 2rem;">
+                    <h4 style="margin-bottom: 0.5rem; color: #fff;">Historial de Eventos</h4>
+                    <div class="events-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                      <div v-for="(evento, i) in trackingData.eventos" :key="i" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                        <div style="font-size: 0.85rem; color: #aaa;">{{ evento.fechaTexto }} <span v-if="evento.ubicacion"> - {{ evento.ubicacion }}</span></div>
+                        <div style="font-weight: 500; color: #fff; margin-top: 0.25rem;">{{ evento.descripcion }}</div>
+                        <div v-if="evento.accion" style="font-size: 0.85rem; color: #ff7300; margin-top: 0.25rem;">{{ evento.accion }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-if="trackingData.imagenes && trackingData.imagenes.length > 0">
+                    <h4 style="margin-bottom: 0.5rem; color: #fff;">Imágenes ({{ trackingData.imagenes.length }})</h4>
+                    <div style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem;">
+                      <a v-for="(img, i) in trackingData.imagenes" :key="i" :href="img" target="_blank" style="flex-shrink: 0;">
+                        <img :src="img" alt="Tracking Image" style="max-width: 200px; height: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </transition>
         </div>

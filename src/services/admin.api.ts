@@ -61,6 +61,33 @@ class AdminAPI extends APIBase {
     const res = await this.delete<any>(`users/${id}`);
     return res.data;
   }
+
+  async getGeneralMetrics(locationId: string, startDate?: string, endDate?: string) {
+    let url = `admin/metrics/general?locationId=${locationId}`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+    
+    const res = await this.get<any>(url);
+    return res.data;
+  }
+
+  async getActiveAgents(locationId: string, startDate?: string, endDate?: string) {
+    let url = `admin/metrics/agents?locationId=${locationId}`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+    
+    const res = await this.get<any>(url);
+    return res.data;
+  }
+
+  async getRecentConversations(locationId: string, startDate?: string, endDate?: string) {
+    let url = `admin/metrics/recent-conversations?locationId=${locationId}`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+    
+    const res = await this.get<any>(url);
+    return res.data;
+  }
 }
 
 export const adminApi = new AdminAPI();
