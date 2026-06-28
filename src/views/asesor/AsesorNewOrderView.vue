@@ -22,6 +22,7 @@ const form = ref({
   weightLb: 0,
   trackingUsa: '',
   notes: '',
+  serviceType: 'logistica' as import('@/services/asesoria.api').ServiceType,
 })
 
 const configs = ref<FeeConfig[]>([])
@@ -208,8 +209,20 @@ onMounted(async () => {
           <h3 class="card-title"><i class="fa-solid fa-box-open" /> Detalle de la compra</h3>
           <div class="field-row">
             <div class="field">
+              <AppSelect
+                v-model="form.serviceType"
+                :options="[
+                  { value: 'logistica', label: 'Logística (solo envío)' },
+                  { value: 'compra_total', label: 'Compra Total (compramos + enviamos)' },
+                ]"
+                label="Tipo de servicio *"
+              />
+            </div>
+            <div class="field">
               <AppSelect v-model="form.storeName" :options="storeOptions" label="Tienda *" />
             </div>
+          </div>
+          <div class="field-row">
             <label class="field">
               <span class="field-label">URL del producto</span>
               <input v-model="form.productUrl" type="url" class="field-input" placeholder="https://..." />

@@ -40,6 +40,16 @@ export interface FeeConfig {
   enabled: boolean;
 }
 
+export type ServiceType = 'logistica' | 'compra_total';
+
+export interface AuditEntry {
+  timestamp: string;
+  action: string;
+  userId: string;
+  userName: string;
+  notes: string;
+}
+
 export interface PurchaseOrder {
   _id: string;
   asesorId: { _id: string; name: string; email: string } | string;
@@ -57,6 +67,7 @@ export interface PurchaseOrder {
   feeRuleApplied: string;
   totalAmount: number;
   currency: string;
+  serviceType: ServiceType;
   status: string;
   paymentStatus: string;
   paymentLinkUrl?: string;
@@ -65,6 +76,10 @@ export interface PurchaseOrder {
   transferNotes?: string;
   notes?: string;
   adminNotes?: string;
+  sharedWith?: { asesorId: string; sharedAt: string }[];
+  auditLog?: AuditEntry[];
+  viewToken?: string;
+  viewTokenUsed?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -125,12 +140,14 @@ class AsesoriaAPI extends APIBase {
   async listOrders(params?: {
     status?: string;
     paymentStatus?: string;
+    includeShared?: boolean;
     limit?: number;
     offset?: number;
   }): Promise<{ orders: PurchaseOrder[]; total: number }> {
     const searchParams = new URLSearchParams();
     if (params?.status) searchParams.append("status", params.status);
     if (params?.paymentStatus) searchParams.append("paymentStatus", params.paymentStatus);
+    if (params?.includeShared) searchParams.append("includeShared", "true");
     if (params?.limit) searchParams.append("limit", String(params.limit));
     if (params?.offset) searchParams.append("offset", String(params.offset));
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
@@ -143,7 +160,7 @@ class AsesoriaAPI extends APIBase {
     return res.data;
   }
 
-  async createOrder(input: CreateOrderInput): Promise<{ order: PurchaseOrder }> {
+  async createOrder(input: CreateOrderInput & { serviceType?: ServiceType }): Promise<{ order: PurchaseOrder }> {
     const res = await this.post<{ order: PurchaseOrder }>("v1/asesoria/orders", input);
     return res.data;
   }
@@ -184,6 +201,31 @@ class AsesoriaAPI extends APIBase {
       `v1/asesoria/orders/${id}/transfer`,
       formData,
     );
+    return res.data;
+  }
+
+  async shareOrder(id: string, targetAsesorId: string): Promise<{ order: PurchaseOrder }> {
+    const res = await this.post<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/share`, { targetAsesorId });
+    return res.data;
+  }
+
+  async unshareOrder(id: string, targetAsesorId: string): Promise<{ order: PurchaseOrder }> {
+    const res = await this.delete<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/share/${targetAsesorId}`);
+    return res.data;
+  }
+
+  async getOrderByViewToken(token: string): Promise<{ order: Partial<PurchaseOrder> & { wasAlreadyUsed: boolean } }> {
+    const res = await this.get<{ order: Partial<PurchaseOrder> & { wasAlreadyUsed: boolean } }>(`v1/asesoria/orders/view/${token}`);
+    return res.data;
+  }
+
+  async resetViewToken(id: string): Promise<{ order: PurchaseOrder }> {
+    const res = await this.post<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/reset-view-token`, {});
+    return res.data;
+  }
+
+  async searchClients(q: string): Promise<{ orders: PurchaseOrder[] }> {
+    const res = await this.get<{ orders: PurchaseOrder[] }>(`v1/asesoria/clientes/search?q=${encodeURIComponent(q)}`);
     return res.data;
   }
 

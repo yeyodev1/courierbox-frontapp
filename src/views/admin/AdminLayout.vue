@@ -22,16 +22,29 @@ const menuGroups = [
     ],
   },
   {
+    label: 'Operaciones',
+    items: [
+      { path: '/admin/purchase-orders', label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (p: string) => p.startsWith('/admin/purchase-orders') },
+      { path: '/admin/envios', label: 'Envíos a Domicilio', icon: 'fa-solid fa-truck', match: (p: string) => p.startsWith('/admin/envios') },
+      { path: '/admin/tracking', label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (p: string) => p.startsWith('/admin/tracking') },
+    ],
+  },
+  {
     label: 'Asesores',
     items: [
       { path: '/admin/fee-config', label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/admin/fee-config') },
-      { path: '/admin/purchase-orders', label: 'Órdenes de compra', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/admin/purchase-orders') },
+    ],
+  },
+  {
+    label: 'Financiero',
+    items: [
+      { path: '/admin/costos', label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (p: string) => p.startsWith('/admin/costos') },
+      { path: '/admin/conciliacion', label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: (p: string) => p.startsWith('/admin/conciliacion') },
     ],
   },
   {
     label: 'Módulos',
     items: [
-      { path: '/admin/conciliacion', label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: (p: string) => p.startsWith('/admin/conciliacion') },
       { path: '/admin/metrics', label: 'Métricas GHL', icon: 'fa-solid fa-chart-line', match: (p: string) => p.startsWith('/admin/metrics') },
     ],
   },
@@ -53,7 +66,9 @@ const pageMeta = computed(() => {
     '/admin/users': { title: 'Usuarios', sub: 'Administra los miembros del equipo' },
     '/admin/tracking': { title: 'Tracking Interno', sub: 'Consulta el estado de los envíos' },
     '/admin/fee-config': { title: 'Configuración de tarifas', sub: 'Define el fee de gestión para asesores' },
-    '/admin/purchase-orders': { title: 'Órdenes de compra', sub: 'Gestiona las órdenes de los asesores' },
+    '/admin/purchase-orders': { title: 'Pendientes de Compra', sub: 'Revisa y gestiona las órdenes pendientes de comprar' },
+    '/admin/costos': { title: 'Costos y Gastos', sub: 'Registra costos operacionales, logísticos y de envío' },
+    '/admin/envios': { title: 'Envíos a Domicilio', sub: 'Gestiona los envíos de última milla' },
     '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
     '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
   }

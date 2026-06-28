@@ -88,7 +88,19 @@ const routes: RouteRecordRaw[] = [
         path: "purchase-orders",
         name: "AdminPurchaseOrders",
         component: () => import("@/views/admin/AdminPurchaseOrdersView.vue"),
-        meta: { title: "Órdenes de compra · Courier Box" },
+        meta: { title: "Pendientes de Compra · Courier Box" },
+      },
+      {
+        path: "costos",
+        name: "AdminCostos",
+        component: () => import("@/views/admin/AdminCostosView.vue"),
+        meta: { title: "Costos y Gastos · Courier Box" },
+      },
+      {
+        path: "envios",
+        name: "AdminEnvios",
+        component: () => import("@/views/admin/AdminEnviosView.vue"),
+        meta: { title: "Envíos a Domicilio · Courier Box" },
       },
       {
         path: "conciliacion",
@@ -146,6 +158,12 @@ const routes: RouteRecordRaw[] = [
     name: "PaymentPortal",
     component: () => import("@/views/PaymentPortalView.vue"),
     meta: { title: "Mis Pagos · Courier Box" },
+  },
+  {
+    path: "/seguir/:token",
+    name: "SeguirPedido",
+    component: () => import("@/views/SeguirPedidoView.vue"),
+    meta: { title: "Seguir Pedido · Courier Box", hideNavigation: true },
   },
   {
     path: "/:pathMatch(.*)*",

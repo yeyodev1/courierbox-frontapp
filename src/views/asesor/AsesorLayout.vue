@@ -17,7 +17,7 @@ const menuGroups = [
     items: [
       { path: '/asesor', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (p: string) => p === '/asesor' },
       { path: '/asesor/calculadora', label: 'Calculadora', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/asesor/calculadora') },
-      { path: '/asesor/ordenes', label: 'Órdenes de compra', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ordenes') },
+      { path: '/asesor/ordenes', label: 'Ventas', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ordenes') },
     ],
   },
 ]
@@ -35,7 +35,7 @@ const pageMeta = computed(() => {
   const map: Record<string, { title: string; sub: string }> = {
     '/asesor': { title: 'Dashboard', sub: 'Resumen de tus órdenes y pagos' },
     '/asesor/calculadora': { title: 'Calculadora de gestión', sub: 'Cotiza el fee de gestión de compra' },
-    '/asesor/ordenes': { title: 'Órdenes de compra', sub: 'Gestiona las órdenes de tus clientes' },
+    '/asesor/ordenes': { title: 'Ventas', sub: 'Gestiona las órdenes de compra de tus clientes' },
     '/asesor/ordenes/nueva': { title: 'Nueva orden', sub: 'Crea una orden de compra para tu cliente' },
   }
   return map[route.path] || { title: 'Asesor', sub: '' }

@@ -14,5 +14,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    allowedHosts: [
+      'courierboxlogistics.com',
+      'testing-storybrand-frontend.bakano.ec',
+    ],
   },
 })

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { asesoriaApi } from '@/services/asesoria.api'
-import type { PurchaseOrder } from '@/services/asesoria.api'
+import axios from 'axios'
+import { asesoriaApi, type PurchaseOrder } from '@/services/asesoria.api'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,6 +17,23 @@ const transferFile = ref<File | null>(null)
 const transferReference = ref('')
 const transferNotes = ref('')
 const copied = ref(false)
+const internalCopied = ref(false)
+const resettingToken = ref(false)
+
+const showShareModal = ref(false)
+const shareTargetEmail = ref('')
+const sharing = ref(false)
+const shareSearchResults = ref<{ _id: string; name: string; email: string }[]>([])
+const searchingAsesores = ref(false)
+
+const windowOrigin = window.location.origin
+const apiBaseUrl = (() => {
+  const origin = window.location.origin
+  if (origin.includes('testing-storybrand-frontend.bakano.ec')) {
+    return 'https://testing-storybrand-backapp.bakano.ec/api'
+  }
+  return (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
+})()
 
 const statusSteps = [
   { key: 'borrador', label: 'Borrador' },
@@ -31,6 +48,53 @@ const currentStepIndex = computed(() => {
   if (!order.value) return -1
   return statusSteps.findIndex((s) => s.key === order.value?.status)
 })
+
+function copyInternalLink() {
+  if (!order.value?.viewToken) return
+  navigator.clipboard.writeText(`${windowOrigin}/seguir/${order.value.viewToken}`)
+  internalCopied.value = true
+  setTimeout(() => (internalCopied.value = false), 2000)
+}
+
+async function resetToken() {
+  if (!order.value) return
+  resettingToken.value = true
+  try {
+    const data = await asesoriaApi.resetViewToken(order.value._id)
+    order.value = data.order
+  } catch (e: any) {
+    console.error('Error resetting token:', e)
+  } finally {
+    resettingToken.value = false
+  }
+}
+
+function formatAuditAction(action: string): string {
+  const labels: Record<string, string> = {
+    created: 'Orden creada',
+    status_changed: 'Estado actualizado',
+    payment_status_changed: 'Estado de pago actualizado',
+    shared: 'Orden compartida',
+    unshared: 'Acceso removido',
+    link_shared: 'Enlace de pago generado',
+    transfer_uploaded: 'Comprobante subido',
+    view_token_generated: 'Enlace interno generado',
+    view_token_reset: 'Enlace interno renovado',
+    viewed_by_client: 'Visto por el cliente',
+  }
+  return labels[action] || action
+}
+
+function formatDate(ts: string): string {
+  const d = new Date(ts)
+  return d.toLocaleDateString('es-EC', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 async function loadOrder() {
   loading.value = true
@@ -95,6 +159,51 @@ function onFileChange(e: Event) {
     }
   }
 
+async function searchAsesores() {
+  if (!shareTargetEmail.value.trim()) return
+  searchingAsesores.value = true
+  try {
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token')
+    const res = await axios.get<{ users: { _id: string; name: string; email: string }[] }>(
+      `${apiBaseUrl}/users?q=${encodeURIComponent(shareTargetEmail.value.trim())}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    shareSearchResults.value = res.data.users || []
+  } catch {
+    shareSearchResults.value = []
+  } finally {
+    searchingAsesores.value = false
+  }
+}
+
+async function shareWith(asesorId: string) {
+  sharing.value = true
+  try {
+    await asesoriaApi.shareOrder(orderId.value, asesorId)
+    showShareModal.value = false
+    shareTargetEmail.value = ''
+    shareSearchResults.value = []
+    await loadOrder()
+  } catch (e: any) {
+    error.value = e.message || 'Error al compartir'
+  } finally {
+    sharing.value = false
+  }
+}
+
+async function unshare(asesorId: string) {
+  try {
+    await asesoriaApi.unshareOrder(orderId.value, asesorId)
+    await loadOrder()
+  } catch (e: any) {
+    error.value = e.message || 'Error al revocar'
+  }
+}
+
+function isSharedWith(asesorId: string): boolean {
+  return order.value?.sharedWith?.some((s) => s.asesorId === asesorId) ?? false
+}
+
 onMounted(loadOrder)
 </script>
 
@@ -146,6 +255,7 @@ onMounted(loadOrder)
         <section class="card">
           <h3 class="card-title">Detalles de la compra</h3>
           <div class="detail-list">
+            <div class="detail-item"><span>Tipo de servicio</span><strong>{{ order.serviceType === 'compra_total' ? 'Compra Total' : 'Logística' }}</strong></div>
             <div class="detail-item"><span>Tienda</span><strong>{{ order.storeName }}</strong></div>
             <div class="detail-item"><span>Valor producto</span><strong>${{ order.productValue.toFixed(2) }}</strong></div>
             <div class="detail-item"><span>Envío USA</span><strong>${{ order.shippingValue.toFixed(2) }}</strong></div>
@@ -208,6 +318,54 @@ onMounted(loadOrder)
           </div>
         </section>
 
+        <section class="card">
+          <h3 class="card-title">Compartir</h3>
+          <p class="share-desc">Comparte esta orden con otro asesor para que pueda verla.</p>
+          <div v-if="order.sharedWith && order.sharedWith.length > 0" class="shared-list">
+            <div v-for="s in order.sharedWith" :key="s.asesorId" class="shared-item">
+              <span>Asesor {{ s.asesorId.slice(-6).toUpperCase() }}</span>
+              <button class="btn-unshare" @click="unshare(s.asesorId)" title="Revocar acceso">
+                <i class="fa-solid fa-xmark" />
+              </button>
+            </div>
+          </div>
+          <button class="btn-secondary" @click="showShareModal = true">
+            <i class="fa-solid fa-share-nodes" /> Compartir
+          </button>
+        </section>
+
+        <section class="card full-width">
+          <h3 class="card-title">Enlace interno para el cliente</h3>
+          <p class="share-desc">Este enlace permite al cliente ver el estado de su orden sin necesidad de cuenta.</p>
+          <div v-if="order.viewToken" class="payment-link">
+            <input :value="`${windowOrigin}/seguir/${order.viewToken}`" readonly class="field-input" />
+            <button class="btn-secondary" @click="copyInternalLink">
+              <i :class="internalCopied ? 'fa-solid fa-check' : 'fa-solid fa-copy'" />
+              {{ internalCopied ? 'Copiado' : 'Copiar' }}
+            </button>
+            <button class="btn-ghost btn-sm" :disabled="resettingToken" @click="resetToken" title="Generar nuevo enlace">
+              <i class="fa-solid fa-rotate" /> Nuevo
+            </button>
+          </div>
+          <button v-else class="btn-primary btn-sm" :disabled="resettingToken" @click="resetToken">
+            <i class="fa-solid fa-link" /> Generar enlace
+          </button>
+        </section>
+
+        <section v-if="order.auditLog && order.auditLog.length" class="card full-width">
+          <h3 class="card-title">Historial de cambios</h3>
+          <div class="audit-timeline">
+            <div v-for="entry in order.auditLog" :key="entry.timestamp" class="audit-entry">
+              <div class="audit-dot" />
+              <div class="audit-body">
+                <div class="audit-action">{{ formatAuditAction(entry.action) }}</div>
+                <div class="audit-meta">{{ entry.userName }} &middot; {{ formatDate(entry.timestamp) }}</div>
+                <div v-if="entry.notes" class="audit-notes">{{ entry.notes }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section v-if="order.notes || order.adminNotes" class="card full-width">
           <h3 class="card-title">Notas</h3>
           <p v-if="order.notes" class="note"><strong>Tuyas:</strong> {{ order.notes }}</p>
@@ -215,6 +373,48 @@ onMounted(loadOrder)
         </section>
       </div>
     </template>
+
+    <transition name="fade">
+      <div v-if="showShareModal" class="modal-overlay" @click.self="showShareModal = false">
+        <div class="modal-card">
+          <div class="modal-icon-box info"><i class="fa-solid fa-share-nodes" /></div>
+          <h3>Compartir orden</h3>
+          <p class="share-desc">Busca un asesor por nombre o email para compartir esta orden.</p>
+          <div class="share-search">
+            <input
+              v-model="shareTargetEmail"
+              class="field-input"
+              placeholder="Nombre o email del asesor..."
+              @keyup.enter="searchAsesores"
+            />
+            <button class="btn-sm" @click="searchAsesores" :disabled="searchingAsesores">
+              <i class="fa-solid fa-search" />
+            </button>
+          </div>
+          <div v-if="searchingAsesores" class="search-loading">Buscando...</div>
+          <div v-else-if="shareSearchResults.length > 0" class="share-results">
+            <button
+              v-for="u in shareSearchResults"
+              :key="u._id"
+              class="share-result-item"
+              :class="{ shared: isSharedWith(u._id) }"
+              :disabled="isSharedWith(u._id)"
+              @click="shareWith(u._id)"
+            >
+              <strong>{{ u.name }}</strong>
+              <span>{{ u.email }}</span>
+              <span v-if="isSharedWith(u._id)" class="shared-tag">Compartido</span>
+            </button>
+          </div>
+          <div v-else-if="shareTargetEmail && !searchingAsesores" class="search-empty">
+            No se encontraron asesores
+          </div>
+          <div class="modal-actions">
+            <button class="btn-ghost" @click="showShareModal = false">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -543,4 +743,237 @@ onMounted(loadOrder)
     margin-bottom: 0;
   }
 }
+
+.share-desc {
+  color: $ink-400;
+  font-size: 0.85rem;
+  margin: 0 0 $space-4;
+}
+
+.shared-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  margin-bottom: $space-4;
+}
+
+.shared-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-2 $space-3;
+  background: rgba($brand-orange, 0.06);
+  border: 1px solid rgba($brand-orange, 0.15);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: $fg-dark;
+}
+
+.btn-unshare {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: $ink-400;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { background: rgba($signal-red, 0.1); color: #ff8a8f; }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba($ink-1000, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-4;
+}
+
+.modal-card {
+  background: $ink-900;
+  border: 1px solid rgba($ink-500, 0.15);
+  border-radius: 20px;
+  padding: $space-8;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+
+  .modal-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto $space-4;
+    font-size: 1.2rem;
+    &.info { background: rgba($brand-orange, 0.12); color: $brand-orange; }
+  }
+
+  h3 { font-size: 1.15rem; margin: 0 0 $space-2; }
+}
+
+.share-search {
+  display: flex;
+  gap: $space-2;
+  margin-bottom: $space-4;
+
+  .field-input {
+    flex: 1;
+  }
+}
+
+.btn-sm {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $ink-700;
+  border: 1px solid rgba($ink-500, 0.2);
+  border-radius: 10px;
+  color: $fg-dark;
+  cursor: pointer;
+  flex-shrink: 0;
+  &:hover { background: $ink-600; }
+}
+
+.search-loading, .search-empty {
+  color: $ink-400;
+  font-size: 0.85rem;
+  padding: $space-3 0;
+}
+
+.share-results {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  margin-bottom: $space-4;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.share-result-item {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  width: 100%;
+  padding: $space-3;
+  background: transparent;
+  border: 1px solid rgba($ink-500, 0.1);
+  border-radius: 10px;
+  color: $fg-dark;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba($brand-orange, 0.08);
+    border-color: rgba($brand-orange, 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.shared {
+    border-color: rgba($brand-orange, 0.2);
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: $ink-400;
+  }
+}
+
+.shared-tag {
+  margin-left: auto;
+  font-size: 0.7rem !important;
+  font-weight: 600;
+  color: $brand-orange !important;
+  background: rgba($brand-orange, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: $space-3;
+}
+
+.btn-ghost {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: 1px solid rgba($ink-500, 0.3);
+  border-radius: 10px;
+  color: $ink-300;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  &:hover { background: rgba($ink-500, 0.15); color: $fg-dark; }
+}
+
+.audit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: $space-2;
+}
+
+.audit-entry {
+  display: flex;
+  gap: $space-3;
+  padding: $space-3 0;
+  border-left: 2px solid rgba($brand-orange, 0.2);
+  margin-left: 4px;
+  &:first-child { padding-top: 0; }
+  &:last-child { border-left-color: transparent; }
+}
+
+.audit-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: $brand-orange;
+  flex-shrink: 0;
+  margin-left: -7px;
+  margin-top: 4px;
+}
+
+.audit-body { flex: 1; }
+
+.audit-action {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: $fg-dark;
+}
+
+.audit-meta {
+  font-size: 0.75rem;
+  color: $ink-400;
+  margin-top: 2px;
+}
+
+.audit-notes {
+  font-size: 0.8rem;
+  color: $ink-300;
+  margin-top: $space-1;
+  background: rgba($ink-700, 0.3);
+  padding: $space-1 $space-2;
+  border-radius: 6px;
+}
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
