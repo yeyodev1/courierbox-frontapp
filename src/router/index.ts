@@ -103,6 +103,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "Envíos a Domicilio · Courier Box" },
       },
       {
+        path: "contactos",
+        name: "AdminContactos",
+        component: () => import("@/views/admin/AdminContactosView.vue"),
+        meta: { title: "Contactos · Courier Box" },
+      },
+      {
         path: "conciliacion",
         name: "AdminConciliacion",
         component: () => import("@/views/admin/ConciliacionView.vue"),

@@ -1,5 +1,16 @@
 import APIBase from './httpBase'
 
+export interface TrayectoPago {
+  proveedorId?: string
+  proveedorNombre: string
+  tracking: string
+  costo: number
+  pagado: boolean
+  fechaPago?: string
+  comprobanteUrl: string
+  notas: string
+}
+
 export interface EnvioDomicilio {
   _id: string
   paqueteId: {
@@ -12,10 +23,8 @@ export interface EnvioDomicilio {
   clienteNombre: string
   clienteDireccion: string
   clienteTelefono: string
-  tipoTransportista: 'propio' | 'externo'
-  transportistaNombre: string
-  costoEnvio: number
-  trackingLocal: string
+  trayectoUsa: TrayectoPago
+  trayectoLocal: TrayectoPago
   estado: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'fallido'
   evidenciaUrl: string
   notas: string
@@ -48,10 +57,8 @@ class EnviosAPI extends APIBase {
     clienteNombre: string
     clienteDireccion: string
     clienteTelefono?: string
-    tipoTransportista?: string
-    transportistaNombre?: string
-    costoEnvio?: number
-    trackingLocal?: string
+    trayectoUsa?: { proveedorId?: string; proveedorNombre?: string; tracking?: string; costo?: number; notas?: string }
+    trayectoLocal?: { proveedorId?: string; proveedorNombre?: string; tracking?: string; costo?: number; notas?: string }
     notas?: string
   }) {
     const res = await this.post<{ envio: EnvioDomicilio }>('v1/envios', data)
@@ -60,6 +67,11 @@ class EnviosAPI extends APIBase {
 
   async update(id: string, data: Partial<EnvioDomicilio>) {
     const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}`, data)
+    return res.data
+  }
+
+  async marcarPago(id: string, trayecto: 'trayectoUsa' | 'trayectoLocal', pagado: boolean, comprobanteUrl?: string) {
+    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/pago`, { trayecto, pagado, comprobanteUrl })
     return res.data
   }
 
@@ -76,6 +88,11 @@ class EnviosAPI extends APIBase {
 
   async buscarPaquetes(q: string) {
     const res = await this.get<{ paquetes: PaqueteSimple[] }>(`v1/envios/buscar-paquetes?q=${encodeURIComponent(q)}`)
+    return res.data
+  }
+
+  async buscarClientes(q: string): Promise<{ clientes: { clientName: string; clientEmail?: string; clientPhone?: string; lastOrderDate: string }[] }> {
+    const res = await this.get<{ clientes: { clientName: string; clientEmail?: string; clientPhone?: string; lastOrderDate: string }[] }>(`v1/envios/buscar-clientes?q=${encodeURIComponent(q)}`)
     return res.data
   }
 }
