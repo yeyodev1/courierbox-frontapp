@@ -7,9 +7,13 @@ class APIBase {
 
   constructor() {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1'
     const detected = origin.includes('testing-storybrand-frontend.bakano.ec')
       ? 'https://testing-storybrand-backapp.bakano.ec/api'
-      : ''
+      : isLocalhost
+        ? 'http://localhost:8101/api'
+        : ''
     const raw = detected || (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
     const trimmed = raw.replace(/\/+$/, '')
     this.baseUrl = trimmed.endsWith('/api') || /\/api\//.test(trimmed)

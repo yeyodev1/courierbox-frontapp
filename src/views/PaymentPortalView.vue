@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { courierBridgeApi } from '@/services/courierbridge.api'
 import { useToastStore } from '@/stores/toast.store'
+import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 
 const toastStore = useToastStore()
 const casillero = ref('')
@@ -42,14 +43,6 @@ async function buscarDeudas() {
   } finally {
     loading.value = false
     searched.value = true
-  }
-}
-
-function onFileChange(e: Event) {
-  const target = e.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    comprobante.value = file
   }
 }
 
@@ -206,15 +199,12 @@ function formatMoney(n: number) {
             </div>
 
             <div class="form-group">
-              <label>Comprobante de Pago (foto o PDF) *</label>
-              <input
-                type="file"
+              <AppFileUpload
+                v-model="comprobante"
+                label="Comprobante de Pago *"
                 accept="image/*,.pdf"
-                @change="onFileChange"
-                required
-                class="file-input"
+                hint="Sube una foto o PDF nítido. Lo almacenamos de forma segura con Cloudinary."
               />
-              <p class="file-hint" v-if="comprobante">Archivo: {{ comprobante.name }}</p>
             </div>
 
             <button type="submit" :disabled="submitting || !referenciaPago.trim() || !comprobante" class="submit-btn">

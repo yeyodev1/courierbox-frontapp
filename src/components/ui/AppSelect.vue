@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 
 export type SelectOption = string | { value: string; label: string };
 
@@ -23,7 +23,9 @@ const emit = defineEmits<{
 }>();
 
 const isOpen = ref(false);
+const selectionInFlight = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
+const triggerRef = ref<HTMLButtonElement | null>(null);
 const fieldId = computed(() => props.id ?? `select-${Math.random().toString(36).slice(2, 9)}`);
 
 const normalizedOptions = computed(() =>
@@ -44,8 +46,14 @@ function toggle() {
 }
 
 function select(value: string) {
+  if (selectionInFlight.value) return;
+  selectionInFlight.value = true;
   emit("update:modelValue", value);
   isOpen.value = false;
+  nextTick(() => triggerRef.value?.blur());
+  setTimeout(() => {
+    selectionInFlight.value = false;
+  }, 0);
 }
 
 function close() {
@@ -93,6 +101,7 @@ watch(
     <label v-if="label" :for="fieldId" class="app-select__label">{{ label }}</label>
     <button
       type="button"
+      ref="triggerRef"
       :id="fieldId"
       class="app-select__trigger"
       :disabled="disabled"
@@ -116,6 +125,7 @@ watch(
           :class="['app-select__option', { 'is-selected': opt.value === modelValue }]"
           role="option"
           :aria-selected="opt.value === modelValue"
+          @pointerdown.stop.prevent="select(opt.value)"
           @click.stop="select(opt.value)"
         >
           {{ opt.label }}
@@ -216,6 +226,10 @@ watch(
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
     max-height: 240px;
     overflow-y: auto;
+
+    @media (max-width: 640px) {
+      max-height: 180px;
+    }
   }
 
   &__option {

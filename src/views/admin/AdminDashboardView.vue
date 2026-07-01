@@ -49,33 +49,33 @@ onMounted(async () => {
 
 <template>
   <div class="page-content">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon purple"><i class="fa-solid fa-link" /></div>
+    <div class="stats-grid" role="list">
+      <div class="stat-card" role="listitem" aria-label="Links de pago totales">
+        <div class="stat-icon purple"><i class="fa-solid fa-link" aria-hidden="true" /></div>
         <div class="stat-info">
           <span class="stat-value">{{ resumen.totalPayments }}</span>
           <span class="stat-label">Links de Pago</span>
         </div>
         <div class="stat-trend up">
-          <i class="fa-solid fa-arrow-up" /> {{ resumen.recentPayments }} esta semana
+          <i class="fa-solid fa-arrow-up" aria-hidden="true" /> {{ resumen.recentPayments }} esta semana
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon orange"><i class="fa-solid fa-clock" /></div>
+      <div class="stat-card" role="listitem" aria-label="Pagos pendientes">
+        <div class="stat-icon orange"><i class="fa-solid fa-clock" aria-hidden="true" /></div>
         <div class="stat-info">
           <span class="stat-value">{{ resumen.pendingPayments }}</span>
           <span class="stat-label">Pendientes</span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon green"><i class="fa-solid fa-users" /></div>
+      <div class="stat-card" role="listitem" aria-label="Usuarios registrados">
+        <div class="stat-icon green"><i class="fa-solid fa-users" aria-hidden="true" /></div>
         <div class="stat-info">
           <span class="stat-value">{{ resumen.totalUsers }}</span>
           <span class="stat-label">Usuarios Registrados</span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon blue"><i class="fa-solid fa-box" /></div>
+      <div class="stat-card" role="listitem" aria-label="Paquetes pendientes">
+        <div class="stat-icon blue"><i class="fa-solid fa-box" aria-hidden="true" /></div>
         <div class="stat-info">
           <span class="stat-value">{{ resumen.totalPaquetesPendientes }}</span>
           <span class="stat-label">Paquetes Pendientes</span>
@@ -84,25 +84,25 @@ onMounted(async () => {
     </div>
 
     <div class="quick-grid">
-      <section class="content-card full">
+      <section class="content-card full" aria-label="Acceso rápido">
         <div class="card-head">
-          <h3><i class="fa-solid fa-bolt" /> Acceso Rápido</h3>
+          <h3><i class="fa-solid fa-bolt" aria-hidden="true" /> Acceso Rápido</h3>
         </div>
         <div class="quick-actions">
-          <button class="qa-btn" @click="router.push('/admin/payments')">
-            <div class="qa-icon"><i class="fa-solid fa-plus" /></div>
+          <button class="qa-btn" @click="router.push('/admin/payments')" aria-label="Ir a Links de Pago">
+            <span class="qa-icon"><i class="fa-solid fa-plus" aria-hidden="true" /></span>
             <span>Nuevo Link de Pago</span>
           </button>
-          <button class="qa-btn" @click="router.push('/admin/users')">
-            <div class="qa-icon"><i class="fa-solid fa-user-plus" /></div>
+          <button class="qa-btn" @click="router.push('/admin/users')" aria-label="Ir a Usuarios">
+            <span class="qa-icon"><i class="fa-solid fa-user-plus" aria-hidden="true" /></span>
             <span>Registrar Usuario</span>
           </button>
-          <button class="qa-btn" @click="router.push('/admin/conciliacion')">
-            <div class="qa-icon"><i class="fa-solid fa-file-invoice" /></div>
+          <button class="qa-btn" @click="router.push('/admin/conciliacion')" aria-label="Ir a Conciliación Bancaria">
+            <span class="qa-icon"><i class="fa-solid fa-file-invoice" aria-hidden="true" /></span>
             <span>Conciliación Bancaria</span>
           </button>
-          <button class="qa-btn" @click="router.push('/admin/metrics')">
-            <div class="qa-icon"><i class="fa-solid fa-chart-line" /></div>
+          <button class="qa-btn" @click="router.push('/admin/metrics')" aria-label="Ir a Métricas GHL">
+            <span class="qa-icon"><i class="fa-solid fa-chart-line" aria-hidden="true" /></span>
             <span>Métricas GHL</span>
           </button>
         </div>
@@ -221,6 +221,11 @@ onMounted(async () => {
     font-size: 0.85rem;
     font-weight: 500;
     font-family: inherit;
+
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: 2px;
+    }
 
     .qa-icon {
       width: 44px; height: 44px;

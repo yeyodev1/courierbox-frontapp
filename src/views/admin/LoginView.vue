@@ -19,7 +19,9 @@ const handleLogin = async () => {
     const res = await adminApi.login(email.value, password.value);
     authStore.setToken(res.token);
     const role = res.user?.role;
-    router.push({ name: role === 'asesor' ? 'AsesorDashboard' : 'AdminDashboard' });
+    if (role === 'asesor') router.push({ name: 'AsesorDashboard' });
+    else if (role === 'superadmin') router.push({ name: 'SuperadminDashboard' });
+    else router.push({ name: 'AdminDashboard' });
   } catch (err: any) {
     error.value = err.message || 'Error al iniciar sesión';
   } finally {

@@ -22,6 +22,8 @@
   --radius-md: #{$radius-md};
   --radius-lg: #{$radius-lg};
   --radius-pill: #{$radius-pill};
+  --modal-gutter: clamp(0.75rem, 2vw, 1.5rem);
+  --modal-max-height: calc(100svh - (var(--modal-gutter) * 2));
 }
 
 body {
@@ -62,6 +64,50 @@ body {
 .section {
   padding-block: clamp(4rem, 10vw, 9rem);
   position: relative;
+}
+
+// Global modal sizing: keep the card inside the viewport and scroll content internally.
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--modal-gutter);
+  background: rgba($ink-1000, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  overflow: auto;
+  overscroll-behavior: contain;
+
+  @media (max-width: 640px) {
+    align-items: flex-start;
+    padding: 0.5rem;
+  }
+}
+
+.modal-card {
+  width: min(100%, 720px);
+  max-height: var(--modal-max-height) !important;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-card.wide {
+  width: min(100%, 960px);
+}
+
+.modal-card.confirm-card {
+  width: min(100%, 420px);
+}
+
+.modal-card.wizard,
+.modal-card.provider-modal,
+.modal-card.type-modal {
+  width: min(100%, 860px);
 }
 
 // Lenis smooth-scroll classes

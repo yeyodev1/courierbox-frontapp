@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { asesoriaApi, type PurchaseOrder } from '@/services/asesoria.api'
+import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -152,13 +153,6 @@ async function submitTransfer() {
   }
 }
 
-function onFileChange(e: Event) {
-    const target = e.target as HTMLInputElement
-    if (target.files?.length) {
-      transferFile.value = target.files[0] as File
-    }
-  }
-
 async function searchAsesores() {
   if (!shareTargetEmail.value.trim()) return
   searchingAsesores.value = true
@@ -297,10 +291,12 @@ onMounted(loadOrder)
             </p>
           </div>
           <div v-else class="transfer-form">
-            <label class="field">
-              <span class="field-label">Imagen del comprobante</span>
-              <input type="file" accept="image/*" class="field-input file" @change="onFileChange" />
-            </label>
+            <AppFileUpload
+              v-model="transferFile"
+              label="Imagen del comprobante"
+              accept="image/*"
+              hint="Adjunta una foto clara del comprobante para verificar la transferencia."
+            />
             <div class="field-row">
               <label class="field">
                 <span class="field-label">Referencia</span>

@@ -27,7 +27,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <AppPreloader v-if="!$route.path.startsWith('/admin') && !$route.path.startsWith('/login')" />
+  <AppPreloader v-if="!$route.path.startsWith('/admin') && !$route.path.startsWith('/superadmin') && !$route.path.startsWith('/login')" />
   <div class="app">
     <SiteNav v-if="!$route.meta.hideNavigation" />
     <RouterView v-slot="{ Component, route }">

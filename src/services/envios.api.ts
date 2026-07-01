@@ -13,6 +13,7 @@ export interface TrayectoPago {
 
 export interface EnvioDomicilio {
   _id: string
+  modo: 'local' | 'interprovincial'
   paqueteId: {
     _id: string
     wr: string
@@ -23,12 +24,22 @@ export interface EnvioDomicilio {
   clienteNombre: string
   clienteDireccion: string
   clienteTelefono: string
+  numeroInvoice: string
+  ciudadDestino: string
+  proveedorUtilizado: string
+  valorCobrado: number
+  valorPagadoProveedor: number
+  guiaUrl: string
+  fotoEntregaUrl: string
+  firmaUrl: string
+  novedad: string
   trayectoUsa: TrayectoPago
   trayectoLocal: TrayectoPago
   estado: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'fallido'
   evidenciaUrl: string
   notas: string
   creadoPor: { _id: string; name: string; email: string }
+  entregadoEn?: string
   createdAt: string
   updatedAt: string
 }
@@ -54,9 +65,15 @@ class EnviosAPI extends APIBase {
 
   async create(data: {
     paqueteId: string
+    modo?: 'local' | 'interprovincial'
     clienteNombre: string
     clienteDireccion: string
     clienteTelefono?: string
+    numeroInvoice?: string
+    ciudadDestino?: string
+    proveedorUtilizado?: string
+    valorCobrado?: number
+    valorPagadoProveedor?: number
     trayectoUsa?: { proveedorId?: string; proveedorNombre?: string; tracking?: string; costo?: number; notas?: string }
     trayectoLocal?: { proveedorId?: string; proveedorNombre?: string; tracking?: string; costo?: number; notas?: string }
     notas?: string
@@ -75,15 +92,16 @@ class EnviosAPI extends APIBase {
     return res.data
   }
 
+  async uploadArchivo(id: string, tipo: 'foto' | 'firma' | 'guia', file: File) {
+    const form = new FormData()
+    form.append('tipo', tipo)
+    form.append('file', file)
+    const res = await this.post<{ envio: EnvioDomicilio; upload: { url: string; publicId: string } }>(`v1/envios/${id}/upload`, form)
+    return res.data
+  }
+
   async remove(id: string) {
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token')
-    const raw = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
-    const baseUrl = raw.replace(/\/+$/, '')
-    const url = (baseUrl.endsWith('/api') || /\/api\//.test(baseUrl) ? baseUrl : `${baseUrl}/api`)
-    await fetch(`${url}/v1/envios/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await this.delete(`v1/envios/${id}`)
   }
 
   async buscarPaquetes(q: string) {

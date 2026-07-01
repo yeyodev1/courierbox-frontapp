@@ -36,6 +36,8 @@ export const useAuthStore = defineStore("auth", () => {
   const userRole = computed(() => (currentUser.value?.role as string | undefined) || null);
   const isAdmin = computed(() => userRole.value === "admin");
   const isAsesor = computed(() => userRole.value === "asesor");
+  const isGerencia = computed(() => userRole.value === "gerencia");
+  const isSuperadmin = computed(() => userRole.value === "superadmin");
 
   return {
     token,
@@ -46,5 +48,7 @@ export const useAuthStore = defineStore("auth", () => {
     userRole,
     isAdmin,
     isAsesor,
+    isGerencia,
+    isSuperadmin,
   };
 });

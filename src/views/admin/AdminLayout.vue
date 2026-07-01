@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,46 +11,70 @@ const authStore = useAuthStore()
 const sidebarExpanded = ref(true)
 const sidebarMobileOpen = ref(false)
 const showLogoutConfirm = ref(false)
+const currentRole = computed(() => authStore.userRole || 'admin')
+const basePath = computed(() => (currentRole.value === 'superadmin' ? '/superadmin' : '/admin'))
 
-const menuGroups = [
-  {
-    label: 'Navegación',
-    items: [
-      { path: '/admin', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (p: string) => p === '/admin' },
-      { path: '/admin/payments', label: 'Links de Pago', icon: 'fa-solid fa-link', match: (p: string) => p.startsWith('/admin/payments') },
-      { path: '/admin/users', label: 'Usuarios', icon: 'fa-solid fa-users', match: (p: string) => p.startsWith('/admin/users') },
-      { path: '/admin/tracking', label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (p: string) => p.startsWith('/admin/tracking') },
-    ],
-  },
-  {
-    label: 'Operaciones',
-    items: [
-      { path: '/admin/purchase-orders', label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (p: string) => p.startsWith('/admin/purchase-orders') },
-      { path: '/admin/envios', label: 'Envíos a Domicilio', icon: 'fa-solid fa-truck', match: (p: string) => p.startsWith('/admin/envios') },
-      { path: '/admin/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: (p: string) => p.startsWith('/admin/contactos') },
-      { path: '/admin/tracking', label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (p: string) => p.startsWith('/admin/tracking') },
-    ],
-  },
-  {
-    label: 'Asesores',
-    items: [
-      { path: '/admin/fee-config', label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/admin/fee-config') },
-    ],
-  },
-  {
-    label: 'Financiero',
-    items: [
-      { path: '/admin/costos', label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (p: string) => p.startsWith('/admin/costos') },
-      { path: '/admin/conciliacion', label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: (p: string) => p.startsWith('/admin/conciliacion') },
-    ],
-  },
-  {
-    label: 'Módulos',
-    items: [
-      { path: '/admin/metrics', label: 'Métricas GHL', icon: 'fa-solid fa-chart-line', match: (p: string) => p.startsWith('/admin/metrics') },
-    ],
-  },
-]
+function p(path: string) {
+  return `${basePath.value}${path}`
+}
+
+const menuGroups = computed(() => {
+  if (currentRole.value === 'superadmin') {
+    return [
+      {
+        label: 'Privado',
+        items: [
+          { path: p(''), label: 'Dashboard Ejecutivo', icon: 'fa-solid fa-chart-line', match: (routePath: string) => routePath.startsWith('/superadmin') },
+          { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith('/superadmin/reportes') },
+          { path: p('/produccion'), label: 'Producción Diaria', icon: 'fa-solid fa-clipboard-list', match: (routePath: string) => routePath.startsWith('/superadmin/produccion') },
+          { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: (routePath: string) => routePath.startsWith('/superadmin/caja') },
+        ],
+      },
+    ]
+  }
+
+  return [
+    {
+      label: 'Navegación',
+      items: [
+        { path: p(''), label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (routePath: string) => routePath === basePath.value },
+        { path: p('/payments'), label: 'Links de Pago', icon: 'fa-solid fa-link', match: (routePath: string) => routePath.startsWith(`${basePath.value}/payments`) },
+        { path: p('/users'), label: 'Usuarios', icon: 'fa-solid fa-users', match: (routePath: string) => routePath.startsWith(`${basePath.value}/users`) },
+        { path: p('/tracking'), label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (routePath: string) => routePath.startsWith(`${basePath.value}/tracking`) },
+      ],
+    },
+    {
+      label: 'Operaciones',
+      items: [
+        { path: p('/purchase-orders'), label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (routePath: string) => routePath.startsWith(`${basePath.value}/purchase-orders`) },
+        { path: p('/envios'), label: 'Envíos', icon: 'fa-solid fa-truck', match: (routePath: string) => routePath.startsWith(`${basePath.value}/envios`) },
+        { path: p('/contactos'), label: 'Contactos', icon: 'fa-solid fa-address-book', match: (routePath: string) => routePath.startsWith(`${basePath.value}/contactos`) },
+      ],
+    },
+        {
+          label: 'Finanzas',
+          items: [
+            { path: p('/costos'), label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (routePath: string) => routePath.startsWith(`${basePath.value}/costos`) },
+            { path: p('/proveedores'), label: 'Proveedores', icon: 'fa-solid fa-truck-fast', match: (routePath: string) => routePath.startsWith(`${basePath.value}/proveedores`) },
+            { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: (routePath: string) => routePath.startsWith(`${basePath.value}/caja`) },
+            { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith(`${basePath.value}/reportes`) },
+          ],
+        },
+    {
+      label: 'Producción',
+      items: [
+        { path: p('/produccion'), label: 'Producción Diaria', icon: 'fa-solid fa-clipboard-list', match: (routePath: string) => routePath.startsWith(`${basePath.value}/produccion`) },
+        { path: p('/conciliacion'), label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: (routePath: string) => routePath.startsWith(`${basePath.value}/conciliacion`) },
+      ],
+    },
+    {
+      label: 'Asesores',
+      items: [
+        { path: p('/fee-config'), label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (routePath: string) => routePath.startsWith(`${basePath.value}/fee-config`) },
+      ],
+    },
+  ]
+})
 
 const currentPath = computed(() => route.path)
 
@@ -59,20 +84,29 @@ const userDisplayName = computed(() => {
 })
 const userEmail = computed(() => authStore.currentUser?.email || '')
 const userInitial = computed(() => userDisplayName.value.charAt(0).toUpperCase())
+const roleLabel = computed(() => (currentRole.value === 'superadmin' ? 'Private Suite' : currentRole.value === 'gerencia' ? 'Gerencia' : 'Admin Panel'))
 
 const pageMeta = computed(() => {
   const map: Record<string, { title: string; sub: string }> = {
     '/admin': { title: 'Dashboard', sub: 'Resumen general del sistema' },
+    '/superadmin': { title: 'Dashboard Ejecutivo', sub: 'Control privado y visión ejecutiva' },
     '/admin/payments': { title: 'Links de Pago', sub: 'Genera y administra links de pago' },
     '/admin/users': { title: 'Usuarios', sub: 'Administra los miembros del equipo' },
     '/admin/tracking': { title: 'Tracking Interno', sub: 'Consulta el estado de los envíos' },
     '/admin/fee-config': { title: 'Configuración de tarifas', sub: 'Define el fee de gestión para asesores' },
     '/admin/purchase-orders': { title: 'Pendientes de Compra', sub: 'Revisa y gestiona las órdenes pendientes de comprar' },
     '/admin/costos': { title: 'Costos y Gastos', sub: 'Registra costos operacionales, logísticos y de envío' },
+    '/admin/proveedores': { title: 'Proveedores', sub: 'Crea y administra los proveedores conectados a costos y envíos' },
     '/admin/envios': { title: 'Envíos a Domicilio', sub: 'Gestiona los envíos de última milla' },
+    '/admin/caja': { title: 'Caja', sub: 'Movimientos de ingreso y egreso' },
+    '/admin/produccion': { title: 'Producción Diaria', sub: 'Registro diario de producción y CRM' },
+    '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
     '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
     '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
     '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
+    '/superadmin/reportes': { title: 'Estado de Resultados', sub: 'Visión ejecutiva privada' },
+    '/superadmin/produccion': { title: 'Producción Diaria', sub: 'Control privado de producción' },
+    '/superadmin/caja': { title: 'Caja', sub: 'Seguimiento financiero privado' },
   }
   return map[route.path] || { title: 'Admin', sub: '' }
 })
@@ -81,64 +115,74 @@ function navigate(path: string) {
   router.push(path)
   sidebarMobileOpen.value = false
 }
+
+function handleLogoutKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') showLogoutConfirm.value = false
+}
 </script>
 
 <template>
   <div class="admin-shell" :class="{ 'sidebar-collapsed': !sidebarExpanded }">
     <!-- Mobile overlay -->
     <transition name="fade">
-      <div v-if="sidebarMobileOpen" class="mobile-overlay" @click="sidebarMobileOpen = false" />
+      <div
+        v-if="sidebarMobileOpen"
+        class="mobile-overlay"
+        aria-hidden="true"
+        @click="sidebarMobileOpen = false"
+      />
     </transition>
 
     <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }">
+    <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }" aria-label="Barra de navegación">
       <div class="sidebar-brand">
         <div class="brand-icon">
           <span class="logo-mark">C</span>
         </div>
         <div class="brand-text" v-show="sidebarExpanded">
           <span class="brand-name">Courier Box</span>
-          <span class="brand-role">Admin Panel</span>
+          <span class="brand-role">{{ roleLabel }}</span>
         </div>
         <button
           class="collapse-btn"
+          :aria-label="sidebarExpanded ? 'Colapsar sidebar' : 'Expandir sidebar'"
           @click="sidebarExpanded = !sidebarExpanded"
-          :title="sidebarExpanded ? 'Colapsar' : 'Expandir'"
         >
-          <i class="fa-solid fa-chevron-left" :class="{ rotated: !sidebarExpanded }" />
+          <i class="fa-solid fa-chevron-left" aria-hidden="true" :class="{ rotated: !sidebarExpanded }" />
         </button>
       </div>
 
-      <nav class="sidebar-nav">
-        <template v-for="group in menuGroups" :key="group.label">
+      <nav class="sidebar-nav" aria-label="Secciones de administración" data-lenis-prevent data-lenis-prevent-wheel data-lenis-prevent-touch>
+        <template v-for="(group, gi) in menuGroups" :key="group.label">
           <span class="nav-section-label" v-show="sidebarExpanded">{{ group.label }}</span>
           <button
             v-for="item in group.items"
             :key="item.path"
             class="nav-item"
             :class="{ active: item.match(currentPath) }"
+            :aria-current="item.match(currentPath) ? 'page' : undefined"
             @click="navigate(item.path)"
             :title="!sidebarExpanded ? item.label : ''"
           >
-            <div class="nav-icon-wrapper">
-              <i :class="item.icon" />
-            </div>
+            <span class="nav-icon-wrapper">
+              <i :class="item.icon" aria-hidden="true" />
+            </span>
             <span class="nav-label" v-show="sidebarExpanded">{{ item.label }}</span>
           </button>
-          <div class="nav-divider" v-show="sidebarExpanded" v-if="group !== menuGroups[menuGroups.length - 1]" />
+          <div v-if="gi < menuGroups.length - 1" class="nav-divider" v-show="sidebarExpanded" />
         </template>
       </nav>
 
       <div class="sidebar-footer">
         <div class="sidebar-user">
-          <div class="user-avatar-mini">{{ userInitial }}</div>
+          <span class="user-avatar-mini">{{ userInitial }}</span>
           <div class="user-info-text" v-show="sidebarExpanded">
             <span class="user-name">{{ userDisplayName }}</span>
             <span class="user-email">{{ userEmail }}</span>
           </div>
         </div>
-        <button class="logout-icon-btn" @click="showLogoutConfirm = true" title="Cerrar sesión">
-          <i class="fa-solid fa-right-from-bracket" />
+        <button class="logout-icon-btn" aria-label="Cerrar sesión" @click="showLogoutConfirm = true">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true" />
         </button>
       </div>
     </aside>
@@ -147,22 +191,30 @@ function navigate(path: string) {
     <div class="main-area">
       <header class="top-bar">
         <div class="top-bar-left">
-          <button class="hamburger" @click="sidebarMobileOpen = true">
-            <i class="fa-solid fa-bars" />
+          <button class="hamburger" aria-label="Abrir menú de navegación" @click="sidebarMobileOpen = true">
+            <i class="fa-solid fa-bars" aria-hidden="true" />
           </button>
           <div class="page-title-group">
-            <h2 class="page-title">{{ pageMeta.title }}</h2>
+            <h1 class="page-title">{{ pageMeta.title }}</h1>
             <p class="page-subtitle">{{ pageMeta.sub }}</p>
           </div>
         </div>
         <div class="top-bar-right">
-          <div class="user-avatar" @click="showLogoutConfirm = true" :title="userDisplayName">
+          <span
+            class="user-avatar"
+            :title="userDisplayName"
+            tabindex="0"
+            role="button"
+            aria-label="Abrir opciones de usuario"
+            @click="showLogoutConfirm = true"
+            @keydown.enter="showLogoutConfirm = true"
+          >
             {{ userInitial }}
-          </div>
+          </span>
         </div>
       </header>
 
-      <main class="main-content">
+      <main class="main-content" id="admin-main-content">
         <router-view v-slot="{ Component }">
           <transition name="fade-slide" mode="out-in">
             <component :is="Component" />
@@ -173,14 +225,24 @@ function navigate(path: string) {
 
     <!-- ===== LOGOUT MODAL ===== -->
     <transition name="fade">
-      <div v-if="showLogoutConfirm" class="modal-overlay" @click.self="showLogoutConfirm = false">
+      <div
+        v-if="showLogoutConfirm"
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-modal-title"
+        @click.self="showLogoutConfirm = false"
+        @keydown.escape="handleLogoutKeydown"
+      >
         <div class="modal-card">
-          <div class="modal-icon-box warn"><i class="fa-solid fa-right-from-bracket" /></div>
-          <h3>Cerrar Sesión</h3>
+          <div class="modal-icon-box warn">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true" />
+          </div>
+          <h3 id="logout-modal-title" class="modal-title">Cerrar Sesión</h3>
           <p>¿Estás seguro de que deseas cerrar sesión?</p>
           <div class="modal-actions">
-            <button class="btn-ghost" @click="showLogoutConfirm = false">Cancelar</button>
-            <button class="btn-danger" @click="authStore.logout()">Sí, cerrar</button>
+            <AppButton variant="outline" @click="showLogoutConfirm = false">Cancelar</AppButton>
+            <AppButton variant="primary" @click="authStore.logout()">Sí, cerrar sesión</AppButton>
           </div>
         </div>
       </div>
@@ -197,6 +259,7 @@ function navigate(path: string) {
   min-height: 100vh;
   background: $ink-1000;
   color: $fg-dark;
+  overflow-x: hidden;
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────
@@ -315,6 +378,11 @@ function navigate(path: string) {
       color: $fg-dark;
     }
 
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: 2px;
+    }
+
     i {
       transition: transform 0.3s ease;
       &.rotated {
@@ -335,7 +403,34 @@ function navigate(path: string) {
   flex-direction: column;
   gap: 2px;
   padding: $space-4 $space-3;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  pointer-events: auto;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($ink-500, 0.28);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba($ink-400, 0.38);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 
   .nav-section-label {
     font-size: 0.65rem;
@@ -367,6 +462,11 @@ function navigate(path: string) {
     text-align: left;
     position: relative;
     font-family: inherit;
+
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: -2px;
+    }
 
     .nav-icon-wrapper {
       width: 36px;
@@ -489,6 +589,11 @@ function navigate(path: string) {
     transition: all 0.2s;
     flex-shrink: 0;
 
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: 2px;
+    }
+
     &:hover {
       background: rgba($signal-red, 0.1);
       color: #ff8a8f;
@@ -505,6 +610,7 @@ function navigate(path: string) {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 
   .sidebar-collapsed & {
     margin-left: 72px;
@@ -551,6 +657,11 @@ function navigate(path: string) {
         color: $fg-dark;
         cursor: pointer;
         font-size: 1rem;
+
+        &:focus-visible {
+          outline: 2px solid $brand-orange;
+          outline-offset: 2px;
+        }
       }
     }
 
@@ -583,6 +694,11 @@ function navigate(path: string) {
       font-weight: 700;
       font-size: 0.85rem;
       cursor: pointer;
+
+      &:focus-visible {
+        outline: 2px solid $brand-orange;
+        outline-offset: 2px;
+      }
     }
   }
 }
@@ -592,6 +708,8 @@ function navigate(path: string) {
   flex: 1;
   padding: $space-8;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
 
   @media (max-width: 768px) {
     padding: $space-4;
@@ -618,7 +736,6 @@ function navigate(path: string) {
   padding: $space-8;
   max-width: 420px;
   width: 100%;
-  text-align: center;
 
   .modal-icon-box {
     width: 48px;
@@ -627,15 +744,16 @@ function navigate(path: string) {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto $space-4;
+    margin: 0 0 $space-4;
     font-size: 1.2rem;
 
     &.warn { background: rgba($signal-amber, 0.12); color: $signal-amber; }
   }
 
-  h3 {
+  .modal-title {
     font-size: 1.15rem;
     margin: 0 0 $space-2;
+    text-align: left;
   }
 
   p {
@@ -645,46 +763,13 @@ function navigate(path: string) {
   }
 
   .modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    justify-content: flex-end;
     gap: $space-3;
 
     @media (max-width: 640px) {
-      grid-template-columns: 1fr;
+      flex-direction: column;
     }
-  }
-}
-
-.btn-ghost {
-  padding: 0.75rem 1.5rem;
-  background: transparent;
-  border: 1px solid rgba($ink-500, 0.3);
-  border-radius: 10px;
-  color: $ink-300;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-
-  &:hover {
-    background: rgba($ink-500, 0.15);
-    color: $fg-dark;
-  }
-}
-
-.btn-danger {
-  padding: 0.75rem 1.5rem;
-  background: $signal-red;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: darken($signal-red, 8%);
   }
 }
 

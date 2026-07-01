@@ -21,7 +21,7 @@ pnpm build && pnpm preview
 ## Variables
 | Variable | Default | Descripción |
 |----------|---------|-------------|
-| `VITE_API_BASE_URL` | `http://localhost:8100/api` | Endpoint del API Node |
+| `VITE_API_BASE_URL` | `http://localhost:8101/api` | Endpoint del API Node |
 
 ## Estructura
 ```

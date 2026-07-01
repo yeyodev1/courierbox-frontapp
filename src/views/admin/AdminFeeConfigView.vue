@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { asesoriaApi } from '@/services/asesoria.api'
 import AppSelect from '@/components/ui/AppSelect.vue'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { FeeConfig, FeeRuleType, FeeTier } from '@/services/asesoria.api'
 
 const configs = ref<FeeConfig[]>([])
@@ -12,6 +13,8 @@ const success = ref('')
 
 const showWizard = ref(false)
 const wizardStep = ref(1)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref('')
 const wizard = ref({
   name: 'Tarifa por defecto',
   ruleType: 'fixed_plus_percentage' as FeeRuleType,
@@ -93,12 +96,20 @@ async function setDefault(id: string) {
 }
 
 async function deleteConfig(id: string) {
-  if (!confirm('¿Eliminar esta tarifa?')) return
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDeleteConfig() {
+  if (!deleteTargetId.value) return
   try {
-    await asesoriaApi.deleteFeeConfig(id)
+    await asesoriaApi.deleteFeeConfig(deleteTargetId.value)
     await loadConfigs()
   } catch (e: any) {
     error.value = e.message || 'Error al eliminar'
+  } finally {
+    showDeleteConfirm.value = false
+    deleteTargetId.value = ''
   }
 }
 
@@ -279,6 +290,16 @@ onMounted(loadConfigs)
       </div>
     </div>
   </transition>
+
+  <AppConfirmModal
+    :open="showDeleteConfirm"
+    title="Eliminar tarifa"
+    message="¿Eliminar esta tarifa? Esta acción no se puede deshacer."
+    confirm-label="Eliminar"
+    variant="danger"
+    @cancel="showDeleteConfirm = false; deleteTargetId = ''"
+    @confirm="confirmDeleteConfig"
+  />
 </div>
 </template>
 

@@ -9,9 +9,12 @@ const router = useRouter()
 const orders = ref<PurchaseOrder[]>([])
 const loading = ref(false)
 const error = ref('')
+const viewMode = ref<'board' | 'table'>('board')
 const activeTab = ref('pendientes')
 const statusFilter = ref('')
 const paymentFilter = ref('')
+const draggingOrderId = ref<string | null>(null)
+const draggingStatus = ref<string | null>(null)
 
 const showComprarModal = ref(false)
 const comprarOrder = ref<PurchaseOrder | null>(null)
@@ -50,6 +53,16 @@ const paymentOptions = [
   { value: 'rechazado', label: 'Rechazado' },
 ]
 
+const boardStatuses = [
+  { key: 'borrador', label: 'Borrador', accent: 'neutral' },
+  { key: 'pendiente', label: 'Pendiente', accent: 'orange' },
+  { key: 'en_proceso', label: 'En proceso', accent: 'blue' },
+  { key: 'comprado', label: 'Comprado', accent: 'green' },
+  { key: 'en_envio', label: 'En envío', accent: 'purple' },
+  { key: 'entregado', label: 'Entregado', accent: 'green' },
+  { key: 'cancelado', label: 'Cancelado', accent: 'red' },
+]
+
 const pendientesCount = computed(() => {
   return orders.value.filter((o) => o.status === 'pendiente').length
 })
@@ -62,6 +75,19 @@ const filteredOrders = computed(() => {
     if (paymentFilter.value && o.paymentStatus !== paymentFilter.value) return false
     return true
   })
+})
+
+const boardColumns = computed(() => {
+  const result: Record<string, PurchaseOrder[]> = {}
+  for (const col of boardStatuses) result[col.key] = []
+  for (const order of orders.value) {
+    if (statusFilter.value && order.status !== statusFilter.value) continue
+    if (paymentFilter.value && order.paymentStatus !== paymentFilter.value) continue
+    const bucket = result[order.status]
+    if (!bucket) continue
+    bucket.push(order)
+  }
+  return result
 })
 
 async function loadOrders() {
@@ -93,6 +119,28 @@ async function updatePayment(order: PurchaseOrder, paymentStatus: string) {
   } catch (e: any) {
     error.value = e.message || 'Error al actualizar pago'
   }
+}
+
+function onDragStart(order: PurchaseOrder) {
+  draggingOrderId.value = order._id
+  draggingStatus.value = order.status
+}
+
+function onDragEnd() {
+  draggingOrderId.value = null
+  draggingStatus.value = null
+}
+
+async function dropOnStatus(status: string) {
+  if (!draggingOrderId.value || draggingStatus.value === status) return
+  const order = orders.value.find((o) => o._id === draggingOrderId.value)
+  if (!order) return
+  await updateStatus(order, status)
+  onDragEnd()
+}
+
+function allowDrop(event: DragEvent) {
+  event.preventDefault()
 }
 
 function openComprar(order: PurchaseOrder) {
@@ -211,6 +259,15 @@ onMounted(loadOrders)
       </div>
     </div>
 
+    <div class="view-toggle">
+      <button class="toggle-btn" :class="{ active: viewMode === 'board' }" @click="viewMode = 'board'">
+        <i class="fa-solid fa-table-columns" /> Tablero
+      </button>
+      <button class="toggle-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">
+        <i class="fa-solid fa-table" /> Tabla
+      </button>
+    </div>
+
     <div v-if="loading" class="loading">
       <i class="fa-solid fa-circle-notch fa-spin" /> Cargando...
     </div>
@@ -222,6 +279,52 @@ onMounted(loadOrders)
     <div v-else-if="filteredOrders.length === 0" class="empty">
       <i class="fa-solid fa-cart-shopping" />
       <p>No hay órdenes en esta sección</p>
+    </div>
+
+    <div v-else-if="viewMode === 'board'" class="board-scroll">
+      <div class="board">
+        <section
+          v-for="col in boardStatuses"
+          :key="col.key"
+          class="board-column"
+          :class="[`accent-${col.accent}`]"
+          @dragover="allowDrop"
+          @drop="dropOnStatus(col.key)"
+        >
+          <header class="board-column__header">
+            <div>
+              <h3>{{ col.label }}</h3>
+              <span>{{ boardColumns[col.key]?.length || 0 }} órdenes</span>
+            </div>
+          </header>
+          <div class="board-column__body">
+            <article
+              v-for="order in boardColumns[col.key]"
+              :key="order._id"
+              class="board-card"
+              draggable="true"
+              :class="{ dragging: draggingOrderId === order._id }"
+              @dragstart="onDragStart(order)"
+              @dragend="onDragEnd"
+            >
+              <div class="board-card__top">
+                <strong>{{ order.clientName }}</strong>
+                <span class="mono">#{{ order._id.slice(-6).toUpperCase() }}</span>
+              </div>
+              <p class="board-card__desc">{{ order.description.slice(0, 84) }}{{ order.description.length > 84 ? '...' : '' }}</p>
+              <div class="board-card__meta">
+                <span class="badge" :class="order.paymentStatus === 'pagado' ? 'badge-green' : 'badge-blue'">{{ order.paymentStatus }}</span>
+                <strong>${{ order.totalAmount.toFixed(2) }}</strong>
+              </div>
+              <div class="board-card__actions">
+                <select class="badge-select" :value="order.status" @change="updateStatus(order, ($event.target as HTMLSelectElement).value)">
+                  <option v-for="opt in statusOptions.filter((o) => o.value)" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
     </div>
 
     <div v-else class="table-wrapper">
@@ -449,6 +552,33 @@ onMounted(loadOrders)
   gap: $space-4;
 }
 
+.view-toggle {
+  display: inline-flex;
+  gap: $space-2;
+  padding: $space-1;
+  background: $ink-900;
+  border: 1px solid rgba($ink-500, 0.12);
+  border-radius: 14px;
+  width: fit-content;
+}
+
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border: 0;
+  background: transparent;
+  color: $ink-400;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  &.active {
+    background: rgba($brand-orange, 0.12);
+    color: $brand-orange;
+  }
+}
+
 .filter {
   display: flex;
   align-items: center;
@@ -496,6 +626,72 @@ onMounted(loadOrders)
   border: 1px solid rgba($ink-500, 0.12);
   border-radius: 16px;
 }
+
+.board-scroll {
+  overflow-x: auto;
+  padding-bottom: $space-2;
+}
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(290px, 1fr);
+  gap: $space-4;
+  min-height: 65vh;
+}
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  background: rgba($ink-900, 0.8);
+  border: 1px solid rgba($ink-500, 0.12);
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 100%;
+  &.accent-orange { box-shadow: inset 0 3px 0 rgba($brand-orange, 0.8); }
+  &.accent-blue { box-shadow: inset 0 3px 0 rgba(#64b5f6, 0.8); }
+  &.accent-green { box-shadow: inset 0 3px 0 rgba(#81c784, 0.8); }
+  &.accent-purple { box-shadow: inset 0 3px 0 rgba(#a78bfa, 0.8); }
+  &.accent-red { box-shadow: inset 0 3px 0 rgba(#e5484d, 0.8); }
+  &.accent-neutral { box-shadow: inset 0 3px 0 rgba($ink-400, 0.8); }
+}
+
+.board-column__header {
+  padding: $space-4;
+  border-bottom: 1px solid rgba($ink-500, 0.12);
+  h3 { margin: 0; font-size: 1rem; }
+  span { color: $ink-400; font-size: 0.8rem; }
+}
+
+.board-column__body {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-4;
+  min-height: 280px;
+}
+
+.board-card {
+  background: rgba($ink-800, 0.95);
+  border: 1px solid rgba($ink-500, 0.12);
+  border-radius: 16px;
+  padding: $space-4;
+  cursor: grab;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  &:hover { transform: translateY(-1px); border-color: rgba($brand-orange, 0.2); }
+  &.dragging { opacity: 0.55; transform: scale(0.98); }
+}
+
+.board-card__top, .board-card__meta, .board-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+}
+
+.board-card__top { margin-bottom: $space-2; }
+.board-card__desc { margin: 0 0 $space-3; color: $ink-300; font-size: 0.9rem; line-height: 1.45; }
+.board-card__meta { margin-bottom: $space-3; }
 
 .orders-table {
   width: 100%;

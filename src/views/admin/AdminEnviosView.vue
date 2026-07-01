@@ -24,11 +24,17 @@ const clientSearchResults = ref<{ clientName: string; clientEmail?: string; clie
 const clientSearching = ref(false)
 
 const form = ref({
+  modo: 'local' as 'local' | 'interprovincial',
   paqueteId: '',
   paqueteLabel: '',
   clienteNombre: '',
   clienteDireccion: '',
   clienteTelefono: '',
+  numeroInvoice: '',
+  ciudadDestino: '',
+  proveedorUtilizado: '',
+  valorCobrado: 0,
+  valorPagadoProveedor: 0,
   usaProveedorId: '',
   usaProveedorNombre: '',
   usaTracking: '',
@@ -39,6 +45,17 @@ const form = ref({
   localCosto: 0,
   notas: '',
 })
+
+const fotoEntrega = ref<File | null>(null)
+const firmaEntrega = ref<File | null>(null)
+const guiaArchivo = ref<File | null>(null)
+
+function setFile(event: Event, kind: 'foto' | 'firma' | 'guia') {
+  const file = (event.target as HTMLInputElement | null)?.files?.[0] || null
+  if (kind === 'foto') fotoEntrega.value = file
+  if (kind === 'firma') firmaEntrega.value = file
+  if (kind === 'guia') guiaArchivo.value = file
+}
 
 const proveedoresActivos = computed(() => proveedores.value.filter((p) => p.activo))
 
@@ -86,10 +103,14 @@ function selectPaquete(p: PaqueteSimple) {
 
 function openCreate() {
   form.value = {
-    paqueteId: '', paqueteLabel: '', clienteNombre: '', clienteDireccion: '', clienteTelefono: '',
+    modo: 'local', paqueteId: '', paqueteLabel: '', clienteNombre: '', clienteDireccion: '', clienteTelefono: '',
+    numeroInvoice: '', ciudadDestino: '', proveedorUtilizado: '', valorCobrado: 0, valorPagadoProveedor: 0,
     usaProveedorId: '', usaProveedorNombre: '', usaTracking: '', usaCosto: 0,
     localProveedorId: '', localProveedorNombre: '', localTracking: '', localCosto: 0, notas: '',
   }
+  fotoEntrega.value = null
+  firmaEntrega.value = null
+  guiaArchivo.value = null
   loadProveedores()
   showModal.value = true
 }
@@ -127,11 +148,17 @@ function selectLocalProv(id: string) {
 async function create() {
   if (!form.value.paqueteId || !form.value.clienteNombre || !form.value.clienteDireccion) return
   try {
-    await enviosApi.create({
+    const created = await enviosApi.create({
+      modo: form.value.modo,
       paqueteId: form.value.paqueteId,
       clienteNombre: form.value.clienteNombre,
       clienteDireccion: form.value.clienteDireccion,
       clienteTelefono: form.value.clienteTelefono || undefined,
+      numeroInvoice: form.value.numeroInvoice || undefined,
+      ciudadDestino: form.value.ciudadDestino || undefined,
+      proveedorUtilizado: form.value.proveedorUtilizado || undefined,
+      valorCobrado: form.value.valorCobrado,
+      valorPagadoProveedor: form.value.valorPagadoProveedor,
       trayectoUsa: {
         proveedorId: form.value.usaProveedorId || undefined,
         proveedorNombre: form.value.usaProveedorNombre,
@@ -146,6 +173,13 @@ async function create() {
       },
       notas: form.value.notas,
     })
+
+    const envioId = created.envio?._id
+    if (envioId) {
+      if (fotoEntrega.value) await enviosApi.uploadArchivo(envioId, 'foto', fotoEntrega.value)
+      if (firmaEntrega.value) await enviosApi.uploadArchivo(envioId, 'firma', firmaEntrega.value)
+      if (guiaArchivo.value) await enviosApi.uploadArchivo(envioId, 'guia', guiaArchivo.value)
+    }
     showModal.value = false
     await load()
   } catch (e: any) {
@@ -308,7 +342,9 @@ onMounted(() => {
         <button class="btn-primary" @click="openCreate"><i class="fa-solid fa-plus" /> Nuevo envío</button>
       </div>
 
-      <div v-if="loading" class="loading"><i class="fa-solid fa-circle-notch fa-spin" /> Cargando...</div>
+      <div v-if="loading" class="skeleton-list">
+        <div v-for="n in 4" :key="n" class="skeleton-row"></div>
+      </div>
       <div v-else-if="error" class="alert error"><i class="fa-solid fa-circle-exclamation" /> {{ error }}</div>
       <div v-else-if="filtered.length === 0" class="empty"><i class="fa-solid fa-truck" /><p>No hay envíos</p></div>
 
@@ -317,6 +353,7 @@ onMounted(() => {
           <thead>
             <tr>
               <th>ID</th>
+              <th>Modo</th>
               <th>Cliente</th>
               <th>Paquete</th>
               <th>Proveedor USA</th>
@@ -325,6 +362,9 @@ onMounted(() => {
               <th>Proveedor Local</th>
               <th>Tracking Local</th>
               <th>Pago Local</th>
+              <th>Cobrado</th>
+              <th>Guía</th>
+              <th>Evidencia</th>
               <th>Costo</th>
               <th>Estado</th>
               <th>Fecha</th>
@@ -333,6 +373,7 @@ onMounted(() => {
           <tbody>
             <tr v-for="e in filtered" :key="e._id">
               <td class="mono">#{{ e._id.slice(-6).toUpperCase() }}</td>
+              <td><span class="badge badge-blue">{{ e.modo || 'local' }}</span></td>
               <td><strong>{{ e.clienteNombre }}</strong><div class="cell-sub">{{ e.clienteDireccion.slice(0, 30) }}</div></td>
               <td class="mono">{{ e.paqueteId?.wr || e.paqueteId?.sh || '—' }}</td>
               <td>{{ e.trayectoUsa?.proveedorNombre || '—' }}</td>
@@ -359,7 +400,16 @@ onMounted(() => {
                   <i :class="e.trayectoLocal?.pagado ? 'fa-solid fa-check-circle' : 'fa-regular fa-circle'" />
                 </button>
               </td>
+              <td>
+                <a v-if="e.guiaUrl" :href="e.guiaUrl" target="_blank" class="file-link">Abrir</a>
+                <span v-else>—</span>
+              </td>
+              <td>
+                <a v-if="e.fotoEntregaUrl || e.firmaUrl || e.evidenciaUrl" :href="e.fotoEntregaUrl || e.evidenciaUrl || e.firmaUrl" target="_blank" class="file-link">Abrir</a>
+                <span v-else>—</span>
+              </td>
               <td class="mono costo">{{ formatMoney((e.trayectoUsa?.costo || 0) + (e.trayectoLocal?.costo || 0)) }}</td>
+              <td class="mono costo">{{ formatMoney(e.valorCobrado || 0) }}</td>
               <td>
                 <select class="badge-select" :value="e.estado" @change="updateStatus(e, ($event.target as HTMLSelectElement).value)">
                   <option v-for="(l, k) in estadoLabel" :key="k" :value="k">{{ l }}</option>
@@ -433,6 +483,15 @@ onMounted(() => {
           <h3>Nuevo envío</h3>
           <div class="modal-body">
             <section>
+              <h4>Tipo de envío</h4>
+              <div class="field-row">
+                <select v-model="form.modo" class="field-input">
+                  <option value="local">Local</option>
+                  <option value="interprovincial">Interprovincial</option>
+                </select>
+              </div>
+            </section>
+            <section>
               <h4>Paquete</h4>
               <div class="paquete-search">
                 <input v-model="searchQuery" class="field-input" placeholder="Buscar por WR, SH o tracking..." @keyup.enter="searchPaquetes" />
@@ -477,7 +536,22 @@ onMounted(() => {
                 <input v-model="form.clienteTelefono" class="field-input" placeholder="Teléfono" />
               </div>
             </section>
-            <section>
+            <section v-if="form.modo === 'interprovincial'">
+              <h4>Datos interprovinciales</h4>
+              <div class="field-row">
+                <input v-model="form.numeroInvoice" class="field-input" placeholder="Número de invoice" />
+                <input v-model="form.ciudadDestino" class="field-input" placeholder="Ciudad destino" />
+              </div>
+              <div class="field-row">
+                <input v-model="form.proveedorUtilizado" class="field-input" placeholder="Proveedor utilizado" />
+                <input v-model.number="form.valorCobrado" type="number" min="0" step="0.01" class="field-input cost" placeholder="Valor cobrado" />
+              </div>
+              <div class="field-row">
+                <input v-model.number="form.valorPagadoProveedor" type="number" min="0" step="0.01" class="field-input cost" placeholder="Valor pagado al proveedor" />
+                <input type="file" class="field-input" @change="(e) => setFile(e, 'guia')" />
+              </div>
+            </section>
+            <section v-if="form.modo === 'local'">
               <h4>Trayecto 1 <span class="badge badge-blue">Origen → Miami</span></h4>
               <div class="field-row prov-row">
                 <select v-model="form.usaProveedorId" class="field-input prov-select" @change="selectUsaProv(form.usaProveedorId)">
@@ -511,6 +585,13 @@ onMounted(() => {
               <div class="field-row">
                 <input v-model="form.localTracking" class="field-input" placeholder="Tracking" />
                 <input v-model.number="form.localCosto" type="number" min="0" step="0.01" class="field-input cost" placeholder="Costo $" />
+              </div>
+            </section>
+            <section v-if="form.modo === 'local'">
+              <h4>Evidencia de entrega</h4>
+              <div class="field-row">
+                <input type="file" accept="image/*" class="field-input" @change="(e) => setFile(e, 'foto')" />
+                <input type="file" accept="image/*" class="field-input" @change="(e) => setFile(e, 'firma')" />
               </div>
             </section>
             <textarea v-model="form.notas" class="field-input" rows="2" placeholder="Notas adicionales..." />
@@ -642,6 +723,17 @@ onMounted(() => {
   &:hover { color: $brand-orange; }
   &.pagado { color: #81c784; }
 }
+
+.skeleton-list { display: flex; flex-direction: column; gap: $space-3; }
+.skeleton-row { height: 58px; border-radius: 14px; background: linear-gradient(90deg, rgba($ink-700,.7), rgba($ink-600,.7), rgba($ink-700,.7)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+
+.file-link {
+  color: $brand-orange;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 .badge {
   padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600;
