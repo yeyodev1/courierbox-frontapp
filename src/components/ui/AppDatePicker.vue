@@ -22,6 +22,8 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 const isOpen = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
+const alignRight = ref(false)
 const today = startOfDay(new Date())
 const currentMonth = ref(startOfMonth(parseDate(props.modelValue) || today))
 
@@ -140,6 +142,16 @@ function onKeyDown(event: KeyboardEvent) {
   if (event.key === 'Escape') close()
 }
 
+function updatePanelPosition() {
+  const trigger = triggerRef.value
+  const panel = panelRef.value
+  if (!trigger || !panel) return
+
+  const triggerRect = trigger.getBoundingClientRect()
+  const panelWidth = Math.min(320, window.innerWidth - 16)
+  alignRight.value = triggerRect.left + panelWidth > window.innerWidth - 12
+}
+
 watch(
   () => props.modelValue,
   (value) => {
@@ -149,14 +161,22 @@ watch(
   }
 )
 
+watch(isOpen, async (open) => {
+  if (!open) return
+  await nextTick()
+  updatePanelPosition()
+})
+
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
   document.addEventListener('keydown', onKeyDown)
+  window.addEventListener('resize', updatePanelPosition)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onClickOutside)
   document.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('resize', updatePanelPosition)
 })
 </script>
 
@@ -178,7 +198,7 @@ onUnmounted(() => {
     </button>
 
     <transition name="dropdown">
-      <div v-show="isOpen" class="app-date-picker__panel" role="dialog" aria-label="Selector de fecha">
+      <div ref="panelRef" v-show="isOpen" class="app-date-picker__panel" :class="{ 'align-right': alignRight }" role="dialog" aria-label="Selector de fecha">
         <div class="app-date-picker__header">
           <button type="button" class="nav-btn" @click="goMonth(-1)"><i class="fa-solid fa-chevron-left" /></button>
           <div class="month-label">{{ monthLabel }}</div>
@@ -286,12 +306,17 @@ onUnmounted(() => {
     top: calc(100% + 4px);
     left: 0;
     z-index: 50;
-    width: min(320px, 100vw);
+    width: min(320px, calc(100vw - 16px));
     padding: $space-4;
     background: $ink-900;
     border: 1px solid rgba($ink-500, 0.2);
     border-radius: 16px;
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.4);
+
+    &.align-right {
+      left: auto;
+      right: 0;
+    }
   }
 
   &__header {
@@ -411,6 +436,28 @@ onUnmounted(() => {
     margin: 0;
     font-size: 0.8rem;
     color: #ff8a8f;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-date-picker {
+    &__panel {
+      position: fixed;
+      left: 0.5rem;
+      right: 0.5rem;
+      top: auto;
+      bottom: 0.5rem;
+      width: auto;
+      max-width: none;
+      max-height: min(78vh, 460px);
+      overflow: auto;
+      border-radius: 20px 20px 16px 16px;
+    }
+
+    &__panel.align-right {
+      left: 0.5rem;
+      right: 0.5rem;
+    }
   }
 }
 
