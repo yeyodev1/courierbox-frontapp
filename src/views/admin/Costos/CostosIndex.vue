@@ -16,6 +16,8 @@ const toastStore = useToastStore()
 
 const gastos = ref<Gasto[]>([])
 const loading = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
 const error = ref('')
 const resumen = ref<any>(null)
 
@@ -108,16 +110,29 @@ function openEdit(gasto: Gasto) {
   showFormModal.value = true
 }
 
-async function handleRemove(id: string) {
+async function handleRemove(id: string, done?: (success: boolean) => void) {
+  deleting.value = true
+  let deleted = false
   try {
     await costosApi.remove(id)
-    await load()
+    deleted = true
+    toastStore.showNotification('Gasto eliminado correctamente', 'success')
+    done?.(true)
   } catch (e: any) {
     toastStore.showNotification(e.message || 'Error al eliminar', 'error')
+    done?.(false)
+  } finally {
+    deleting.value = false
+  }
+
+  if (deleted) {
+    await load()
   }
 }
 
 async function handleSave(payload: any, file: File | null) {
+  if (saving.value) return
+  saving.value = true
   try {
     if (selectedGasto.value) {
       const updated = await costosApi.update(selectedGasto.value._id, payload)
@@ -130,11 +145,14 @@ async function handleSave(payload: any, file: File | null) {
         await costosApi.uploadFactura(created.gasto._id, file)
       }
     }
+    toastStore.showNotification(selectedGasto.value ? 'Gasto actualizado correctamente' : 'Gasto guardado correctamente', 'success')
     showFormModal.value = false
     selectedGasto.value = null
     await load()
   } catch (e: any) {
     toastStore.showNotification(e.message || 'Error al guardar', 'error')
+  } finally {
+    saving.value = false
   }
 }
 </script>
@@ -158,6 +176,7 @@ async function handleSave(payload: any, file: File | null) {
       :gastos="filteredGastos"
       :loading="loading"
       :error="error"
+      :deleting="deleting"
       @detail="openDetail"
       @delete="handleRemove"
     />
@@ -173,6 +192,7 @@ async function handleSave(payload: any, file: File | null) {
       ref="formModalRef"
       :show="showFormModal"
       :initial-data="selectedGasto"
+      :saving="saving"
       @close="showFormModal = false; selectedGasto = null"
       @save="handleSave"
     />

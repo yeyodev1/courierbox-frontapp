@@ -7,30 +7,38 @@ import { useToastStore } from '@/stores/toast.store'
 const props = defineProps({
   gastos: { type: Array as () => Gasto[], required: true },
   loading: { type: Boolean, default: false },
-  error: { type: String, default: '' }
+  error: { type: String, default: '' },
+  deleting: { type: Boolean, default: false },
 })
 
 const emit = defineEmits<{
   (e: 'detail', gasto: Gasto): void
-  (e: 'delete', id: string): void
+  (e: 'delete', id: string, done: (success: boolean) => void): void
 }>()
 
 const toastStore = useToastStore()
 
 const showDeleteConfirm = ref(false)
 const deleteTargetId = ref('')
+const deleteInFlight = ref(false)
 
 function requestRemove(id: string) {
+  if (props.deleting || deleteInFlight.value) return
   deleteTargetId.value = id
   showDeleteConfirm.value = true
 }
 
 function confirmRemove() {
   if (deleteTargetId.value) {
-    emit('delete', deleteTargetId.value)
+    deleteInFlight.value = true
+    emit('delete', deleteTargetId.value, (success) => {
+      deleteInFlight.value = false
+      if (success) {
+        showDeleteConfirm.value = false
+        deleteTargetId.value = ''
+      }
+    })
   }
-  showDeleteConfirm.value = false
-  deleteTargetId.value = ''
 }
 
 function formatCurrency(n: number) {
@@ -50,6 +58,15 @@ const tipoLabel: Record<string, string> = {
 watch(() => props.error, (value) => {
   if (value) toastStore.showNotification(value, 'error')
 })
+
+watch(
+  () => props.deleting,
+  (value, oldValue) => {
+    if (oldValue && !value && deleteInFlight.value) {
+      deleteInFlight.value = false
+    }
+  }
+)
 </script>
 
 <template>
@@ -100,7 +117,7 @@ watch(() => props.error, (value) => {
                 <span v-else>—</span>
               </td>
               <td>
-                <button class="btn-icon danger" @click.stop="requestRemove(g._id)" title="Eliminar">
+                <button class="btn-icon danger" :disabled="deleting || deleteInFlight" @click.stop="requestRemove(g._id)" title="Eliminar">
                   <i class="fa-solid fa-trash-can" />
                 </button>
               </td>
@@ -134,7 +151,7 @@ watch(() => props.error, (value) => {
             <span class="file-link">
               {{ g.comprobanteUrl ? 'Comprobante disponible' : 'Sin comprobante' }}
             </span>
-            <button class="btn-icon danger" type="button" @click.stop="requestRemove(g._id)" title="Eliminar">
+            <button class="btn-icon danger" type="button" :disabled="deleting || deleteInFlight" @click.stop="requestRemove(g._id)" title="Eliminar">
               <i class="fa-solid fa-trash-can" />
             </button>
           </div>
@@ -147,6 +164,7 @@ watch(() => props.error, (value) => {
       title="Eliminar gasto"
       message="¿Eliminar este gasto? Esta acción no se puede deshacer."
       confirm-label="Eliminar"
+      :confirm-loading="deleteInFlight || deleting"
       variant="danger"
       @cancel="showDeleteConfirm = false; deleteTargetId = ''"
       @confirm="confirmRemove"

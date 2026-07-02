@@ -6,12 +6,14 @@ interface Props {
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'danger' | 'warning' | 'info'
+  confirmLoading?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
   confirmLabel: 'Confirmar',
   cancelLabel: 'Cancelar',
   variant: 'danger',
+  confirmLoading: false,
 })
 
 const emit = defineEmits<{
@@ -22,9 +24,9 @@ const emit = defineEmits<{
 
 <template>
   <transition name="fade">
-    <div v-if="open" class="confirm-modal" @click.self="emit('cancel')">
+    <div v-if="open" class="confirm-modal" @click.self="!confirmLoading && emit('cancel')">
       <div class="confirm-modal__card" :class="`is-${variant}`">
-        <button class="confirm-modal__close" type="button" @click="emit('cancel')">
+        <button class="confirm-modal__close" type="button" :disabled="confirmLoading" @click="emit('cancel')">
           <i class="fa-solid fa-xmark" />
         </button>
         <div class="confirm-modal__icon" :class="`is-${variant}`">
@@ -33,8 +35,11 @@ const emit = defineEmits<{
         <h3>{{ title }}</h3>
         <p>{{ message }}</p>
         <div class="confirm-modal__actions">
-          <button type="button" class="btn-secondary" @click="emit('cancel')">{{ cancelLabel }}</button>
-          <button type="button" class="btn-danger" @click="emit('confirm')">{{ confirmLabel }}</button>
+          <button type="button" class="btn-secondary" :disabled="confirmLoading" @click="emit('cancel')">{{ cancelLabel }}</button>
+          <button type="button" class="btn-danger" :disabled="confirmLoading" @click="emit('confirm')">
+            <i v-if="confirmLoading" class="fa-solid fa-spinner fa-spin" />
+            {{ confirmLoading ? 'Eliminando...' : confirmLabel }}
+          </button>
         </div>
       </div>
     </div>
