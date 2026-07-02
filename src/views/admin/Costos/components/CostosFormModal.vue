@@ -10,7 +10,8 @@ import { useToastStore } from '@/stores/toast.store'
 
 const props = defineProps({
   show: { type: Boolean, required: true },
-  initialData: { type: Object as () => Gasto | null, default: null }
+  initialData: { type: Object as () => Gasto | null, default: null },
+  saving: { type: Boolean, default: false },
 })
 
 const emit = defineEmits<{
@@ -189,6 +190,7 @@ function discardAndCloseModal() {
 }
 
 function handleSave() {
+  if (props.saving) return
   const categoria = form.value.categoria === 'Otro (especificar)'
     ? form.value.categoriaPersonalizada
     : form.value.categoria
@@ -233,7 +235,8 @@ function handleSave() {
     icon="fa-solid fa-coins"
     icon-variant="info"
     max-width="600px"
-    :prevent-close-on-overlay="hasUnsavedChanges"
+    :prevent-close-on-overlay="hasUnsavedChanges || saving"
+    :disable-close="saving"
     @close="requestCloseModal"
   >
         <form id="costos-form" @submit.prevent="handleSave">
@@ -346,8 +349,11 @@ function handleSave() {
 
       <template #footer>
         <div class="form-actions">
-          <button type="button" class="btn-ghost" @click="requestCloseModal">Cancelar</button>
-          <button type="submit" form="costos-form" class="btn-primary" @click="handleSave">{{ initialData ? 'Actualizar' : 'Guardar' }}</button>
+          <button type="button" class="btn-ghost" :disabled="saving" @click="requestCloseModal">Cancelar</button>
+          <button type="submit" form="costos-form" class="btn-primary" :disabled="saving">
+            <i v-if="saving" class="fa-solid fa-spinner fa-spin" />
+            {{ saving ? 'Guardando...' : (initialData ? 'Actualizar' : 'Guardar') }}
+          </button>
         </div>
       </template>
   </AppModal>

@@ -16,6 +16,8 @@ export interface Gasto {
   proveedor: string
   referencia: string
   comprobanteUrl: string
+  comprobantePublicId?: string
+  comprobanteResourceType?: string
   numeroFactura: string
   fechaFactura?: string
   libras: number
@@ -112,7 +114,7 @@ class CostosAPI extends APIBase {
   async uploadFactura(id: string, file: File) {
     const form = new FormData()
     form.append('file', file)
-    const res = await this.post<{ gasto: Gasto; upload: { url: string; publicId: string } }>(`v1/costos/${id}/upload`, form)
+    const res = await this.post<{ gasto: Gasto; upload: { url: string; publicId: string; resourceType: string } }>(`v1/costos/${id}/upload`, form)
     return res.data
   }
 

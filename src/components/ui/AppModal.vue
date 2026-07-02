@@ -26,6 +26,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  disableClose: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -33,13 +37,13 @@ const emit = defineEmits<{
 }>()
 
 function handleOverlayClick() {
-  if (!props.preventCloseOnOverlay) {
+  if (!props.preventCloseOnOverlay && !props.disableClose) {
     emit('close')
   }
 }
 
 function handleEscape(e: KeyboardEvent) {
-  if (props.show && e.key === 'Escape' && !props.preventCloseOnOverlay) {
+  if (props.show && e.key === 'Escape' && !props.preventCloseOnOverlay && !props.disableClose) {
     emit('close')
   }
 }
@@ -57,7 +61,13 @@ onUnmounted(() => {
   <transition name="fade">
     <div v-if="show" class="modal-overlay" @click.self="handleOverlayClick">
       <div class="modal-card" :style="{ maxWidth: maxWidth }">
-        <button type="button" class="modal-close-btn" aria-label="Cerrar modal" @click="emit('close')">
+        <button
+          v-if="!disableClose"
+          type="button"
+          class="modal-close-btn"
+          aria-label="Cerrar modal"
+          @click="emit('close')"
+        >
           <i class="fa-solid fa-xmark" />
         </button>
 
