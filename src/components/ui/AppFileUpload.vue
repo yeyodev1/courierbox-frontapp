@@ -170,6 +170,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -411,7 +412,7 @@ onBeforeUnmount(() => {
     color: $ink-1000;
 
     &:hover {
-      background: lighten($brand-orange, 6%);
+      background: color.adjust($brand-orange, $lightness: 6%);
     }
   }
 

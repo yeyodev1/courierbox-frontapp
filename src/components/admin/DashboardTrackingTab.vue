@@ -94,6 +94,7 @@ async function handleSearchTracking() {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -329,7 +330,7 @@ async function handleSearchTracking() {
   min-height: 46px;
 
   &:hover:not(:disabled) {
-    background: lighten($brand-orange, 5%);
+    background: color.adjust($brand-orange, $lightness: 5%);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba($brand-orange, 0.3);
   }

@@ -220,6 +220,7 @@ function formatMoney(n: number) {
 </template>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use "@/styles/tokens/colors" as *;
 @use "@/styles/tokens/space" as *;
 
@@ -232,7 +233,7 @@ function formatMoney(n: number) {
 .hero-section {
   padding: 160px 0 60px;
   text-align: center;
-  background: linear-gradient(135deg, $ink-1000 0%, lighten($ink-1000, 5%) 100%);
+  background: linear-gradient(135deg, $ink-1000 0%, color.adjust($ink-1000, $lightness: 5%) 100%);
 
   h1 {
     font-size: 2.5rem;

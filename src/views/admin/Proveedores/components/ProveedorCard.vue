@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import type { Proveedor } from '@/services/proveedores.api'
 
+function formatCurrency(value: number) {
+  return '$' + Number(value || 0).toFixed(2)
+}
+
 defineProps<{
   proveedor: Proveedor
+  gastoMesActual?: number
+  gastoHistorico?: number
 }>()
 
 defineEmits<{
@@ -30,6 +36,17 @@ defineEmits<{
     </div>
 
     <p class="notes">{{ proveedor.notas || 'Sin notas' }}</p>
+
+    <div class="cost-band">
+      <div>
+        <span>Este mes</span>
+        <strong>{{ formatCurrency(gastoMesActual || 0) }}</strong>
+      </div>
+      <div>
+        <span>Histórico</span>
+        <strong>{{ formatCurrency(gastoHistorico || 0) }}</strong>
+      </div>
+    </div>
 
     <div class="card-actions">
       <button class="btn-ghost" type="button" @click="$emit('detail', proveedor)"><i class="fa-solid fa-coins" /> Ver costos</button>
@@ -116,6 +133,32 @@ defineEmits<{
   color: $ink-300;
 }
 
+.cost-band {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-3;
+  margin: 0 0 $space-4;
+  padding: $space-3 $space-4;
+  border-radius: 14px;
+  background: rgba($ink-800, 0.55);
+  border: 1px solid rgba($ink-500, 0.1);
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  span {
+    color: $ink-400;
+    font-size: 0.75rem;
+  }
+
+  strong {
+    font-size: 0.95rem;
+  }
+}
+
 .card-actions {
   display: flex;
   gap: $space-3;
@@ -156,6 +199,10 @@ defineEmits<{
 
   .status {
     align-self: flex-start;
+  }
+
+  .cost-band {
+    flex-direction: column;
   }
 }
 </style>

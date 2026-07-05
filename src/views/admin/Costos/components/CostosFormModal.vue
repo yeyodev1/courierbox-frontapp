@@ -54,13 +54,30 @@ function syncSnapshot() {
   initialSnapshot.value = currentSnapshot.value
 }
 
+function calculateWeightTotal() {
+  const libras = Number(form.value.libras || 0)
+  const valorPorLibra = Number(form.value.valorPorLibra || 0)
+  return Number((libras * valorPorLibra).toFixed(2))
+}
+
+function syncCalculatedWeightTotal() {
+  if (!incluyeCostoLibras.value) return
+  const total = calculateWeightTotal()
+  form.value.valorTotal = total
+  if (total > 0) form.value.monto = total
+}
+
 function syncWeightFields(enabled: boolean) {
   if (!enabled) {
     form.value.libras = 0
     form.value.valorPorLibra = 0
     form.value.valorTotal = form.value.monto
+    return
   }
+  syncCalculatedWeightTotal()
 }
+
+watch([incluyeCostoLibras, () => form.value.libras, () => form.value.valorPorLibra], syncCalculatedWeightTotal)
 
 function syncFacturaPreview(file: File | null) {
   if (facturaPreviewUrl.value) {
@@ -161,6 +178,7 @@ function applyGastoToForm(gasto: Gasto) {
     categoriaPersonalizada: categoriaConocida.includes(gasto.categoria) ? '' : gasto.categoria,
   }
   incluyeCostoLibras.value = isWeightExpense(gasto)
+  if (incluyeCostoLibras.value) syncCalculatedWeightTotal()
   facturaFile.value = null
   providerQuery.value = gasto.proveedor || ''
 }
@@ -196,6 +214,10 @@ function handleSave() {
     : form.value.categoria
   if (!categoria || !form.value.descripcion || form.value.monto <= 0) {
     toastStore.showNotification('Completa todos los campos requeridos', 'error')
+    return
+  }
+  if (incluyeCostoLibras.value && (Number(form.value.libras || 0) <= 0 || Number(form.value.valorPorLibra || 0) <= 0)) {
+    toastStore.showNotification('Ingresa libras y valor por libra para calcular el total', 'error')
     return
   }
   const pesoPayload = incluyeCostoLibras.value
@@ -271,7 +293,8 @@ function handleSave() {
           </div>
           <div class="form-field">
             <span>Monto USD *</span>
-            <input v-model.number="form.monto" type="number" step="0.01" min="0" class="field-input" />
+            <input v-model.number="form.monto" type="number" step="0.01" min="0" class="field-input" :disabled="incluyeCostoLibras" />
+            <small v-if="incluyeCostoLibras" class="field-note">Se sincroniza con el total calculado por libras.</small>
           </div>
           <div class="form-field">
             <AppDatePicker v-model="form.fecha" label="Fecha" />
@@ -305,7 +328,8 @@ function handleSave() {
             </div>
             <div class="form-field">
               <span>Valor total</span>
-              <input v-model.number="form.valorTotal" type="number" min="0" step="0.01" class="field-input" />
+              <input v-model.number="form.valorTotal" type="number" min="0" step="0.01" class="field-input" disabled />
+              <small class="field-note">Calculado automáticamente.</small>
             </div>
           </div>
           <div class="form-field">
@@ -377,6 +401,7 @@ function handleSave() {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -403,6 +428,16 @@ function handleSave() {
   font-family: inherit;
   outline: none;
   &:focus { border-color: $brand-orange; }
+
+  &:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+  }
+}
+
+.field-note {
+  font-size: 0.75rem;
+  color: $ink-500;
 }
 
 .toggle-row {
@@ -587,7 +622,7 @@ function handleSave() {
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
-  &:hover { background: darken($brand-orange, 8%); }
+  &:hover { background: color.adjust($brand-orange, $lightness: -8%); }
 }
 
 .btn-ghost {

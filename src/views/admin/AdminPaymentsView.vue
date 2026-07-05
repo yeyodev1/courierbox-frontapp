@@ -187,6 +187,7 @@ function copyToClipboard(text: string) {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -308,7 +309,7 @@ function copyToClipboard(text: string) {
   min-height: 46px;
 
   &:hover:not(:disabled) {
-    background: lighten($brand-orange, 5%);
+    background: color.adjust($brand-orange, $lightness: 5%);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba($brand-orange, 0.3);
   }
@@ -453,7 +454,7 @@ function copyToClipboard(text: string) {
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s;
-  &:hover { background: darken($signal-red, 8%); }
+  &:hover { background: color.adjust($signal-red, $lightness: -8%); }
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }

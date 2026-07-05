@@ -295,6 +295,7 @@ onMounted(loadConfigs)
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -344,7 +345,7 @@ onMounted(loadConfigs)
   font-family: inherit;
 
   &:hover:not(:disabled) {
-    background: lighten($brand-orange, 6%);
+    background: color.adjust($brand-orange, $lightness: 6%);
   }
 
   &:disabled {

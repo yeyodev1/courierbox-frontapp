@@ -217,6 +217,7 @@ onMounted(loadContactos)
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -265,7 +266,7 @@ onMounted(loadContactos)
   font-size: 0.85rem;
   cursor: pointer;
   font-family: inherit;
-  &:hover { background: darken($brand-orange, 8%); }
+  &:hover { background: color.adjust($brand-orange, $lightness: -8%); }
 }
 
 .loading, .empty {

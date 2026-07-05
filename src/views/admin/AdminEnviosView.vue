@@ -664,6 +664,7 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -744,7 +745,7 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
 .btn-primary {
   display: inline-flex; align-items: center; gap: $space-2; padding: 0.6rem 1.25rem; background: $brand-orange;
   border: none; border-radius: 10px; color: #fff; font-weight: 600; cursor: pointer; font-size: 0.9rem; font-family: inherit;
-  &:hover { background: darken($brand-orange, 8%); }
+  &:hover { background: color.adjust($brand-orange, $lightness: -8%); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 

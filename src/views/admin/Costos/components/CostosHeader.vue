@@ -17,6 +17,7 @@ defineEmits<{
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -70,6 +71,6 @@ defineEmits<{
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
-  &:hover { background: darken($brand-orange, 8%); }
+  &:hover { background: color.adjust($brand-orange, $lightness: -8%); }
 }
 </style>

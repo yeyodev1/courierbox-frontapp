@@ -164,6 +164,7 @@ watch([productValue, shippingValue, configId], calculate, { deep: true })
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -316,7 +317,7 @@ watch([productValue, shippingValue, configId], calculate, { deep: true })
   font-family: inherit;
 
   &:hover:not(:disabled) {
-    background: lighten($brand-orange, 6%);
+    background: color.adjust($brand-orange, $lightness: 6%);
     transform: translateY(-1px);
   }
 

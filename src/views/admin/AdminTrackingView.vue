@@ -97,6 +97,7 @@ async function handleSearchTracking() {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -140,7 +141,7 @@ async function handleSearchTracking() {
   display: flex; justify-content: center; align-items: center; gap: $space-2;
   background: $brand-orange; color: #fff; border: none;
   padding: 0.85rem 1.5rem; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.25s; min-height: 46px;
-  &:hover:not(:disabled) { background: lighten($brand-orange, 5%); transform: translateY(-1px); box-shadow: 0 4px 12px rgba($brand-orange, 0.3); }
+  &:hover:not(:disabled) { background: color.adjust($brand-orange, $lightness: 5%); transform: translateY(-1px); box-shadow: 0 4px 12px rgba($brand-orange, 0.3); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 

@@ -466,6 +466,7 @@ const goBack = () => {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 
 /* Data Notice Banner */
@@ -882,7 +883,7 @@ const goBack = () => {
     width: 50px;
     height: 50px;
     border-radius: 12px;
-    background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 20%));
+    background: linear-gradient(135deg, $brand-orange, color.adjust($brand-orange, $lightness: -20%));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1108,7 +1109,7 @@ const goBack = () => {
 .chat-avatar {
   width: 45px; height: 45px;
   border-radius: 50%;
-  background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 20%));
+  background: linear-gradient(135deg, $brand-orange, color.adjust($brand-orange, $lightness: -20%));
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 1.2rem;
   box-shadow: 0 4px 10px rgba($brand-orange, 0.3);
@@ -1205,7 +1206,7 @@ const goBack = () => {
     align-self: flex-end;
     .msg-author { text-align: right; margin-right: 0.5rem; color: $brand-orange; }
     .msg-content {
-      background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 10%));
+      background: linear-gradient(135deg, $brand-orange, color.adjust($brand-orange, $lightness: -10%));
       color: #fff;
       border-radius: 18px 18px 4px 18px;
     }

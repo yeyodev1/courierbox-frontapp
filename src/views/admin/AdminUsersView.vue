@@ -36,6 +36,8 @@ const updateSuccess = ref(false)
 const showDeleteModal = ref(false)
 const userToDelete = ref<any>(null)
 const deletingUser = ref(false)
+const showProtectedDeleteModal = ref(false)
+const protectedDeleteMessage = ref('')
 
 const stats = computed(() => {
   const total = users.value.length
@@ -146,6 +148,17 @@ async function handleUpdateUser() {
 }
 
 function confirmDeleteUser(user: any) {
+  const currentRole = authStore.userRole
+  const targetRole = String(user?.role || '')
+
+  if (currentRole === 'admin' && (targetRole === 'admin' || targetRole === 'superadmin')) {
+    protectedDeleteMessage.value = targetRole === 'superadmin'
+      ? '¿Quieres eliminar a un superadmin? Romper la empresa no viene en el plan, bro. No puedes tocarlo.'
+      : '¿Quieres eliminar a otro admin? No puedes, bro. Eso solo lo hace un superadmin.'
+    showProtectedDeleteModal.value = true
+    return
+  }
+
   userToDelete.value = user
   showDeleteModal.value = true
 }
@@ -397,6 +410,20 @@ async function executeDeleteUser() {
           <div class="modal-actions">
             <AppButton type="button" variant="outline" @click="showDeleteModal = false">Cancelar</AppButton>
             <AppButton type="button" variant="primary" :loading="deletingUser" @click="executeDeleteUser">Sí, eliminar</AppButton>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Protected delete modal -->
+    <transition name="modal-scale">
+      <div v-if="showProtectedDeleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="protected-delete-modal-title" @click.self="showProtectedDeleteModal = false" @keydown.escape="showProtectedDeleteModal = false">
+        <div class="modal-card">
+          <div class="modal-icon-box danger"><i class="fa-solid fa-shield-halved" aria-hidden="true" /></div>
+          <h3 id="protected-delete-modal-title">Acceso denegado</h3>
+          <p>{{ protectedDeleteMessage }}</p>
+          <div class="modal-actions">
+            <AppButton type="button" variant="primary" @click="showProtectedDeleteModal = false">Entendido</AppButton>
           </div>
         </div>
       </div>

@@ -218,6 +218,7 @@ watch(() => props.modelValue, (newVal) => {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 
 .custom-date-filter {
@@ -456,7 +457,7 @@ watch(() => props.modelValue, (newVal) => {
   .btn-primary {
     width: 100%;
     padding: 0.875rem;
-    background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 10%));
+    background: linear-gradient(135deg, $brand-orange, color.adjust($brand-orange, $lightness: -10%));
     color: #fff;
     border: none;
     border-radius: 12px;

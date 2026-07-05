@@ -78,6 +78,7 @@ function formatMonth(key: string) {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -210,7 +211,7 @@ function formatMonth(key: string) {
 .bar-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, $brand-orange, lighten($brand-orange, 12%));
+  background: linear-gradient(90deg, $brand-orange, color.adjust($brand-orange, $lightness: 12%));
 
   &.category {
     background: linear-gradient(90deg, #7c9cff, #9cb3ff);

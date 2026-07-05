@@ -465,6 +465,7 @@ onMounted(loadOrders)
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -840,7 +841,7 @@ onMounted(loadOrders)
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s;
-  &:hover { background: darken($brand-orange, 8%); }
+  &:hover { background: color.adjust($brand-orange, $lightness: -8%); }
 }
 
 .client-search {

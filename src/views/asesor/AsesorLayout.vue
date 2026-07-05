@@ -148,6 +148,7 @@ function navigate(path: string) {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
@@ -629,7 +630,7 @@ function navigate(path: string) {
   transition: all 0.2s;
 
   &:hover {
-    background: darken($signal-red, 8%);
+    background: color.adjust($signal-red, $lightness: -8%);
   }
 }
 
