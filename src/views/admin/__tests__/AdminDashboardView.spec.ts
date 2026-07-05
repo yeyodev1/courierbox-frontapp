@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminDashboardView from '../AdminDashboardView.vue'
 
@@ -56,5 +57,19 @@ describe('AdminDashboardView', () => {
 
     await wrapper.get('button[aria-label="Ir a Gastos"]').trigger('click')
     expect(mocks.push).toHaveBeenCalledWith('/admin/costos')
+  })
+
+  it('muestra skeleton mientras carga los datos', async () => {
+    mocks.getPayments.mockReturnValue(new Promise(() => {}))
+    mocks.getUsers.mockReturnValue(new Promise(() => {}))
+    mocks.getData.mockReturnValue(new Promise(() => {}))
+    mocks.costosResumen.mockReturnValue(new Promise(() => {}))
+
+    const wrapper = mount(AdminDashboardView)
+    await nextTick()
+
+    expect(wrapper.find('.dashboard-skeleton').exists()).toBe(true)
+    expect(wrapper.findAll('.skeleton-stat')).toHaveLength(6)
+    expect(wrapper.findAll('.skeleton-action')).toHaveLength(5)
   })
 })
