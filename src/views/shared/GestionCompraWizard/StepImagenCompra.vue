@@ -1,7 +1,22 @@
 <template>
   <div class="step-imagen">
-    <h3 class="step__title">Imagen de la compra</h3>
-    <p class="step__desc">Sube una captura de pantalla o comprobante de la compra realizada.</p>
+    <h3 class="step__title">Soporte de compra</h3>
+    <p class="step__desc">Sube una foto, captura o comprobante. Si no existe archivo, deja marcado que quedó verificado.</p>
+
+    <div class="support-grid">
+      <button class="support-card" :class="{ selected: store.formData.comprobanteEstado === 'comprobante' }" @click="store.formData.comprobanteEstado = 'comprobante'">
+        <span class="support-title">Con comprobante</span>
+        <span class="support-desc">Tienes factura, captura o archivo de respaldo.</span>
+      </button>
+      <button class="support-card" :class="{ selected: store.formData.comprobanteEstado === 'verificado' }" @click="store.formData.comprobanteEstado = 'verificado'">
+        <span class="support-title">Verificado sin archivo</span>
+        <span class="support-desc">Ya se confirmó, pero no hay comprobante adjunto.</span>
+      </button>
+      <button class="support-card" :class="{ selected: store.formData.comprobanteEstado === 'sin_soporte' }" @click="store.formData.comprobanteEstado = 'sin_soporte'">
+        <span class="support-title">Sin soporte</span>
+        <span class="support-desc">Solo marca esto si vas a completar el respaldo después.</span>
+      </button>
+    </div>
 
     <div
       class="drop-zone"
@@ -18,20 +33,13 @@
         <button class="btn-remove" @click.stop="removeFile">Quitar imagen</button>
       </template>
       <template v-else>
-        <span class="drop-icon">🖼️</span>
+        <span class="drop-icon"><i class="fa-regular fa-image" aria-hidden="true" /></span>
         <p class="drop-text">Arrastra una imagen o <strong>haz clic para seleccionar</strong></p>
         <p class="drop-hint">JPG, PNG, WEBP — máx. 10 MB</p>
       </template>
     </div>
 
-    <div v-if="uploading" class="upload-progress">
-      <div class="progress-bar" :style="{ width: uploadPct + '%' }"></div>
-      <span>Subiendo... {{ uploadPct }}%</span>
-    </div>
-
-    <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
-
-    <p class="skip-hint">Esta imagen se enviará al cliente con su notificación.</p>
+    <p class="skip-hint">La imagen se subirá cuando guardes la orden. Si la dejas lista aquí, se usará en el envío final.</p>
 
     <div v-if="store.formData.notas !== undefined" class="notas-group">
       <label class="field-label">Notas adicionales (opcional)</label>
@@ -48,16 +56,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
-import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 
 const store = useGestionCompraFormStore()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
-const preview = ref<string>(store.formData.imagenCompraUrl || '')
-const uploading = ref(false)
-const uploadPct = ref(0)
-const uploadError = ref('')
+const preview = ref<string>(store.formData.imagenCompraPreview || store.formData.imagenCompraUrl || '')
 
 function onFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -73,27 +77,15 @@ function onDrop(e: DragEvent) {
 async function processFile(file: File) {
   store.formData.imagenCompraFile = file
   preview.value = URL.createObjectURL(file)
-  uploadError.value = ''
-  uploading.value = true
-  uploadPct.value = 30
-
-  try {
-    const url = await gestionesCompraAPI.uploadImagen(file)
-    store.formData.imagenCompraUrl = url
-    uploadPct.value = 100
-  } catch (e: any) {
-    uploadError.value = e?.message ?? 'Error al subir la imagen'
-    preview.value = ''
-    store.formData.imagenCompraUrl = ''
-  } finally {
-    uploading.value = false
-  }
+  store.formData.imagenCompraPreview = preview.value
+  store.formData.imagenCompraUrl = ''
 }
 
 function removeFile() {
   preview.value = ''
   store.formData.imagenCompraUrl = ''
   store.formData.imagenCompraFile = null
+  store.formData.imagenCompraPreview = ''
   if (fileInput.value) fileInput.value.value = ''
 }
 
@@ -104,22 +96,33 @@ defineExpose({ isValid: () => true })
 <style scoped lang="scss">
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
-.step-imagen { display: flex; flex-direction: column; gap: $space-4; }
-.step__title { color: $fg-dark; font-size: 1.1rem; margin: 0; }
-.step__desc { color: $ink-300; font-size: 0.9rem; margin: 0; }
+.step-imagen { display: flex; flex-direction: column; gap: $space-5; }
+.step__title { color: $fg-dark; font-size: 1.15rem; margin: 0; }
+.step__desc { color: $ink-300; font-size: 0.92rem; margin: 0; line-height: 1.6; }
+.support-grid { display: flex; flex-wrap: wrap; gap: $space-3; }
+.support-card {
+  flex: 1 1 220px;
+  display: flex; flex-direction: column; gap: 6px; text-align: left; cursor: pointer;
+  padding: $space-4 $space-4; background: $ink-900; border: 2px solid $ink-500; border-radius: 16px;
+  color: $fg-dark; transition: all 0.18s;
+  &:hover { border-color: $ink-300; }
+  &.selected { border-color: $brand-orange; background: rgba(240,138,31,0.08); }
+}
+.support-title { font-weight: 800; font-size: 0.95rem; }
+.support-desc { font-size: 0.84rem; color: $ink-300; line-height: 1.5; }
 .drop-zone {
-  border: 2px dashed $ink-500; border-radius: 12px;
-  padding: $space-6 $space-4; display: flex; flex-direction: column;
-  align-items: center; gap: $space-2; cursor: pointer;
+  border: 2px dashed $ink-500; border-radius: 18px;
+  padding: $space-6 $space-5; display: flex; flex-direction: column;
+  align-items: center; gap: $space-3; cursor: pointer;
   transition: border-color 0.18s, background 0.18s;
   &:hover, &.drag-over { border-color: $brand-orange; background: rgba(240,138,31,0.04); }
-  &.has-file { border-style: solid; border-color: $brand-orange; padding: $space-4; }
+  &.has-file { border-style: solid; border-color: $brand-orange; padding: $space-5; }
 }
 .hidden { display: none; }
-.drop-icon { font-size: 2.5rem; }
-.drop-text { color: $ink-300; text-align: center; margin: 0; }
-.drop-hint { color: $ink-400; font-size: 0.8rem; margin: 0; }
-.preview-img { max-width: 100%; max-height: 280px; border-radius: 8px; object-fit: contain; }
+.drop-icon { color: $brand-orange; font-size: 2.1rem; line-height: 1; }
+.drop-text { color: $ink-300; text-align: center; margin: 0; line-height: 1.55; }
+.drop-hint { color: $ink-400; font-size: 0.82rem; margin: 0; }
+.preview-img { max-width: 100%; max-height: 280px; border-radius: 12px; object-fit: contain; }
 .btn-remove {
   background: rgba(229,72,77,0.15); border: 1px solid $signal-red;
   color: $signal-red; padding: $space-1 $space-3; border-radius: 6px;
@@ -131,7 +134,7 @@ defineExpose({ isValid: () => true })
   span { display: none; }
 }
 .progress-bar { height: 100%; background: $brand-orange; border-radius: 4px; transition: width 0.3s; }
-.skip-hint { font-size: 0.8rem; color: $ink-400; }
+.skip-hint { font-size: 0.82rem; color: $ink-400; line-height: 1.5; }
 .notas-group { display: flex; flex-direction: column; gap: $space-2; }
 .field-label { color: $ink-300; font-size: 0.85rem; font-weight: 600; }
 .notas-input {
@@ -141,4 +144,6 @@ defineExpose({ isValid: () => true })
   &:focus { border-color: $brand-orange; }
 }
 .field-error { color: $signal-red; font-size: 0.82rem; }
+
+@media (max-width: 720px) { .support-grid { flex-direction: column; } }
 </style>

@@ -5,7 +5,7 @@
       <div class="header-right">
         <span class="estado-badge" :class="`estado-${gestion?.estado}`">{{ estadoLabel(gestion?.estado ?? '') }}</span>
         <AppButton variant="outline" @click="reNotificar" :disabled="notifying">
-          {{ notifying ? 'Enviando...' : '🔔 Renotificar' }}
+          {{ notifying ? 'Enviando...' : 'Renotificar' }}
         </AppButton>
       </div>
     </div>

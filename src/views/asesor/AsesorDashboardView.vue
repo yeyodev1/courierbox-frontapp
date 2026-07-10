@@ -36,10 +36,16 @@ const actions = [
     route: '/asesor/ordenes',
   },
   {
-    label: 'Nueva Gestión',
-    sub: 'Registrar gestión de compra',
+    label: 'Nueva Venta',
+    sub: 'Registrar venta de compra',
     icon: 'fa-solid fa-cart-plus',
-    route: '/asesor/gestiones-compra/nueva',
+    route: '/asesor/ventas',
+  },
+  {
+    label: 'Contactos',
+    sub: 'Ver historial y clientes',
+    icon: 'fa-solid fa-address-book',
+    route: '/asesor/contactos',
   },
   {
     label: 'Mis Gestiones',

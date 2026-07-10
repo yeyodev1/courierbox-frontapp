@@ -251,6 +251,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "Nueva Gestión · Courier Box" },
       },
       {
+        path: "ventas",
+        name: "AsesorVentas",
+        component: () => import("@/views/asesor/AsesorNuevaGestionView.vue"),
+        meta: { title: "Ventas · Courier Box" },
+      },
+      {
+        path: "contactos",
+        name: "AsesorContactos",
+        component: () => import("@/views/asesor/AsesorContactosView.vue"),
+        meta: { title: "Contactos · Courier Box" },
+      },
+      {
+        path: "contactos/:key",
+        name: "AsesorContactoDetail",
+        component: () => import("@/views/asesor/AsesorContactoDetailView.vue"),
+        meta: { title: "Detalle de Contacto · Courier Box" },
+      },
+      {
         path: "gestiones-compra/:id",
         name: "AsesorGestionDetail",
         component: () => import("@/views/asesor/AsesorGestionCompraDetailView.vue"),

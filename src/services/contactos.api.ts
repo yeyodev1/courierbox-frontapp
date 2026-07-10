@@ -26,6 +26,7 @@ export interface ContactoDetail {
     totalOrders: number
     firstOrderDate: string
     lastOrderDate: string
+    asesores?: AsesorInfo[]
   }
   orders: any[]
 }

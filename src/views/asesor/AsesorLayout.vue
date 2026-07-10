@@ -17,13 +17,14 @@ const menuGroups = [
     items: [
       { path: '/asesor', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (p: string) => p === '/asesor' },
       { path: '/asesor/calculadora', label: 'Calculadora', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/asesor/calculadora') },
-      { path: '/asesor/ordenes', label: 'Ventas', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ordenes') },
+      { path: '/asesor/ventas', label: 'Ventas', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ventas') || p.startsWith('/asesor/gestiones-compra/nueva') },
     ],
   },
   {
     label: 'Gestión de Compra',
     items: [
       { path: '/asesor/gestiones-compra', label: 'Mis Gestiones', icon: 'fa-solid fa-cart-plus', match: (p: string) => p.startsWith('/asesor/gestiones-compra') },
+      { path: '/asesor/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: (p: string) => p.startsWith('/asesor/contactos') },
     ],
   },
 ]
@@ -41,10 +42,11 @@ const pageMeta = computed(() => {
   const map: Record<string, { title: string; sub: string }> = {
     '/asesor': { title: 'Dashboard', sub: 'Resumen de tus órdenes y pagos' },
     '/asesor/calculadora': { title: 'Calculadora de gestión', sub: 'Cotiza el fee de gestión de compra' },
-    '/asesor/ordenes': { title: 'Ventas', sub: 'Gestiona las órdenes de compra de tus clientes' },
+    '/asesor/ventas': { title: 'Ventas', sub: 'Registra ventas, historial y comprobantes' },
     '/asesor/ordenes/nueva': { title: 'Nueva orden', sub: 'Crea una orden de compra para tu cliente' },
     '/asesor/gestiones-compra': { title: 'Mis Gestiones de Compra', sub: 'Administra tus gestiones del mes' },
-    '/asesor/gestiones-compra/nueva': { title: 'Nueva Gestión', sub: 'Registra una nueva gestión de compra' },
+    '/asesor/gestiones-compra/nueva': { title: 'Nueva Venta', sub: 'Registra una nueva venta de compra' },
+    '/asesor/contactos': { title: 'Contactos', sub: 'Gestiona el historial de tus clientes' },
   }
   return map[route.path] || { title: 'Asesor', sub: '' }
 })
@@ -263,22 +265,24 @@ function navigate(path: string) {
     right: -12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    background: $ink-700;
-    border: 1px solid $ink-500;
-    color: $ink-300;
+    z-index: 40;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(180deg, $brand-orange, darken($brand-orange, 12%));
+    border: 1px solid rgba($brand-orange, 0.6);
+    color: $ink-1000;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.6rem;
-    transition: all 0.2s;
+    font-size: 0.7rem;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(240, 138, 31, 0.12);
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
 
     &:hover {
-      background: $ink-600;
-      color: $fg-dark;
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(240, 138, 31, 0.22);
     }
 
     i {

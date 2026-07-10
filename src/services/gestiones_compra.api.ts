@@ -1,10 +1,12 @@
 import APIBase from './httpBase'
+import type { ServiceType } from '@/services/asesoria.api'
 
 export interface Contacto {
   _id: string
   nombre: string
   email?: string
   telefono?: string
+  cedula?: string
   notas?: string
 }
 
@@ -18,6 +20,13 @@ export interface CuentaBancaria {
 }
 
 export type GestionCompraEstado = 'borrador' | 'activa' | 'completado' | 'cancelado'
+export type GestionCompraStage = 'solicitada' | 'revisando' | 'comprada' | 'en_transito' | 'entregada'
+
+export interface GestionCompraFoto {
+  url: string
+  title?: string
+  createdAt: string
+}
 
 export interface GestionCompra {
   _id: string
@@ -33,6 +42,8 @@ export interface GestionCompra {
   paginaCompra: string
   fechaEntregaTentativa: string // ISO date
   imagenCompraUrl?: string
+  fotosRelacionadas: GestionCompraFoto[]
+  stage: GestionCompraStage
   estado: GestionCompraEstado
   viewToken: string
   notificacionEnviada: boolean
@@ -56,10 +67,13 @@ export interface CreateGestionCompraInput {
   cuentaBancariaId: string
   costoVenta: number
   valorComision: number
+  serviceType?: ServiceType
   feeConfigId?: string
   paginaCompra: string
   fechaEntregaTentativa: string
   imagenCompraUrl?: string
+  fotosRelacionadas?: { url: string; title?: string; createdAt?: string }[]
+  stage?: GestionCompraStage
   notas?: string
 }
 

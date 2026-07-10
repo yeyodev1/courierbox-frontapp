@@ -4,7 +4,7 @@
       <button class="btn-back" @click="$router.back()">← Volver</button>
       <h1 class="page-title">Nueva Gestión de Compra</h1>
     </div>
-    <GestionCompraWizard redirect-on-success="/admin/gestiones-compra" />
+    <GestionCompraWizard />
   </div>
 </template>
 

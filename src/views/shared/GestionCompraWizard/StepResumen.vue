@@ -24,6 +24,10 @@
         <span class="label">Cuenta de pago</span>
         <span class="value">{{ cuentaText }}</span>
       </div>
+      <div class="summary-row">
+        <span class="label">Modo de gestión</span>
+        <span class="value">{{ serviceTypeLabel }}</span>
+      </div>
       <div v-if="store.formData.reservaConfirmada" class="summary-row">
         <span class="label">Reserva confirmada</span>
         <span class="value green">Sí ✓</span>
@@ -44,9 +48,13 @@
         <span class="label">Entrega tentativa</span>
         <span class="value">{{ fechaFormateada }}</span>
       </div>
-      <div v-if="store.formData.imagenCompraUrl" class="summary-row">
+      <div v-if="store.formData.imagenCompraUrl || store.formData.imagenCompraPreview" class="summary-row">
         <span class="label">Imagen</span>
-        <img :src="store.formData.imagenCompraUrl" alt="Compra" class="preview-thumb" />
+        <img :src="store.formData.imagenCompraUrl || store.formData.imagenCompraPreview" alt="Compra" class="preview-thumb" />
+      </div>
+      <div class="summary-row">
+        <span class="label">Soporte</span>
+        <span class="value">{{ soporteLabel }}</span>
       </div>
       <div v-if="store.formData.notas" class="summary-row">
         <span class="label">Notas</span>
@@ -55,7 +63,7 @@
     </div>
 
     <div class="notification-info">
-      <span class="bell">🔔</span>
+      <span class="bell"><i class="fa-solid fa-bell" aria-hidden="true" /></span>
       <p>Al guardar se enviará automáticamente: <strong>email al cliente</strong>, <strong>WhatsApp vía GHL</strong> y se generará un <strong>enlace de seguimiento</strong>.</p>
     </div>
   </div>
@@ -78,6 +86,16 @@ const fechaFormateada = computed(() => {
   return new Date(store.formData.fechaEntregaTentativa + 'T00:00:00').toLocaleDateString('es-EC', {
     year: 'numeric', month: 'long', day: 'numeric'
   })
+})
+
+const serviceTypeLabel = computed(() =>
+  store.formData.serviceType === 'logistica' ? 'Solo courier' : 'Compra total'
+)
+
+const soporteLabel = computed(() => {
+  if (store.formData.comprobanteEstado === 'verificado') return 'Verificado sin archivo'
+  if (store.formData.comprobanteEstado === 'sin_soporte') return 'Sin soporte'
+  return 'Con comprobante'
 })
 
 defineExpose({ isValid: () => true })
@@ -114,5 +132,5 @@ defineExpose({ isValid: () => true })
   p { color: $ink-300; font-size: 0.85rem; line-height: 1.5; margin: 0; }
   strong { color: $fg-dark; }
 }
-.bell { font-size: 1.3rem; }
+.bell { color: $brand-orange; font-size: 1.2rem; line-height: 1; }
 </style>

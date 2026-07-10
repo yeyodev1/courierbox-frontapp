@@ -1,6 +1,21 @@
 import APIBase from './httpBase'
 import type { Contacto } from './gestiones_compra.api'
 
+export interface ContactoCbResult {
+  contacto: Contacto
+  created: boolean
+  matchedOn: string[]
+}
+
+export interface ContactoCbCreateInput {
+  nombre: string
+  email?: string
+  telefono?: string
+  phoneCountryCode?: string
+  cedula?: string
+  notas?: string
+}
+
 class ContactosCbAPI extends APIBase {
   private readonly base = 'v1/contactos-cb'
 
@@ -18,12 +33,12 @@ class ContactosCbAPI extends APIBase {
     return res.data
   }
 
-  async create(data: { nombre: string; email?: string; telefono?: string; notas?: string }): Promise<Contacto> {
-    const res = await this.post<{ contacto: Contacto }>(this.base, data)
-    return res.data.contacto
+  async create(data: ContactoCbCreateInput): Promise<ContactoCbResult> {
+    const res = await this.post<ContactoCbResult>(this.base, data)
+    return res.data
   }
 
-  async update(id: string, data: Partial<{ nombre: string; email: string; telefono: string; notas: string }>): Promise<Contacto> {
+  async update(id: string, data: Partial<{ nombre: string; email: string; telefono: string; cedula: string; notas: string }>): Promise<Contacto> {
     const res = await this.patch<{ contacto: Contacto }>(`${this.base}/${id}`, data)
     return res.data.contacto
   }

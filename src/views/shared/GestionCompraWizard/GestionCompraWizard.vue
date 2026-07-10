@@ -108,41 +108,52 @@ async function handleSubmit() {
   store.isSubmitting = true
 
   try {
-    const data = store.formData
-    const gestion = await gestionesCompraAPI.create({
-      asesorId: data.asesorId || undefined,
-      contactoId: data.contactoId,
-      valorTotal: data.valorTotal ?? 0,
-      valorReserva: data.valorReserva ?? 0,
-      cuentaBancariaId: data.cuentaBancariaId,
-      costoVenta: data.costoVenta ?? 0,
-      valorComision: data.valorComision ?? 0,
-      feeConfigId: data.feeConfigId || undefined,
-      paginaCompra: data.paginaCompra,
-      fechaEntregaTentativa: data.fechaEntregaTentativa,
-      imagenCompraUrl: data.imagenCompraUrl || undefined,
-      notas: data.notas || undefined,
-    })
+      const data = store.formData
+      let imagenCompraUrl = data.imagenCompraUrl || undefined
+
+      if (!imagenCompraUrl && data.imagenCompraFile) {
+        imagenCompraUrl = await gestionesCompraAPI.uploadImagen(data.imagenCompraFile)
+        store.formData.imagenCompraUrl = imagenCompraUrl
+      }
+
+      const notesParts = [data.notas?.trim(), supportNote(data.comprobanteEstado)].filter(Boolean)
+      const serviceType = data.serviceType || undefined
+      const gestion = await gestionesCompraAPI.create({
+        asesorId: data.asesorId || undefined,
+        contactoId: data.contactoId,
+        valorTotal: data.valorTotal ?? 0,
+        valorReserva: data.valorReserva ?? 0,
+        cuentaBancariaId: data.cuentaBancariaId,
+        costoVenta: data.costoVenta ?? 0,
+        valorComision: data.valorComision ?? 0,
+        feeConfigId: data.feeConfigId || undefined,
+        paginaCompra: data.paginaCompra,
+        fechaEntregaTentativa: data.fechaEntregaTentativa,
+        imagenCompraUrl,
+        serviceType,
+        notas: notesParts.length ? notesParts.join(' | ') : undefined,
+      })
 
     toast.showNotification('Gestión guardada y cliente notificado', 'success')
     store.reset()
 
-    const redirect = props.redirectOnSuccess
-    if (redirect) {
-      router.push(redirect)
-    } else {
-      const role = auth.userRole
-      const base = ['admin', 'superadmin', 'gerencia'].includes(role ?? '')
-        ? '/admin/gestiones-compra'
-        : '/asesor/gestiones-compra'
-      router.push(`${base}/${gestion._id}`)
-    }
+    const role = auth.userRole
+    const base = ['admin', 'superadmin', 'gerencia'].includes(role ?? '')
+      ? '/admin/gestiones-compra'
+      : '/asesor/gestiones-compra'
+    router.push(`${base}/${gestion._id}`)
   } catch (e: any) {
     toast.showNotification(e?.message ?? 'Error al guardar la gestión', 'error')
   } finally {
     isSubmitting.value = false
     store.isSubmitting = false
   }
+}
+
+function supportNote(state: string) {
+  if (state === 'verificado') return 'Soporte: verificado sin comprobante adjunto'
+  if (state === 'sin_soporte') return 'Soporte: sin comprobante'
+  return 'Soporte: con comprobante adjunto'
 }
 </script>
 

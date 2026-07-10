@@ -23,12 +23,16 @@ export interface GestionCompraFormData {
   feeConfigId: string
   feeConfigNombre: string
   // Step 7
+  serviceType: 'logistica' | 'compra_total' | ''
   paginaCompra: string
   // Step 8
   fechaEntregaTentativa: string
   // Step 9
   imagenCompraUrl: string
   imagenCompraFile: File | null
+  imagenCompraPreview: string
+  // Support state
+  comprobanteEstado: 'comprobante' | 'verificado' | 'sin_soporte'
   // General
   notas: string
 }
@@ -60,10 +64,13 @@ const emptyForm = (): GestionCompraFormData => ({
   valorComision: null,
   feeConfigId: '',
   feeConfigNombre: '',
+  serviceType: '',
   paginaCompra: '',
   fechaEntregaTentativa: '',
   imagenCompraUrl: '',
   imagenCompraFile: null,
+  imagenCompraPreview: '',
+  comprobanteEstado: 'comprobante',
   notas: '',
 })
 
@@ -96,11 +103,12 @@ export const useGestionCompraFormStore = defineStore('gestionCompraForm', () => 
     return currentStep.value
   })
 
-  function init(options: { adminMode?: boolean; defaultAsesorId?: string; defaultAsesorNombre?: string }) {
+  function init(options: { adminMode?: boolean; defaultAsesorId?: string; defaultAsesorNombre?: string; defaultServiceType?: 'logistica' | 'compra_total' | '' }) {
     formData.value = emptyForm()
     currentStep.value = 1
     errors.value = {}
     isAdminMode.value = options.adminMode ?? false
+    formData.value.serviceType = options.defaultServiceType ?? ''
     if (!options.adminMode) {
       formData.value.asesorId = options.defaultAsesorId ?? ''
       formData.value.asesorNombre = options.defaultAsesorNombre ?? ''

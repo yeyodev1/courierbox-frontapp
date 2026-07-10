@@ -1,11 +1,19 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
+import { authAPI } from "@/services/auth.api";
 
 export const useAuthStore = defineStore("auth", () => {
   const savedToken = localStorage.getItem("admin_token");
   const token = ref<string | null>(savedToken && savedToken !== "null" ? savedToken : null);
+  const profile = ref<{ userId: string; email: string; name: string; role: string } | null>(null);
   const router = useRouter();
+
+  const clearSession = () => {
+    token.value = null;
+    profile.value = null;
+    localStorage.removeItem("admin_token");
+  };
 
   const setToken = (newToken: string) => {
     token.value = newToken;
@@ -13,9 +21,21 @@ export const useAuthStore = defineStore("auth", () => {
   };
 
   const logout = () => {
-    token.value = null;
-    localStorage.removeItem("admin_token");
+    clearSession();
     router.push("/login");
+  };
+
+  const bootstrap = async () => {
+    if (!token.value) return null;
+
+    try {
+      const user = await authAPI.me();
+      profile.value = { userId: user.id, email: user.email, name: user.name, role: user.role };
+      return profile.value;
+    } catch {
+      clearSession();
+      return null;
+    }
   };
 
   const isAuthenticated = () => {
@@ -23,13 +43,14 @@ export const useAuthStore = defineStore("auth", () => {
   };
 
   const currentUser = computed(() => {
+    if (profile.value) return profile.value;
     if (!token.value) return null;
     try {
       const payload = token.value.split(".")[1];
       if (!payload) return null;
       return JSON.parse(atob(payload));
     } catch (e) {
-      return null;
+      return profile.value;
     }
   });
 
@@ -41,7 +62,9 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     token,
+    profile,
     setToken,
+    bootstrap,
     logout,
     isAuthenticated,
     currentUser,

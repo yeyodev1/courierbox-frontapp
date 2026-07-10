@@ -58,7 +58,7 @@
         <div class="card-right">
           <span class="amount">${{ g.valorTotal.toFixed(2) }}</span>
           <span class="estado-badge" :class="`estado-${g.estado}`">{{ estadoLabel(g.estado) }}</span>
-          <span v-if="g.imagenCompraUrl" class="has-img">🖼️</span>
+          <span v-if="g.imagenCompraUrl" class="has-img"><i class="fa-regular fa-image" aria-hidden="true" /></span>
         </div>
       </div>
       <div v-if="!gestiones.length" class="empty-state">
