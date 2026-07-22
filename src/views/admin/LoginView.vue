@@ -21,6 +21,8 @@ const handleLogin = async () => {
     const role = res.user?.role;
     if (role === 'asesor') router.push({ name: 'AsesorDashboard' });
     else if (role === 'superadmin') router.push({ name: 'SuperadminDashboard' });
+    else if (role === 'motorizado') router.push({ name: 'MotorizadoEntregas' });
+    else if (role === 'bodega') router.push({ name: 'BodegaCompras' });
     else router.push({ name: 'AdminDashboard' });
   } catch (err: any) {
     toastStore.showNotification(err.message || 'Error al iniciar sesión', 'error');

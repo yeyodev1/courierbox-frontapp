@@ -13,12 +13,12 @@
         <span class="value">{{ store.formData.asesorNombre || '—' }}</span>
       </div>
       <div class="summary-row highlight-row">
-        <span class="label">Valor total</span>
-        <span class="value orange">${{ (store.formData.valorTotal ?? 0).toFixed(2) }}</span>
+        <span class="label">{{ esCourier ? 'Valor del servicio' : 'Valor total' }}</span>
+        <span class="value orange">${{ money(store.formData.valorTotal) }}</span>
       </div>
       <div class="summary-row">
-        <span class="label">Reserva</span>
-        <span class="value">${{ (store.formData.valorReserva ?? 0).toFixed(2) }}</span>
+        <span class="label">{{ esCourier ? 'Abono del servicio' : 'Reserva' }}</span>
+        <span class="value">${{ money(store.formData.valorReserva) }}</span>
       </div>
       <div class="summary-row">
         <span class="label">Cuenta de pago</span>
@@ -33,12 +33,12 @@
         <span class="value green">Sí ✓</span>
       </div>
       <div class="summary-row">
-        <span class="label">Costo de venta</span>
-        <span class="value">${{ (store.formData.costoVenta ?? 0).toFixed(2) }}</span>
+        <span class="label">{{ esCourier ? 'Costo del servicio' : 'Costo de venta' }}</span>
+        <span class="value">${{ money(store.formData.costoVenta) }}</span>
       </div>
       <div class="summary-row">
         <span class="label">Comisión</span>
-        <span class="value">${{ (store.formData.valorComision ?? 0).toFixed(2) }}</span>
+        <span class="value">${{ money(store.formData.valorComision) }}</span>
       </div>
       <div class="summary-row">
         <span class="label">Página de compra</span>
@@ -64,7 +64,23 @@
 
     <div class="notification-info">
       <span class="bell"><i class="fa-solid fa-bell" aria-hidden="true" /></span>
-      <p>Al guardar se enviará automáticamente: <strong>email al cliente</strong>, <strong>WhatsApp vía GHL</strong> y se generará un <strong>enlace de seguimiento</strong>.</p>
+      <div class="notif-body">
+        <p class="notif-title">Al confirmar, la notificación se enviará a:</p>
+        <div class="notif-line" :class="{ missing: !clienteEmail }">
+          <i class="fa-solid fa-envelope" aria-hidden="true" />
+          <span v-if="clienteEmail">Correo: <strong>{{ clienteEmail }}</strong></span>
+          <span v-else>Sin correo registrado — el cliente <strong>no recibirá el email</strong>.</span>
+        </div>
+        <div class="notif-line" :class="{ missing: !clienteTelefono }">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true" />
+          <span v-if="clienteTelefono">WhatsApp: <strong>{{ clienteTelefono }}</strong></span>
+          <span v-else>Sin teléfono registrado — no se enviará <strong>WhatsApp</strong>.</span>
+        </div>
+        <p v-if="!clienteEmail || !clienteTelefono" class="notif-fix">
+          <i class="fa-solid fa-circle-info" aria-hidden="true" />
+          Puedes volver al paso <strong>Cliente</strong> para completar los datos que falten.
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -88,6 +104,12 @@ const fechaFormateada = computed(() => {
   })
 })
 
+const esCourier = computed(() => store.formData.serviceType === 'logistica')
+function money(v: unknown) {
+  return (Number(v) || 0).toFixed(2)
+}
+const clienteEmail = computed(() => store.formData.contacto?.email?.trim() || '')
+const clienteTelefono = computed(() => store.formData.contacto?.telefono?.trim() || '')
 const serviceTypeLabel = computed(() =>
   store.formData.serviceType === 'logistica' ? 'Solo courier' : 'Compra total'
 )
@@ -128,9 +150,21 @@ defineExpose({ isValid: () => true })
 .notification-info {
   display: flex; gap: $space-3; align-items: flex-start;
   background: rgba(43,187,146,0.08); border: 1px solid rgba(43,187,146,0.3);
-  border-radius: 10px; padding: $space-3 $space-4;
+  border-radius: 10px; padding: $space-4;
   p { color: $ink-300; font-size: 0.85rem; line-height: 1.5; margin: 0; }
   strong { color: $fg-dark; }
+}
+.notif-body { display: flex; flex-direction: column; gap: $space-2; }
+.notif-title { color: $fg-dark !important; font-weight: 700; }
+.notif-line {
+  display: flex; align-items: center; gap: $space-2; color: $ink-300; font-size: 0.88rem;
+  i { color: $signal-green; width: 18px; text-align: center; }
+  &.missing { color: $signal-amber; i { color: $signal-amber; } strong { color: $signal-amber; } }
+}
+.notif-fix {
+  display: flex; align-items: center; gap: $space-2; margin-top: $space-1 !important;
+  color: $ink-400 !important; font-size: 0.8rem;
+  i { color: $signal-blue; }
 }
 .bell { color: $brand-orange; font-size: 1.2rem; line-height: 1; }
 </style>

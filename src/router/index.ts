@@ -277,6 +277,56 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: "/motorizado",
+    component: () => import("@/views/motorizado/MotorizadoLayout.vue"),
+    meta: { requiresAuth: true, requiresMotorizado: true, hideNavigation: true },
+    children: [
+      {
+        path: "",
+        name: "MotorizadoEntregas",
+        component: () => import("@/views/motorizado/MotorizadoEntregasView.vue"),
+        meta: { title: "Mis Entregas · Courier Box" },
+      },
+      {
+        path: "entregas/:id",
+        name: "MotorizadoEntregaDetail",
+        component: () => import("@/views/motorizado/MotorizadoEntregaDetailView.vue"),
+        meta: { title: "Entrega · Courier Box" },
+      },
+    ],
+  },
+  {
+    path: "/bodega",
+    component: () => import("@/views/bodega/BodegaLayout.vue"),
+    meta: { requiresAuth: true, requiresBodega: true, hideNavigation: true },
+    children: [
+      {
+        path: "",
+        name: "BodegaCompras",
+        component: () => import("@/views/bodega/BodegaComprasView.vue"),
+        meta: { title: "Bodega · Compras · Courier Box" },
+      },
+      {
+        path: "compras/:id",
+        name: "BodegaCompraDetail",
+        component: () => import("@/views/bodega/BodegaCompraDetailView.vue"),
+        meta: { title: "Recepción · Courier Box" },
+      },
+      {
+        path: "envios",
+        name: "BodegaEnvios",
+        component: () => import("@/views/bodega/BodegaEnviosView.vue"),
+        meta: { title: "Bodega · Envíos · Courier Box" },
+      },
+      {
+        path: "motorizados",
+        name: "BodegaMotorizados",
+        component: () => import("@/views/bodega/BodegaMotorizadosView.vue"),
+        meta: { title: "Bodega · Motorizados · Courier Box" },
+      },
+    ],
+  },
+  {
     path: "/pagos",
     name: "PaymentPortal",
     component: () => import("@/views/PaymentPortalView.vue"),
@@ -316,8 +366,17 @@ router.beforeEach((to, _from, next) => {
   const isAuthenticated = authStore.isAuthenticated();
   const role = authStore.userRole;
 
+  const homeForRole = (r: string | null | undefined) => {
+    if (r === "asesor") return { name: "AsesorDashboard" };
+    if (r === "superadmin") return { name: "SuperadminDashboard" };
+    if (r === "motorizado") return { name: "MotorizadoEntregas" };
+    if (r === "bodega") return { name: "BodegaCompras" };
+    if (["admin", "gerencia"].includes(String(r || ""))) return { name: "AdminDashboard" };
+    return { name: "Home" };
+  };
+
   if (to.name === "AdminLogin" && isAuthenticated) {
-    next({ name: role === "asesor" ? "AsesorDashboard" : role === "superadmin" ? "SuperadminDashboard" : "AdminDashboard" });
+    next(homeForRole(role));
     return;
   }
 
@@ -327,7 +386,17 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (to.meta.requiresAdmin && !["admin", "gerencia", "superadmin"].includes(String(role || ""))) {
-    next({ name: role === "asesor" ? "AsesorDashboard" : role === "superadmin" ? "SuperadminDashboard" : "Home" });
+    next(homeForRole(role));
+    return;
+  }
+
+  if ((to.meta as any).requiresMotorizado && role !== "motorizado") {
+    next(homeForRole(role));
+    return;
+  }
+
+  if ((to.meta as any).requiresBodega && role !== "bodega") {
+    next(homeForRole(role));
     return;
   }
 

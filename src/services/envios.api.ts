@@ -11,19 +11,28 @@ export interface TrayectoPago {
   notas: string
 }
 
+export interface Motorizado {
+  _id: string
+  name: string
+  email: string
+}
+
 export interface EnvioDomicilio {
   _id: string
   modo: 'local' | 'interprovincial'
-  paqueteId: {
+  paqueteId?: {
     _id: string
     wr: string
     sh: string
     trackingOriginal: string
     contenido: string
-  }
+  } | null
   clienteNombre: string
   clienteDireccion: string
   clienteTelefono: string
+  clienteEmail: string
+  asignadoA?: { _id: string; name: string; email: string } | string | null
+  asignadoNombre: string
   numeroInvoice: string
   ciudadDestino: string
   proveedorUtilizado: string
@@ -33,6 +42,10 @@ export interface EnvioDomicilio {
   fotoEntregaUrl: string
   firmaUrl: string
   novedad: string
+  recibidoPorNombre: string
+  recibidoPorApellido: string
+  recibidoPorCedula: string
+  recibidoPorContacto: string
   trayectoUsa: TrayectoPago
   trayectoLocal: TrayectoPago
   estado: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'fallido'
@@ -53,10 +66,11 @@ export interface PaqueteSimple {
 }
 
 class EnviosAPI extends APIBase {
-  async list(params?: { estado?: string; paqueteId?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
+  async list(params?: { estado?: string; paqueteId?: string; asignadoA?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
     const searchParams = new URLSearchParams()
     if (params?.estado) searchParams.set('estado', params.estado)
     if (params?.paqueteId) searchParams.set('paqueteId', params.paqueteId)
+    if (params?.asignadoA) searchParams.set('asignadoA', params.asignadoA)
     if (params?.desde) searchParams.set('desde', params.desde)
     if (params?.hasta) searchParams.set('hasta', params.hasta)
     if (params?.limit) searchParams.set('limit', String(params.limit))
@@ -65,12 +79,19 @@ class EnviosAPI extends APIBase {
     return res.data
   }
 
+  async getById(id: string) {
+    const res = await this.get<{ envio: EnvioDomicilio }>(`v1/envios/${id}`)
+    return res.data
+  }
+
   async create(data: {
-    paqueteId: string
+    paqueteId?: string
     modo?: 'local' | 'interprovincial'
     clienteNombre: string
     clienteDireccion: string
     clienteTelefono?: string
+    clienteEmail?: string
+    asignadoA?: string
     numeroInvoice?: string
     ciudadDestino?: string
     proveedorUtilizado?: string
@@ -82,6 +103,30 @@ class EnviosAPI extends APIBase {
   }) {
     const res = await this.post<{ envio: EnvioDomicilio }>('v1/envios', data)
     return res.data
+  }
+
+  async asignar(id: string, asignadoA: string) {
+    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/asignar`, { asignadoA })
+    return res.data
+  }
+
+  async marcarEntregado(id: string, data: { fotoEntregaUrl?: string; firmaUrl?: string; novedad?: string; recibidoPorNombre?: string; recibidoPorApellido?: string; recibidoPorCedula?: string; recibidoPorContacto?: string }) {
+    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/entregado`, data)
+    return res.data
+  }
+
+  async listMotorizados() {
+    const res = await this.get<{ motorizados: Motorizado[] }>('v1/envios/motorizados')
+    return res.data
+  }
+
+  async createMotorizado(data: { name: string; email: string; password?: string; sendEmail?: boolean; loginUrl?: string }) {
+    const res = await this.post<{ motorizado: Motorizado; password?: string }>('v1/envios/motorizados', data)
+    return res.data
+  }
+
+  async deleteMotorizado(id: string) {
+    await this.delete(`v1/envios/motorizados/${id}`)
   }
 
   async update(id: string, data: Partial<EnvioDomicilio>) {

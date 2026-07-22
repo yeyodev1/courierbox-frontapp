@@ -172,6 +172,14 @@ class GestionesCompraAPI extends APIBase {
     const res = await this.post<{ url: string }>(`${this.base}/upload-imagen`, form)
     return res.data.url
   }
+
+  async recepcionBodega(
+    id: string,
+    data: { fotos: { url: string; title?: string }[]; notas?: string; enviarCorreo?: boolean; entregaEstimada?: string }
+  ): Promise<GestionCompra> {
+    const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/recepcion-bodega`, data)
+    return res.data.gestion
+  }
 }
 
 export const gestionesCompraAPI = new GestionesCompraAPI()

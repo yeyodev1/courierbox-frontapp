@@ -1,7 +1,11 @@
 <template>
   <div class="step-costo">
-    <h3 class="step__title">Costo de venta</h3>
-    <p class="step__desc">¿Cuánto costó el producto en la tienda?</p>
+    <h3 class="step__title">{{ esCourier ? 'Costo del servicio (opcional)' : 'Costo de venta' }}</h3>
+    <p class="step__desc">
+      {{ esCourier
+        ? 'Costo que te representa el traslado (para calcular tu margen). Si no aplica, déjalo en 0.'
+        : '¿Cuánto costó el producto en la tienda?' }}
+    </p>
     <div class="input-group">
       <span class="currency-prefix">$</span>
       <input
@@ -29,6 +33,7 @@ import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
 
 const store = useGestionCompraFormStore()
 const error = ref('')
+const esCourier = computed(() => store.formData.serviceType === 'logistica')
 
 const margin = computed(() => (store.formData.valorTotal ?? 0) - (store.formData.costoVenta ?? 0))
 const marginPct = computed(() =>

@@ -1,11 +1,22 @@
 <template>
   <div class="step-reserva">
-    <h3 class="step__title">Valor de reserva y cuenta de pago</h3>
-    <p class="step__desc">Selecciona una cuenta para recibir la reserva. Si no existe, puedes crearla sin salir del flujo.</p>
+    <h3 class="step__title">{{ esCourier ? 'Abono del servicio y cuenta de pago' : 'Valor de reserva y cuenta de pago' }}</h3>
+    <p class="step__desc">
+      {{ esCourier
+        ? 'En Solo courier el cliente ya pagó el producto; aquí solo registras el abono del servicio de traslado (si aplica) y la cuenta donde te paga.'
+        : 'Selecciona una cuenta para recibir la reserva. Si no existe, puedes crearla sin salir del flujo.' }}
+    </p>
+
+    <div v-if="esCourier" class="courier-note">
+      <i class="fa-solid fa-circle-info" aria-hidden="true" />
+      <span>El cliente ya compró el producto. Si ya pagó todo el servicio, deja el abono en <strong>$0.00</strong>.</span>
+    </div>
 
     <!-- Valor reserva -->
     <div class="field-group">
-      <label class="field-label">Valor de reserva (abono inicial del cliente)</label>
+      <label class="field-label">
+        {{ esCourier ? 'Abono / anticipo del servicio (opcional)' : 'Valor de reserva (abono inicial del cliente)' }}
+      </label>
       <div class="input-group">
         <span class="currency-prefix">$</span>
         <input
@@ -98,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
@@ -109,6 +120,7 @@ import type { CuentaBancaria } from '@/services/gestiones_compra.api'
 const store = useGestionCompraFormStore()
 const auth = useAuthStore()
 const isAdmin = ['admin', 'superadmin', 'gerencia'].includes(auth.userRole ?? '')
+const esCourier = computed(() => store.formData.serviceType === 'logistica')
 
 const cuentas = ref<CuentaBancaria[]>([])
 const loadingCuentas = ref(true)
@@ -177,7 +189,14 @@ defineExpose({
 @use '@/styles/tokens/space' as *;
 .step-reserva { display: flex; flex-direction: column; gap: $space-5; }
 .step__title { color: $fg-dark; font-size: 1.1rem; margin: 0; }
-.step__desc { color: $ink-300; font-size: 0.9rem; margin: 0; }
+.step__desc { color: $ink-300; font-size: 0.9rem; margin: 0; line-height: 1.5; }
+.courier-note {
+  display: flex; align-items: flex-start; gap: $space-2;
+  background: rgba($signal-blue, 0.08); border: 1px solid rgba($signal-blue, 0.25);
+  border-radius: 10px; padding: $space-3 $space-4; color: $ink-300; font-size: 0.85rem; line-height: 1.5;
+  i { color: $signal-blue; margin-top: 2px; }
+  strong { color: $fg-dark; }
+}
 .field-group { display: flex; flex-direction: column; gap: $space-2; }
 .field-label { color: $ink-300; font-size: 0.85rem; font-weight: 600; }
 .field-actions { display: flex; justify-content: flex-end; }

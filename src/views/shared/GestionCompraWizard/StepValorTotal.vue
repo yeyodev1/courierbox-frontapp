@@ -1,7 +1,11 @@
 <template>
   <div class="step-valor">
-    <h3 class="step__title">Valor total de la compra</h3>
-    <p class="step__desc">Ingresa el valor total que el cliente pagará por el producto.</p>
+    <h3 class="step__title">{{ esCourier ? 'Valor a cobrar por el servicio' : 'Valor total de la compra' }}</h3>
+    <p class="step__desc">
+      {{ esCourier
+        ? 'Ingresa el valor total que le cobrarás al cliente por el courier / traslado.'
+        : 'Ingresa el valor total que el cliente pagará por el producto.' }}
+    </p>
     <div class="input-group">
       <span class="currency-prefix">$</span>
       <input
@@ -22,10 +26,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
 
 const store = useGestionCompraFormStore()
+const esCourier = computed(() => store.formData.serviceType === 'logistica')
 const localValor = ref<number>(store.formData.valorTotal ?? 0)
 const error = ref('')
 

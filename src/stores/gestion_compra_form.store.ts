@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Contacto, CuentaBancaria } from '@/services/gestiones_compra.api'
+
+const STORAGE_KEY = 'cb_gestion_compra_draft'
 
 export interface GestionCompraFormData {
   // Step 1
@@ -37,18 +39,45 @@ export interface GestionCompraFormData {
   notas: string
 }
 
-const STEP_LABELS: Record<number, string> = {
-  1: 'Seleccionar cliente',
-  2: 'Seleccionar asesor',
-  3: 'Valor total',
-  4: 'Valor de reserva',
-  5: 'Costo de venta',
-  6: 'Comisión',
-  7: 'Página de compra',
-  8: 'Fecha de entrega',
-  9: 'Imagen de la compra',
-  10: 'Resumen final',
+export type StepKey =
+  | 'cliente'
+  | 'asesor'
+  | 'valorTotal'
+  | 'reserva'
+  | 'costoVenta'
+  | 'comision'
+  | 'paginaCompra'
+  | 'fechaEntrega'
+  | 'imagen'
+  | 'resumen'
+
+const STEP_LABELS: Record<StepKey, string> = {
+  cliente: 'Seleccionar cliente',
+  asesor: 'Seleccionar asesor',
+  valorTotal: 'Valor total',
+  reserva: 'Valor de reserva',
+  costoVenta: 'Costo de venta',
+  comision: 'Comisión',
+  paginaCompra: 'Página de compra',
+  fechaEntrega: 'Fecha de entrega',
+  imagen: 'Imagen de la compra',
+  resumen: 'Resumen final',
 }
+
+// Full ordered flow. Admin sees all steps; asesor skips the "asesor" step
+// (they are always the asesor of their own sale).
+const FULL_FLOW: StepKey[] = [
+  'cliente',
+  'asesor',
+  'valorTotal',
+  'reserva',
+  'costoVenta',
+  'comision',
+  'paginaCompra',
+  'fechaEntrega',
+  'imagen',
+  'resumen',
+]
 
 const emptyForm = (): GestionCompraFormData => ({
   contactoId: '',
@@ -77,31 +106,77 @@ const emptyForm = (): GestionCompraFormData => ({
 export const useGestionCompraFormStore = defineStore('gestionCompraForm', () => {
   const currentStep = ref(1)
   const formData = ref<GestionCompraFormData>(emptyForm())
-  const isAdminMode = ref(false) // true = admin creating (step 2 visible)
-  const totalSteps = computed(() => (isAdminMode.value ? 10 : 9))
+  const isAdminMode = ref(false) // true = admin creating (asesor step visible)
   const isSubmitting = ref(false)
   const errors = ref<Record<string, string>>({})
 
-  const currentStepLabel = computed(() => {
-    if (!isAdminMode.value && currentStep.value >= 2) {
-      // Shift labels: skip step 2 for asesor
-      return STEP_LABELS[currentStep.value + 1] ?? ''
-    }
-    return STEP_LABELS[currentStep.value] ?? ''
-  })
+  // Declarative step list — the single source of truth. This removes the old
+  // fragile index-shifting (realStepIndex) that could render an empty step body.
+  const steps = computed<StepKey[]>(() =>
+    isAdminMode.value ? FULL_FLOW : FULL_FLOW.filter((k) => k !== 'asesor')
+  )
+
+  const totalSteps = computed(() => steps.value.length)
+
+  const currentStepKey = computed<StepKey>(
+    () => steps.value[currentStep.value - 1] ?? 'cliente'
+  )
+
+  const currentStepLabel = computed(() => STEP_LABELS[currentStepKey.value] ?? '')
 
   const progressPercent = computed(() =>
     Math.round((currentStep.value / totalSteps.value) * 100)
   )
 
-  // Resolve the "real" step index for both modes
-  const realStepIndex = computed(() => {
-    // In asesor mode, step numbers are shifted: UI step 2 = data step 3, etc.
-    if (!isAdminMode.value && currentStep.value >= 2) {
-      return currentStep.value + 1
-    }
-    return currentStep.value
+  // --- Draft persistence (localStorage) ---------------------------------
+  // Everything the asesor fills is mirrored to localStorage so a reload does
+  // not wipe progress. Non-serializable fields (File / blob preview) are
+  // stripped. "hasProgress" powers the leave/reload warnings.
+  const hasProgress = computed(() => {
+    const fd = formData.value
+    return !!(fd.serviceType || fd.contactoId || fd.valorTotal != null || fd.cuentaBancariaId)
   })
+
+  function persist() {
+    try {
+      if (!hasProgress.value) {
+        localStorage.removeItem(STORAGE_KEY)
+        return
+      }
+      const fd = { ...formData.value, imagenCompraFile: null, imagenCompraPreview: '' }
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ formData: fd, currentStep: currentStep.value, isAdminMode: isAdminMode.value, savedAt: Date.now() })
+      )
+    } catch {
+      /* storage unavailable — ignore */
+    }
+  }
+
+  function clearDraft() {
+    try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+  }
+
+  function loadDraft(): boolean {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return false
+      const parsed = JSON.parse(raw)
+      if (!parsed?.formData) return false
+      const fd = parsed.formData
+      const meaningful = fd.serviceType || fd.contactoId || fd.valorTotal != null || fd.cuentaBancariaId
+      if (!meaningful) return false
+      formData.value = { ...emptyForm(), ...fd, imagenCompraFile: null, imagenCompraPreview: '' }
+      currentStep.value = parsed.currentStep ?? 1
+      isAdminMode.value = !!parsed.isAdminMode
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // Persist on every change (deep) so nothing is lost mid-flow.
+  watch([formData, currentStep, isAdminMode], persist, { deep: true })
 
   function init(options: { adminMode?: boolean; defaultAsesorId?: string; defaultAsesorNombre?: string; defaultServiceType?: 'logistica' | 'compra_total' | '' }) {
     formData.value = emptyForm()
@@ -113,6 +188,7 @@ export const useGestionCompraFormStore = defineStore('gestionCompraForm', () => 
       formData.value.asesorId = options.defaultAsesorId ?? ''
       formData.value.asesorNombre = options.defaultAsesorNombre ?? ''
     }
+    clearDraft()
   }
 
   function nextStep() {
@@ -166,19 +242,24 @@ export const useGestionCompraFormStore = defineStore('gestionCompraForm', () => 
     formData.value = emptyForm()
     currentStep.value = 1
     errors.value = {}
+    clearDraft()
   }
 
   return {
     currentStep,
     formData,
     isAdminMode,
+    steps,
     totalSteps,
+    currentStepKey,
     currentStepLabel,
     progressPercent,
-    realStepIndex,
     isSubmitting,
     errors,
+    hasProgress,
     init,
+    loadDraft,
+    clearDraft,
     nextStep,
     prevStep,
     goToStep,
