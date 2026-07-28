@@ -7,6 +7,7 @@ import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import {
   AdminDashboardActivityPanel,
   AdminDashboardFinancePanel,
+  AdminDashboardGestionCompraPanel,
   AdminDashboardHero,
   AdminDashboardKpiPanel,
   AdminDashboardQuickActions,
@@ -26,6 +27,9 @@ interface ResumenData {
   totalGastos: number
   gestionesMes: number
   gestionesValorMes: number
+  gestionesComisionMes: number
+  gestionesCostoMes: number
+  gestionesMargenMes: number
 }
 
 interface KpiCard {
@@ -61,6 +65,9 @@ const resumen = ref<ResumenData>({
   totalGastos: 0,
   gestionesMes: 0,
   gestionesValorMes: 0,
+  gestionesComisionMes: 0,
+  gestionesCostoMes: 0,
+  gestionesMargenMes: 0,
 })
 
 function formatCurrency(value: number) {
@@ -78,6 +85,7 @@ const kpiCards = computed<KpiCard[]>(() => ([
   { label: 'Gestiones del Mes', value: formatCurrency(resumen.value.gestionesValorMes), detail: `${resumen.value.gestionesMes} operaciones`, icon: 'fa-bag-shopping', tone: 'teal' },
   { label: 'Facturas', value: formatCompact(resumen.value.totalFacturas), detail: 'Conciliación', icon: 'fa-file-invoice', tone: 'blue' },
   { label: 'Gastos', value: formatCurrency(resumen.value.totalGastos), detail: 'Costo acumulado', icon: 'fa-receipt', tone: 'red' },
+  { label: 'Margen Neto Gestiones', value: formatCurrency(resumen.value.gestionesMargenMes), detail: `${resumen.value.gestionesMes} gestiones · ${formatCurrency(resumen.value.gestionesValorMes)} facturado`, icon: 'fa-bag-shopping', tone: 'teal', route: '/admin/gestiones-compra' },
 ]))
 
 const operationalBars = computed<OperationalBar[]>(() => {
@@ -97,6 +105,7 @@ const operationalBars = computed<OperationalBar[]>(() => {
 })
 
 const quickActions = computed<QuickAction[]>(() => ([
+  { label: 'Gestiones de Compra', icon: 'fa-bag-shopping', route: '/admin/gestiones-compra', badge: formatCompact(resumen.value.gestionesMes), note: `${formatCurrency(resumen.value.gestionesMargenMes)} margen neto` },
   { label: 'Nuevo Link de Pago', icon: 'fa-plus', route: '/admin/payments', badge: formatCompact(resumen.value.totalPayments), note: 'Links activos' },
   { label: 'Registrar Usuario', icon: 'fa-user-plus', route: '/admin/users', badge: formatCompact(resumen.value.totalUsers), note: 'Usuarios totales' },
   { label: 'Conciliación', icon: 'fa-file-invoice', route: '/admin/conciliacion', badge: formatCompact(resumen.value.totalFacturas), note: 'Facturas por revisar' },
@@ -119,6 +128,9 @@ onMounted(async () => {
       totalGastos: 0,
       gestionesMes: 0,
       gestionesValorMes: 0,
+      gestionesComisionMes: 0,
+      gestionesCostoMes: 0,
+      gestionesMargenMes: 0,
     }
     try { const etlData = await adminApi.getData('v1/etl/pendientes'); resumen.value.totalPaquetesPendientes = etlData.paquetes?.length || 0 } catch { /* empty */ }
     try { const concData = await adminApi.getData('v1/conciliacion/resumen'); resumen.value.totalFacturas = concData.resumen?.total || 0 } catch { /* empty */ }
@@ -128,6 +140,9 @@ onMounted(async () => {
       const gcStats = await gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 })
       resumen.value.gestionesMes = gcStats.totalGestiones
       resumen.value.gestionesValorMes = gcStats.sumaValorTotal
+      resumen.value.gestionesComisionMes = gcStats.sumaComision
+      resumen.value.gestionesCostoMes = gcStats.sumaCostoVenta
+      resumen.value.gestionesMargenMes = (gcStats as any).sumaMargenNeto ?? 0
     } catch { /* empty */ }
   } catch { /* empty */ } finally {
     pageLoading.value = false
@@ -146,17 +161,28 @@ onMounted(async () => {
       />
 
       <section class="panel-row">
-        <AdminDashboardKpiPanel :cards="kpiCards" />
+        <AdminDashboardKpiPanel :cards="kpiCards" @navigate="router.push" />
         <AdminDashboardQuickActions :actions="quickActions" @navigate="router.push" />
       </section>
 
       <section class="panel-row">
-        <AdminDashboardActivityPanel :bars="operationalBars" />
+        <AdminDashboardGestionCompraPanel
+          :total-gestiones="resumen.gestionesMes"
+          :valor-total="resumen.gestionesValorMes"
+          :comision="resumen.gestionesComisionMes"
+          :costo-venta="resumen.gestionesCostoMes"
+          :margen-neto="resumen.gestionesMargenMes"
+          @navigate="router.push('/admin/gestiones-compra')"
+        />
         <AdminDashboardFinancePanel
           :total-gastos="resumen.totalGastos"
           :recent-payments="resumen.recentPayments"
           :total-facturas="resumen.totalFacturas"
         />
+      </section>
+
+      <section class="panel-row">
+        <AdminDashboardActivityPanel :bars="operationalBars" />
       </section>
     </template>
   </div>

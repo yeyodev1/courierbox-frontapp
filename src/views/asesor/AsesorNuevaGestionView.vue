@@ -211,7 +211,7 @@ const loadingRecent = ref(true)
 const selectedServiceType = ref<'logistica' | 'compra_total' | ''>('')
 const showTypeModal = ref(false)
 const wizardRef = ref<HTMLElement | null>(null)
-const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, porEstado: {} })
+const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, porEstado: {} })
 const recentGestiones = ref<GestionCompra[]>([])
 const asesorId = computed(() => auth.currentUser?.id || auth.currentUser?.userId || auth.currentUser?._id || '')
 const selectedServiceLabel = computed(() =>

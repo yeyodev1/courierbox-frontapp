@@ -7,15 +7,28 @@ interface KpiCard {
   detail: string
   icon: string
   tone: 'purple' | 'orange' | 'green' | 'blue' | 'teal' | 'red'
+  route?: string
 }
 
-defineProps<{ cards: KpiCard[] }>()
+const props = defineProps<{ cards: KpiCard[] }>()
+const emit = defineEmits<{ navigate: [route: string] }>()
+
+function handleCardClick(card: KpiCard) {
+  if (card.route) emit('navigate', card.route)
+}
 </script>
 
 <template>
   <DashboardPanelShell title="Resumen visual" subtitle="Comparativa operativa" ariaLabel="Resumen visual" :main="true">
     <div class="kpi-strip">
-      <article v-for="card in cards" :key="card.label" class="stat-card" :aria-label="card.label">
+      <article
+        v-for="card in cards"
+        :key="card.label"
+        class="stat-card"
+        :class="{ clickable: !!card.route }"
+        :aria-label="card.label"
+        @click="handleCardClick(card)"
+      >
         <div class="stat-icon" :class="card.tone"><i class="fa-solid" :class="card.icon" aria-hidden="true" /></div>
         <div class="stat-info">
           <span class="stat-value">{{ card.value }}</span>
@@ -51,6 +64,15 @@ defineProps<{ cards: KpiCard[] }>()
   align-items: center;
   justify-content: center;
   text-align: center;
+
+  &.clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+    &:hover {
+      background: rgba($ink-700, 0.55);
+      transform: translateY(-2px);
+    }
+  }
 
   .stat-icon {
     display: flex;
