@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { contactosApi, type Contacto, type ContactoDetail } from '@/services/contactos.api'
 import { useToastStore } from '@/stores/toast.store'
 
 const toastStore = useToastStore()
+const router = useRouter()
 
 const contactos = ref<Contacto[]>([])
 const total = ref(0)
@@ -65,6 +67,16 @@ async function openContacto(c: Contacto) {
 
 function closeDetail() {
   selectedContacto.value = null
+}
+
+function openOrder(order: ContactoDetail['orders'][number]) {
+  router.push(order.source === 'gestion'
+    ? `/admin/gestiones-compra/${order._id}`
+    : `/admin/purchase-orders?order=${order._id}`)
+}
+
+function orderAdvisor(order: ContactoDetail['orders'][number]) {
+  return typeof order.asesorId === 'object' ? order.asesorId.name || order.asesorId.email : 'N/A'
 }
 
 onMounted(loadContactos)
@@ -167,10 +179,11 @@ onMounted(loadContactos)
               <div class="order-header">
                 <span class="order-id">#{{ o._id.slice(-6).toUpperCase() }}</span>
                 <span class="order-status" :class="`status-${o.status}`">
-                  {{ statusSteps.find(s => s.key === o.status)?.label || o.status }}
+                  {{ o.source === 'gestion' ? 'Nueva' : 'Histórica' }} · {{ statusSteps.find(s => s.key === o.status)?.label || o.status }}
                 </span>
                 <span class="order-amount">{{ formatMoney(o.totalAmount) }}</span>
               </div>
+              <button class="order-open" type="button" @click="openOrder(o)">Ver {{ o.source === 'gestion' ? 'gestión' : 'histórico' }}</button>
               <div class="order-body">
                 <div class="order-detail-item">
                   <span class="label">Tienda</span>
@@ -186,7 +199,7 @@ onMounted(loadContactos)
                 </div>
                 <div class="order-detail-item">
                   <span class="label">Creada por</span>
-                  <span>{{ o.asesorId?.name || o.asesorId?.email || 'N/A' }}</span>
+                  <span>{{ orderAdvisor(o) }}</span>
                 </div>
                 <div class="order-detail-item">
                   <span class="label">Fecha</span>
@@ -463,6 +476,7 @@ onMounted(loadContactos)
   padding: $space-4;
   margin-bottom: $space-3;
 }
+.order-open { margin-top: $space-3; border: 1px solid rgba($brand-orange, .3); border-radius: 10px; padding: $space-2 $space-3; color: $brand-orange; background: transparent; cursor: pointer; }
 
 .order-header {
   display: flex;

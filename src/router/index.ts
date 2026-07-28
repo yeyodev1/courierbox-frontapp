@@ -88,7 +88,7 @@ const routes: RouteRecordRaw[] = [
         path: "purchase-orders",
         name: "AdminPurchaseOrders",
         component: () => import("@/views/admin/AdminPurchaseOrdersView.vue"),
-        meta: { title: "Pendientes de Compra · Courier Box" },
+        meta: { title: "Histórico de Órdenes · Courier Box" },
       },
       {
         path: "costos",
@@ -169,6 +169,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/admin/AdminCuentasBancariasView.vue"),
         meta: { title: "Cuentas Bancarias · Courier Box" },
       },
+      {
+        path: "notificaciones",
+        name: "AdminNotificaciones",
+        component: () => import("@/views/admin/AdminNotificacionesView.vue"),
+        meta: { title: "Notificaciones · Courier Box" },
+      },
     ],
   },
   {
@@ -228,8 +234,8 @@ const routes: RouteRecordRaw[] = [
       {
         path: "ordenes/nueva",
         name: "AsesorNewOrder",
-        component: () => import("@/views/asesor/AsesorNewOrderView.vue"),
-        meta: { title: "Nueva Orden · Courier Box" },
+        redirect: { name: "AsesorVentas" },
+        meta: { title: "Nueva Gestión · Courier Box" },
       },
       {
         path: "ordenes/:id",

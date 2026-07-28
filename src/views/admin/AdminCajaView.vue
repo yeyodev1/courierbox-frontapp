@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminApi } from '@/services/admin.api'
 import { contactosApi } from '@/services/contactos.api'
+import { contactosCbAPI } from '@/services/contactos_cb.api'
 import AppSelect from '@/components/ui/AppSelect.vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
@@ -93,8 +94,10 @@ const movimientosFiltrados = computed(() => items.value.filter((item) => {
   return true
 }))
 const showClientEmptyHelp = computed(() => clienteQuery.value.trim().length >= 2 && !searchingClients.value && !selectedClientConfirmed.value && clientResults.value.length === 0)
+const createIdempotencyKey = ref(crypto.randomUUID())
 
 function resetForm() {
+  createIdempotencyKey.value = crypto.randomUUID()
   form.value = {
     tipo: 'ingreso',
     categoria: CATEGORIAS_INGRESO[0] || '',
@@ -185,11 +188,6 @@ async function searchClients() {
   }
 }
 
-function findSearchResultByName(name: string) {
-  const normalized = name.trim().toLowerCase()
-  return clientResults.value.find((client) => client.clientName.trim().toLowerCase() === normalized)
-}
-
 function selectClient(client: ClienteResult) {
   form.value.clienteNombre = client.clientName
   form.value.clienteId = client.clientId
@@ -259,21 +257,19 @@ async function createContactFromModal() {
       return
     }
 
-    await adminApi.postData('v1/asesoria/orders', {
-      clientName,
-      clientEmail: clientEmail || undefined,
-      clientPhone: clientPhone || undefined,
-      storeName: 'Caja',
-      description: 'Contacto creado desde caja',
-      productValue: 0,
-      shippingValue: 0,
-      serviceType: 'logistica',
-      notes: 'Registro inicial creado desde caja',
+    const result = await contactosCbAPI.create({
+      nombre: clientName,
+      email: clientEmail || undefined,
+      telefono: clientPhone || undefined,
+      notas: 'Contacto creado desde caja',
     })
-
-    await searchClients()
-    const found = findSearchResultByName(clientName)
-    if (found) selectClient(found)
+    selectClient({
+      clientId: result.contacto._id,
+      clientName: result.contacto.nombre,
+      clientEmail: result.contacto.email,
+      clientPhone: result.contacto.telefono,
+      lastOrderDate: new Date().toISOString(),
+    })
     showCreateContactModal.value = false
     showToast('Contacto creado y disponible en caja', 'success')
   } catch (e: any) {
@@ -297,6 +293,7 @@ async function save() {
       clienteId: form.value.tipo === 'ingreso' ? form.value.clienteId || undefined : undefined,
       clienteEmail: form.value.tipo === 'ingreso' ? selectedClient.value?.clientEmail || undefined : undefined,
       clientePhone: form.value.tipo === 'ingreso' ? selectedClient.value?.clientPhone || undefined : undefined,
+      idempotencyKey: createIdempotencyKey.value,
     })
 
     if (comprobanteFile.value && created.movimiento?._id) {

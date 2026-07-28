@@ -90,9 +90,9 @@ onMounted(loadContactos)
   <div class="contactos-page">
     <section class="hero">
       <div>
-        <span class="eyebrow">CRM compartido</span>
+        <span class="eyebrow">Historial unificado</span>
         <h1>Contactos del asesor</h1>
-        <p>Todos los asesores pueden ver y gestionar estos contactos. Solo mostramos trazabilidad y últimas gestiones.</p>
+        <p>Consulta tus contactos con gestiones nuevas y órdenes históricas, sin modificar los registros anteriores.</p>
       </div>
       <div class="hero-actions">
         <div class="hero-kpi">
@@ -134,7 +134,7 @@ onMounted(loadContactos)
             <strong>{{ c.clientName }}</strong>
             <span v-if="c.clientEmail" class="contacto-email">{{ c.clientEmail }}</span>
             <span v-if="c.clientPhone" class="contacto-phone">{{ c.clientPhone }}</span>
-            <span class="contacto-note">Visible para todo el equipo</span>
+            <span class="contacto-note">Nuevo + histórico sin duplicados</span>
           </div>
           <div class="contacto-meta">
             <span class="contacto-orders">{{ c.totalOrders }} órdenes</span>

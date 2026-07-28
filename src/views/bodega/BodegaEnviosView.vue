@@ -195,10 +195,13 @@ const filtered = computed(() => {
   if (tab.value === 'entregados') return envios.value.filter((e) => e.estado === 'entregado')
   return envios.value
 })
-// Purchases received in bodega (stage 'comprada') that don't have a delivery yet.
+// Purchases physically received in bodega that don't have a delivery yet.
 const linkedGestionIds = computed(() => new Set(envios.value.map((e) => (e.gestionCompraId ? String(e.gestionCompraId) : '')).filter(Boolean)))
 const porAsignar = computed(() =>
-  gestiones.value.filter((g) => g.stage === 'comprada' && !linkedGestionIds.value.has(String(g._id)))
+  gestiones.value.filter((g) => {
+    const received = g.estadoBodega ? g.estadoBodega === 'recibida' : g.stage === 'comprada'
+    return received && !linkedGestionIds.value.has(String(g._id))
+  })
 )
 function gClienteNombre(g: GestionCompra) { return typeof g.contactoId === 'object' && g.contactoId ? g.contactoId.nombre : 'Cliente' }
 

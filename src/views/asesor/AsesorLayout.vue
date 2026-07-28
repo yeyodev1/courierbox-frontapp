@@ -24,6 +24,7 @@ const menuGroups = [
     label: 'Gestión de Compra',
     items: [
       { path: '/asesor/gestiones-compra', label: 'Mis Gestiones', icon: 'fa-solid fa-cart-plus', match: (p: string) => p.startsWith('/asesor/gestiones-compra') },
+      { path: '/asesor/ordenes', label: 'Histórico', icon: 'fa-solid fa-box-archive', match: (p: string) => p.startsWith('/asesor/ordenes') },
       { path: '/asesor/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: (p: string) => p.startsWith('/asesor/contactos') },
     ],
   },
@@ -40,10 +41,10 @@ const userInitial = computed(() => userDisplayName.value.charAt(0).toUpperCase()
 
 const pageMeta = computed(() => {
   const map: Record<string, { title: string; sub: string }> = {
-    '/asesor': { title: 'Dashboard', sub: 'Resumen de tus órdenes y pagos' },
+    '/asesor': { title: 'Dashboard', sub: 'Resumen de tus gestiones y pagos' },
     '/asesor/calculadora': { title: 'Calculadora de gestión', sub: 'Cotiza el fee de gestión de compra' },
     '/asesor/ventas': { title: 'Ventas', sub: 'Registra ventas, historial y comprobantes' },
-    '/asesor/ordenes/nueva': { title: 'Nueva orden', sub: 'Crea una orden de compra para tu cliente' },
+    '/asesor/ordenes': { title: 'Histórico', sub: 'Órdenes anteriores en modo de solo lectura' },
     '/asesor/gestiones-compra': { title: 'Mis Gestiones de Compra', sub: 'Administra tus gestiones del mes' },
     '/asesor/gestiones-compra/nueva': { title: 'Nueva Venta', sub: 'Registra una nueva venta de compra' },
     '/asesor/contactos': { title: 'Contactos', sub: 'Gestiona el historial de tus clientes' },

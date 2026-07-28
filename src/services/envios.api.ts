@@ -49,13 +49,22 @@ export interface EnvioDomicilio {
   recibidoPorContacto: string
   trayectoUsa: TrayectoPago
   trayectoLocal: TrayectoPago
-  estado: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'fallido'
+  estado: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'fallido' | 'reprogramado'
   evidenciaUrl: string
   notas: string
   creadoPor: { _id: string; name: string; email: string }
   entregadoEn?: string
   createdAt: string
   updatedAt: string
+  bitacora?: Array<{
+    tipo: string
+    estadoAnterior?: string
+    estadoNuevo?: string
+    userId: string
+    userName: string
+    notas: string
+    createdAt: string
+  }>
 }
 
 export interface PaqueteSimple {
@@ -113,7 +122,22 @@ class EnviosAPI extends APIBase {
   }
 
   async marcarEntregado(id: string, data: { fotoEntregaUrl?: string; firmaUrl?: string; novedad?: string; recibidoPorNombre?: string; recibidoPorApellido?: string; recibidoPorCedula?: string; recibidoPorContacto?: string }) {
-    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/entregado`, data)
+    const res = await this.patch<{ envio: EnvioDomicilio; notificacion: { estado: string; ultimoError?: string } | null }>(`v1/envios/${id}/entregado`, data)
+    return res.data
+  }
+
+  async iniciarRuta(id: string) {
+    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/iniciar-ruta`, {})
+    return res.data
+  }
+
+  async marcarFallido(id: string, motivo: string) {
+    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/fallido`, { motivo })
+    return res.data
+  }
+
+  async reprogramar(id: string, motivo?: string) {
+    const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/reprogramar`, { motivo })
     return res.data
   }
 

@@ -28,6 +28,7 @@ const menuGroups = computed(() => {
           { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith('/superadmin/reportes') },
           { path: p('/produccion'), label: 'Producción Diaria', icon: 'fa-solid fa-clipboard-list', match: (routePath: string) => routePath.startsWith('/superadmin/produccion') },
           { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: (routePath: string) => routePath.startsWith('/superadmin/caja') },
+          { path: '/admin/notificaciones', label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: (routePath: string) => routePath.startsWith('/admin/notificaciones') },
         ],
       },
     ]
@@ -46,9 +47,10 @@ const menuGroups = computed(() => {
     {
       label: 'Operaciones',
       items: [
-        { path: p('/purchase-orders'), label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (routePath: string) => routePath.startsWith(`${basePath.value}/purchase-orders`) },
+        { path: p('/purchase-orders'), label: 'Histórico de Órdenes', icon: 'fa-solid fa-box-archive', match: (routePath: string) => routePath.startsWith(`${basePath.value}/purchase-orders`) },
         { path: p('/envios'), label: 'Envíos', icon: 'fa-solid fa-truck', match: (routePath: string) => routePath.startsWith(`${basePath.value}/envios`) },
         { path: p('/contactos'), label: 'Contactos', icon: 'fa-solid fa-address-book', match: (routePath: string) => routePath.startsWith(`${basePath.value}/contactos`) },
+        { path: p('/notificaciones'), label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: (routePath: string) => routePath.startsWith(`${basePath.value}/notificaciones`) },
       ],
     },
         {
@@ -101,7 +103,7 @@ const pageMeta = computed(() => {
     '/admin/users': { title: 'Usuarios', sub: 'Administra los miembros del equipo' },
     '/admin/tracking': { title: 'Tracking Interno', sub: 'Consulta el estado de los envíos' },
     '/admin/fee-config': { title: 'Configuración de tarifas', sub: 'Define el fee de gestión para asesores' },
-    '/admin/purchase-orders': { title: 'Pendientes de Compra', sub: 'Revisa y gestiona las órdenes pendientes de comprar' },
+    '/admin/purchase-orders': { title: 'Histórico de Órdenes', sub: 'Consulta órdenes anteriores sin modificar sus datos' },
     '/admin/costos': { title: 'Costos y Gastos', sub: 'Registra costos operacionales, logísticos y de envío' },
     '/admin/proveedores': { title: 'Proveedores', sub: 'Crea y administra los proveedores conectados a costos y envíos' },
     '/admin/envios': { title: 'Envíos a Domicilio', sub: 'Gestiona los envíos de última milla' },
@@ -113,6 +115,7 @@ const pageMeta = computed(() => {
     '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
     '/admin/gestiones-compra': { title: 'Gestiones de Compra', sub: 'Administra las gestiones de compra del equipo' },
     '/admin/cuentas-bancarias': { title: 'Cuentas Bancarias', sub: 'Configura las cuentas de cobro de reservas' },
+    '/admin/notificaciones': { title: 'Notificaciones', sub: 'Supervisa y reintenta la entrega de correos' },
     '/superadmin/reportes': { title: 'Estado de Resultados', sub: 'Visión ejecutiva privada' },
     '/superadmin/produccion': { title: 'Producción Diaria', sub: 'Control privado de producción' },
     '/superadmin/caja': { title: 'Caja', sub: 'Seguimiento financiero privado' },

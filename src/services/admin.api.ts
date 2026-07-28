@@ -99,6 +99,11 @@ class AdminAPI extends APIBase {
     return res.data;
   }
 
+  async downloadData(endpoint: string) {
+    const res = await this.get<Blob>(endpoint, undefined, { responseType: 'blob', timeout: 60000 });
+    return res.data;
+  }
+
   async postData(endpoint: string, data: unknown) {
     const res = await this.post<any>(endpoint, data);
     return res.data;

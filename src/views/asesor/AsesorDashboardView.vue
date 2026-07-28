@@ -1,27 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { asesoriaApi } from '@/services/asesoria.api'
-import type { PurchaseOrder } from '@/services/asesoria.api'
 import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
+import type { GestionCompra } from '@/services/gestiones_compra.api'
 
 const router = useRouter()
 
 const stats = ref({
-  totalOrders: 0,
+  totalGestiones: 0,
   pendingPayment: 0,
   totalSold: 0,
-  recentOrders: [] as PurchaseOrder[],
+  sumaComision: 0,
+  recentGestiones: [] as GestionCompra[],
 })
 const loading = ref(false)
-const gcStats = ref({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0 })
 
 const actions = [
   {
-    label: 'Nueva orden',
-    sub: 'Crear orden de compra',
+    label: 'Nueva gestión',
+    sub: 'Registrar una compra',
     icon: 'fa-solid fa-plus',
-    route: '/asesor/ordenes/nueva',
+    route: '/asesor/ventas',
   },
   {
     label: 'Calculadora',
@@ -30,16 +29,10 @@ const actions = [
     route: '/asesor/calculadora',
   },
   {
-    label: 'Mis órdenes',
-    sub: 'Ver historial',
+    label: 'Mis gestiones',
+    sub: 'Ver historial operativo',
     icon: 'fa-solid fa-bag-shopping',
-    route: '/asesor/ordenes',
-  },
-  {
-    label: 'Nueva Venta',
-    sub: 'Registrar venta de compra',
-    icon: 'fa-solid fa-cart-plus',
-    route: '/asesor/ventas',
+    route: '/asesor/gestiones-compra',
   },
   {
     label: 'Contactos',
@@ -47,26 +40,30 @@ const actions = [
     icon: 'fa-solid fa-address-book',
     route: '/asesor/contactos',
   },
-  {
-    label: 'Mis Gestiones',
-    sub: 'Ver gestiones del mes',
-    icon: 'fa-solid fa-list-check',
-    route: '/asesor/gestiones-compra',
-  },
 ]
 
 const paymentBadge = {
   pendiente: { label: 'Pendiente', class: 'badge-amber' },
   verificando: { label: 'Verificando', class: 'badge-blue' },
-  pagado: { label: 'Pagado', class: 'badge-green' },
+  confirmado: { label: 'Confirmado', class: 'badge-green' },
   rechazado: { label: 'Rechazado', class: 'badge-red' },
 }
 
 async function loadStats() {
   loading.value = true
   try {
-    const data = await asesoriaApi.getStats()
-    stats.value = data.stats
+    const now = new Date()
+    const [summary, recent] = await Promise.all([
+      gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 }),
+      gestionesCompraAPI.list({ page: 1, limit: 5 }),
+    ])
+    stats.value = {
+      totalGestiones: summary.totalGestiones,
+      pendingPayment: (summary.porEstadoPago?.pendiente || 0) + (summary.porEstadoPago?.verificando || 0),
+      totalSold: summary.ventasConfirmadas || 0,
+      sumaComision: summary.comisionGanada || 0,
+      recentGestiones: recent.gestiones,
+    }
   } catch (e) {
     console.error('[asesor dashboard] stats error:', e)
   } finally {
@@ -87,10 +84,6 @@ function formatMoney(amount: number) {
 
 onMounted(() => {
   loadStats()
-  const now = new Date()
-  gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 })
-    .then(data => { gcStats.value = data })
-    .catch(() => {})
 })
 </script>
 
@@ -100,7 +93,7 @@ onMounted(() => {
       <div>
         <h1 class="page-title">Bienvenido, Asesor</h1>
         <p class="page-subtitle">
-          Gestiona las órdenes de compra de tus clientes, genera links de pago y carga comprobantes.
+          Gestiona compras, pagos, comisiones y seguimiento de tus clientes desde un solo lugar.
         </p>
       </div>
     </section>
@@ -109,8 +102,8 @@ onMounted(() => {
       <div class="stat-card">
         <div class="stat-icon"><i class="fa-solid fa-bag-shopping" /></div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.totalOrders }}</span>
-          <span class="stat-label">Órdenes totales</span>
+          <span class="stat-value">{{ stats.totalGestiones }}</span>
+          <span class="stat-label">Gestiones del mes</span>
         </div>
       </div>
       <div class="stat-card">
@@ -130,9 +123,9 @@ onMounted(() => {
       <div class="stat-card stat-card--highlight" @click="router.push('/asesor/gestiones-compra')" style="cursor:pointer">
         <div class="stat-icon stat-icon--orange"><i class="fa-solid fa-cart-plus" /></div>
         <div class="stat-info">
-          <span class="stat-value">{{ formatMoney(gcStats.sumaValorTotal) }}</span>
-          <span class="stat-label">Gestiones del mes</span>
-          <span class="stat-sub">{{ gcStats.totalGestiones }} operaciones</span>
+          <span class="stat-value">{{ formatMoney(stats.sumaComision) }}</span>
+          <span class="stat-label">Comisión del mes</span>
+          <span class="stat-sub">Ganada sobre pagos confirmados</span>
         </div>
       </div>
     </div>
@@ -158,38 +151,38 @@ onMounted(() => {
 
     <section class="recent-section">
       <div class="section-header">
-        <h3 class="section-title">Órdenes recientes</h3>
-        <router-link :to="{ name: 'AsesorOrders' }" class="btn-link">Ver todas</router-link>
+        <h3 class="section-title">Gestiones recientes</h3>
+        <router-link to="/asesor/gestiones-compra" class="btn-link">Ver todas</router-link>
       </div>
 
       <div v-if="loading" class="loading">
         <i class="fa-solid fa-circle-notch fa-spin" />
       </div>
 
-      <div v-else-if="stats.recentOrders.length === 0" class="empty">
-        <p>No tienes órdenes recientes</p>
+      <div v-else-if="stats.recentGestiones.length === 0" class="empty">
+        <p>No tienes gestiones recientes</p>
       </div>
 
       <div v-else class="recent-list">
         <div
-          v-for="order in stats.recentOrders"
-          :key="order._id"
+          v-for="gestion in stats.recentGestiones"
+          :key="gestion._id"
           class="recent-item"
-          @click="router.push({ name: 'AsesorOrderDetail', params: { id: order._id } })"
+          @click="router.push(`/asesor/gestiones-compra/${gestion._id}`)"
         >
           <div class="recent-main">
-            <span class="recent-client">{{ order.clientName }}</span>
-            <span class="recent-desc">{{ order.description }}</span>
+            <span class="recent-client">{{ typeof gestion.contactoId === 'object' ? gestion.contactoId.nombre : 'Cliente' }}</span>
+            <span class="recent-desc">{{ gestion.paginaCompra }}</span>
           </div>
           <div class="recent-side">
             <span
               class="badge"
-              :class="paymentBadge[order.paymentStatus as keyof typeof paymentBadge]?.class || 'badge-gray'"
+              :class="paymentBadge[(gestion.estadoPago || 'pendiente') as keyof typeof paymentBadge]?.class || 'badge-amber'"
             >
-              {{ paymentBadge[order.paymentStatus as keyof typeof paymentBadge]?.label || order.paymentStatus }}
+              {{ paymentBadge[(gestion.estadoPago || 'pendiente') as keyof typeof paymentBadge]?.label || gestion.estadoPago }}
             </span>
-            <span class="recent-total">{{ formatMoney(order.totalAmount) }}</span>
-            <span class="recent-date">{{ formatDate(order.createdAt) }}</span>
+            <span class="recent-total">{{ formatMoney(gestion.valorTotal) }}</span>
+            <span class="recent-date">{{ formatDate(gestion.createdAt) }}</span>
           </div>
         </div>
       </div>
@@ -227,16 +220,17 @@ onMounted(() => {
 }
 
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: $space-5;
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 }
 
 .stat-card {
+  flex: 1 1 220px;
   background: $ink-900;
   border: 1px solid rgba($ink-500, 0.12);
   border-radius: 16px;
@@ -302,8 +296,8 @@ onMounted(() => {
 }
 
 .actions-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: $space-4;
 
   @media (max-width: 900px) {
@@ -312,6 +306,7 @@ onMounted(() => {
 }
 
 .action-card {
+  flex: 1 1 240px;
   background: $ink-900;
   border: 1px solid rgba($ink-500, 0.12);
   border-radius: 16px;

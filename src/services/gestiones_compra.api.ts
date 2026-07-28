@@ -38,6 +38,33 @@ export interface GestionCompra {
   reservaConfirmada: boolean
   costoVenta: number
   valorComision: number
+  valorPagado?: number
+  estadoPago?: 'pendiente' | 'verificando' | 'confirmado' | 'rechazado' | 'reembolsado'
+  estadoCompra?: 'pendiente' | 'asignada' | 'comprando' | 'comprada' | 'cancelada'
+  estadoBodega?: 'pendiente' | 'recibida' | 'preparando_despacho' | 'despachada'
+  estadoEntrega?: 'sin_envio' | 'pendiente' | 'asignada' | 'en_ruta' | 'entregada' | 'fallida' | 'reprogramada'
+  pagoConfirmadoEn?: string
+  envio?: {
+    modo: 'local' | 'interprovincial'
+    estado: string
+    guiaUrl?: string
+    fotoEntregaUrl?: string
+    firmaUrl?: string
+    entregadoEn?: string
+    recibidoPor?: string
+    recibidoPorCedula?: string
+    bitacora?: Array<{ tipo: string; notas: string; createdAt: string }>
+  } | null
+  notificaciones?: Array<{
+    _id: string
+    evento: string
+    destinatario: string
+    estado: 'pendiente' | 'enviando' | 'enviada' | 'fallida'
+    intentos: number
+    ultimoError?: string
+    enviadaEn?: string
+    createdAt: string
+  }>
   feeConfigId?: string
   paginaCompra: string
   fechaEntregaTentativa: string // ISO date
@@ -83,7 +110,11 @@ export interface GestionesStats {
   sumaComision: number
   sumaCostoVenta: number
   sumaMargenNeto: number
+  sumaValorPagado: number
+  ventasConfirmadas: number
+  comisionGanada: number
   porEstado: Record<string, number>
+  porEstadoPago: Record<string, number>
 }
 
 export interface GestionesListResult {
@@ -96,20 +127,6 @@ export interface GestionesListResult {
 
 class GestionesCompraAPI extends APIBase {
   private readonly base = 'v1/gestiones-compra'
-
-  private buildBaseUrl(): string {
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1'
-    const detected = origin.includes('testing-storybrand-frontend.bakano.ec')
-      ? 'https://testing-storybrand-backapp.bakano.ec/api'
-      : isLocalhost
-        ? 'http://localhost:8101/api'
-        : ''
-    const raw = detected || (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
-    const trimmed = raw.replace(/\/+$/, '')
-    return trimmed.endsWith('/api') || /\/api\//.test(trimmed) ? trimmed : `${trimmed}/api`
-  }
 
   async list(params?: {
     page?: number
@@ -157,6 +174,21 @@ class GestionesCompraAPI extends APIBase {
     return res.data.gestion
   }
 
+  async confirmarPago(id: string, monto: number): Promise<GestionCompra> {
+    const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/confirmar-pago`, { monto })
+    return res.data.gestion
+  }
+
+  async asignarComprador(id: string, compradorId: string): Promise<GestionCompra> {
+    const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/asignar-comprador`, { compradorId })
+    return res.data.gestion
+  }
+
+  async marcarComprada(id: string, numeroOrden?: string): Promise<GestionCompra> {
+    const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/marcar-comprada`, { numeroOrden })
+    return res.data.gestion
+  }
+
   async reNotificar(id: string): Promise<void> {
     await this.post(`${this.base}/${id}/notificar`, {})
   }
@@ -196,21 +228,21 @@ class GestionesCompraAPI extends APIBase {
     return res.data.gestion
   }
 
-  exportUrl(params?: {
+  async downloadExport(params: {
     format: 'excel' | 'pdf'
     estado?: string
     asesorId?: string
     mes?: number
     año?: number
-  }): string {
+  }): Promise<Blob> {
     const query = new URLSearchParams()
-    query.set('format', params?.format ?? 'excel')
-    if (params?.estado) query.set('estado', params.estado)
-    if (params?.asesorId) query.set('asesorId', params.asesorId)
-    if (params?.mes) query.set('mes', String(params.mes))
-    if (params?.año) query.set('año', String(params.año))
-
-    return `${this.buildBaseUrl()}/${this.base}/export/${params?.format === 'pdf' ? 'pdf' : 'excel'}?${query.toString()}`
+    if (params.estado) query.set('estado', params.estado)
+    if (params.asesorId) query.set('asesorId', params.asesorId)
+    if (params.mes) query.set('mes', String(params.mes))
+    if (params.año) query.set('año', String(params.año))
+    const endpoint = `${this.base}/export/${params.format === 'pdf' ? 'pdf' : 'excel'}?${query.toString()}`
+    const response = await this.get<Blob>(endpoint, undefined, { responseType: 'blob', timeout: 90000 })
+    return response.data
   }
 }
 

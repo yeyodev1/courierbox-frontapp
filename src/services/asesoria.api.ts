@@ -160,67 +160,8 @@ class AsesoriaAPI extends APIBase {
     return res.data;
   }
 
-  async createOrder(input: CreateOrderInput & { serviceType?: ServiceType }): Promise<{ order: PurchaseOrder }> {
-    const res = await this.post<{ order: PurchaseOrder }>("v1/asesoria/orders", input);
-    return res.data;
-  }
-
-  async updateOrderStatus(id: string, status: string, adminNotes?: string): Promise<{ order: PurchaseOrder }> {
-    const res = await this.patch<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/status`, {
-      status,
-      adminNotes,
-    });
-    return res.data;
-  }
-
-  async updatePaymentStatus(
-    id: string,
-    paymentStatus: string,
-    adminNotes?: string,
-  ): Promise<{ order: PurchaseOrder }> {
-    const res = await this.patch<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/payment-status`, {
-      paymentStatus,
-      adminNotes,
-    });
-    return res.data;
-  }
-
-  async generatePaymentLink(id: string): Promise<{ payment: any; order: PurchaseOrder }> {
-    const res = await this.post<{ payment: any; order: PurchaseOrder }>(
-      `v1/asesoria/orders/${id}/payment-link`,
-      {},
-    );
-    return res.data;
-  }
-
-  async uploadTransferProof(
-    id: string,
-    formData: FormData,
-  ): Promise<{ order: PurchaseOrder; upload: { url: string; publicId: string } }> {
-    const res = await this.post<{ order: PurchaseOrder; upload: { url: string; publicId: string } }>(
-      `v1/asesoria/orders/${id}/transfer`,
-      formData,
-    );
-    return res.data;
-  }
-
-  async shareOrder(id: string, targetAsesorId: string): Promise<{ order: PurchaseOrder }> {
-    const res = await this.post<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/share`, { targetAsesorId });
-    return res.data;
-  }
-
-  async unshareOrder(id: string, targetAsesorId: string): Promise<{ order: PurchaseOrder }> {
-    const res = await this.delete<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/share/${targetAsesorId}`);
-    return res.data;
-  }
-
   async getOrderByViewToken(token: string): Promise<{ order: Partial<PurchaseOrder> & { wasAlreadyUsed: boolean } }> {
     const res = await this.get<{ order: Partial<PurchaseOrder> & { wasAlreadyUsed: boolean } }>(`v1/asesoria/orders/view/${token}`);
-    return res.data;
-  }
-
-  async resetViewToken(id: string): Promise<{ order: PurchaseOrder }> {
-    const res = await this.post<{ order: PurchaseOrder }>(`v1/asesoria/orders/${id}/reset-view-token`, {});
     return res.data;
   }
 

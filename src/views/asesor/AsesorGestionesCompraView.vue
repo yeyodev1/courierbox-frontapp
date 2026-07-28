@@ -83,7 +83,7 @@ import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import type { GestionCompra, GestionesStats } from '@/services/gestiones_compra.api'
 
 const gestiones = ref<GestionCompra[]>([])
-const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, porEstado: {} })
+const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, sumaValorPagado: 0, ventasConfirmadas: 0, comisionGanada: 0, porEstado: {}, porEstadoPago: {} })
 const loading = ref(true)
 const page = ref(1)
 const pages = ref(1)
@@ -151,7 +151,8 @@ onMounted(() => { load(); loadStats() })
 .page-sub { color: $ink-300; font-size: 0.88rem; margin: $space-1 0 0; }
 .orange { color: $brand-orange; }
 
-.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: $space-3; }
+.kpi-row { display: flex; flex-wrap: wrap; gap: $space-3; }
+.kpi-card { flex: 1 1 180px; }
 .kpi-card {
   background: $ink-900; border: 1px solid $ink-500; border-radius: 12px;
   padding: $space-4; display: flex; flex-direction: column; gap: $space-1;

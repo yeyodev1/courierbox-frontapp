@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getUsers: vi.fn(),
   getData: vi.fn(),
   costosResumen: vi.fn(),
+  gestionesStats: vi.fn(),
   push: vi.fn(),
 }))
 
@@ -29,6 +30,12 @@ vi.mock('@/services/costos.api', () => ({
   },
 }))
 
+vi.mock('@/services/gestiones_compra.api', () => ({
+  gestionesCompraAPI: {
+    getStatsMensuales: mocks.gestionesStats,
+  },
+}))
+
 describe('AdminDashboardView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -40,6 +47,7 @@ describe('AdminDashboardView', () => {
       return Promise.resolve({})
     })
     mocks.costosResumen.mockResolvedValue({ resumen: { total: { total: 123.45 } } })
+    mocks.gestionesStats.mockResolvedValue({ totalGestiones: 2, sumaValorTotal: 100, sumaComision: 6, sumaCostoVenta: 70, sumaMargenNeto: 24, porEstado: {} })
   })
 
   it('muestra el total de gastos y pide el resumen de costos', async () => {

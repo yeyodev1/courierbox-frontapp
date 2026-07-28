@@ -184,7 +184,9 @@ function clienteEmail(g: GestionCompra | null) {
   return g && typeof g.contactoId === 'object' && g.contactoId ? ((g.contactoId as any).email || '') : ''
 }
 function isRecibido(g: GestionCompra) {
-  return ['comprada', 'en_transito', 'entregada'].includes(g.stage)
+  return g.estadoBodega
+    ? ['recibida', 'preparando_despacho', 'despachada'].includes(g.estadoBodega)
+    : ['comprada', 'en_transito', 'entregada'].includes(g.stage)
 }
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: '2-digit' })

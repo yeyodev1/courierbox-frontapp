@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppButton from '@/components/ui/AppButton.vue'
-import { contactosApi, type ContactoDetail } from '@/services/contactos.api'
+import { contactosApi, type ContactoDetail, type ContactoOrder } from '@/services/contactos.api'
 import { useToastStore } from '@/stores/toast.store'
 
 const route = useRoute()
@@ -50,8 +50,10 @@ function back() {
   router.push({ name: 'AsesorContactos' })
 }
 
-function openOrder(id: string) {
-  router.push({ name: 'AsesorOrderDetail', params: { id } })
+function openOrder(order: ContactoOrder) {
+  router.push(order.source === 'gestion'
+    ? { name: 'AsesorGestionDetail', params: { id: order._id } }
+    : { name: 'AsesorOrderDetail', params: { id: order._id } })
 }
 
 onMounted(load)
@@ -121,12 +123,12 @@ watch(() => route.params.key, load)
                 <span class="order-id">#{{ order._id.slice(-6).toUpperCase() }}</span>
                 <h4>{{ order.description }}</h4>
               </div>
-              <button class="order-link" @click="openOrder(order._id)">Ver orden</button>
+              <button class="order-link" @click="openOrder(order)">Ver {{ order.source === 'gestion' ? 'gestión' : 'histórico' }}</button>
             </div>
             <div class="order-meta">
               <span>{{ order.storeName }}</span>
               <span>{{ formatDateTime(order.createdAt) }}</span>
-              <span class="badge">{{ order.status }}</span>
+              <span class="badge">{{ order.source === 'gestion' ? 'Nueva' : 'Histórica' }} · {{ order.status }}</span>
               <strong>{{ formatMoney(order.totalAmount) }}</strong>
             </div>
           </article>

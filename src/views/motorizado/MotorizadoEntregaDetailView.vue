@@ -22,7 +22,6 @@
 
         <div class="quick-actions" v-if="envio.clienteTelefono">
           <a class="qa call" :href="`tel:${envio.clienteTelefono}`"><i class="fa-solid fa-phone" aria-hidden="true" /> Llamar</a>
-          <a class="qa wa" :href="waUrl" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true" /> WhatsApp</a>
         </div>
 
         <div class="meta-grid">
@@ -51,6 +50,17 @@
       <section v-else class="capture-card">
         <h3>Registrar entrega</h3>
 
+        <div v-if="envio.estado === 'asignado' || envio.estado === 'reprogramado'" class="route-start">
+          <i class="fa-solid fa-route" aria-hidden="true" />
+          <div>
+            <strong>Inicia la ruta antes de entregar</strong>
+            <span>La hora de salida quedará en la bitácora.</span>
+          </div>
+          <button type="button" :disabled="saving" @click="iniciarRuta">Iniciar ruta</button>
+        </div>
+
+        <template v-if="envio.estado === 'en_ruta'">
+
         <div class="field">
           <label>Foto de la entrega *</label>
           <div class="photo-box" @click="fileInput?.click()">
@@ -74,7 +84,7 @@
         </div>
 
         <div class="field">
-          <label>Firma de quien recibe (con el dedo)</label>
+          <label>Firma de quien recibe (con el dedo) *</label>
           <div class="sign-wrap">
             <canvas
               ref="canvas"
@@ -100,6 +110,15 @@
           {{ saving ? 'Guardando...' : 'Marcar como entregado' }}
         </button>
         <p class="hint">Se guardará como evidencia y se enviará el comprobante al cliente por correo.</p>
+
+        <div class="failure-box">
+          <label>¿No se pudo entregar?</label>
+          <textarea v-model="motivoFallido" rows="2" placeholder="Indica el motivo obligatorio"></textarea>
+          <button type="button" class="failure-btn" :disabled="!motivoFallido.trim() || saving" @click="marcarFallido">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" /> Registrar entrega fallida
+          </button>
+        </div>
+        </template>
       </section>
     </template>
 
@@ -127,14 +146,21 @@ const envio = ref<EnvioDomicilio | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const fotoPreview = ref('')
 const fotoUrl = ref('')
+const firmaUrl = ref('')
 const novedad = ref('')
+const motivoFallido = ref('')
 const recibeNombre = ref('')
 const recibeApellido = ref('')
 const recibeCedula = ref('')
 const recibeContacto = ref('')
 
 const puedeEntregar = computed(() =>
-  !!fotoUrl.value && !!recibeNombre.value.trim() && !!recibeApellido.value.trim() && !!recibeCedula.value.trim()
+  envio.value?.estado === 'en_ruta' &&
+  !!fotoUrl.value &&
+  (!!firmaUrl.value || hasSignature.value) &&
+  !!recibeNombre.value.trim() &&
+  !!recibeApellido.value.trim() &&
+  recibeCedula.value.replace(/\D+/g, '').length >= 6
 )
 
 const recibidoPorTexto = computed(() => {
@@ -148,7 +174,7 @@ const recibidoPorTexto = computed(() => {
 const canvas = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let drawing = false
-let hasSignature = false
+const hasSignature = ref(false)
 
 const mapsUrl = computed(() => {
   const dir = envio.value?.clienteDireccion ?? ''
@@ -158,15 +184,10 @@ const mapsUrl = computed(() => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}`
 })
 
-const waUrl = computed(() => {
-  const tel = (envio.value?.clienteTelefono ?? '').replace(/\D+/g, '')
-  return `https://wa.me/${tel}`
-})
-
 function estadoLabel(estado: string) {
   return {
     pendiente: 'Pendiente', asignado: 'Asignado', en_ruta: 'En ruta',
-    entregado: 'Entregado', fallido: 'Fallido',
+    entregado: 'Entregado', fallido: 'Fallido', reprogramado: 'Reprogramado',
   }[estado] ?? estado
 }
 
@@ -226,7 +247,7 @@ function draw(e: PointerEvent) {
   const p = pos(e)
   ctx.lineTo(p.x, p.y)
   ctx.stroke()
-  hasSignature = true
+  hasSignature.value = true
 }
 function endDraw() { drawing = false }
 function clearSign() {
@@ -235,12 +256,12 @@ function clearSign() {
   const rect = c.getBoundingClientRect()
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, rect.width, rect.height)
-  hasSignature = false
+  hasSignature.value = false
 }
 function canvasToFile(): Promise<File | null> {
   return new Promise((resolve) => {
     const c = canvas.value
-    if (!c || !hasSignature) { resolve(null); return }
+    if (!c || !hasSignature.value) { resolve(null); return }
     c.toBlob((blob) => {
       if (!blob) { resolve(null); return }
       resolve(new File([blob], `firma-${id}.png`, { type: 'image/png' }))
@@ -254,24 +275,68 @@ async function entregar() {
     error.value = 'Completa nombre, apellido y cédula de quien recibe'
     return
   }
+  if (!hasSignature.value && !firmaUrl.value) { error.value = 'La firma de quien recibe es obligatoria'; return }
   saving.value = true
   error.value = ''
   try {
     const firmaFile = await canvasToFile()
+    if (!firmaFile && !firmaUrl.value) throw new Error('La firma de quien recibe es obligatoria')
     if (firmaFile) {
-      try { await enviosApi.uploadArchivo(id, 'firma', firmaFile) } catch { /* firma opcional */ }
+      const firmaResult = await enviosApi.uploadArchivo(id, 'firma', firmaFile)
+      firmaUrl.value = firmaResult.envio.firmaUrl || firmaResult.upload.url || ''
     }
-    await enviosApi.marcarEntregado(id, {
+    if (!firmaUrl.value) throw new Error('No se pudo guardar la firma')
+    const result = await enviosApi.marcarEntregado(id, {
       novedad: novedad.value,
       recibidoPorNombre: recibeNombre.value.trim(),
       recibidoPorApellido: recibeApellido.value.trim(),
       recibidoPorCedula: recibeCedula.value.trim(),
       recibidoPorContacto: recibeContacto.value.trim(),
     })
-    toast.showNotification('Entrega registrada y cliente notificado', 'success')
+    if (!result.notificacion) {
+      toast.showNotification('Entrega registrada. El cliente no tiene un correo configurado.', 'warning')
+    } else {
+      const emailSent = result.notificacion.estado === 'enviada'
+      toast.showNotification(
+        emailSent ? 'Entrega registrada y comprobante enviado por correo.' : 'Entrega registrada. El correo quedó pendiente de revisión administrativa.',
+        emailSent ? 'success' : 'warning',
+      )
+    }
     router.push('/motorizado')
   } catch (err: any) {
     error.value = err?.message ?? 'No se pudo marcar como entregado'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function iniciarRuta() {
+  saving.value = true
+  error.value = ''
+  try {
+    const result = await enviosApi.iniciarRuta(id)
+    envio.value = result.envio
+    await nextTick()
+    setupCanvas()
+    toast.showNotification('Ruta iniciada y registrada en la bitácora', 'success')
+  } catch (err: any) {
+    error.value = err?.message ?? 'No se pudo iniciar la ruta'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function marcarFallido() {
+  if (!motivoFallido.value.trim()) return
+  saving.value = true
+  error.value = ''
+  try {
+    const result = await enviosApi.marcarFallido(id, motivoFallido.value.trim())
+    envio.value = result.envio
+    toast.showNotification('Entrega fallida registrada en la bitácora', 'warning')
+    router.push('/motorizado')
+  } catch (err: any) {
+    error.value = err?.message ?? 'No se pudo registrar la novedad'
   } finally {
     saving.value = false
   }
@@ -284,6 +349,7 @@ async function load() {
     envio.value = res.envio
     fotoUrl.value = res.envio.fotoEntregaUrl || ''
     fotoPreview.value = res.envio.fotoEntregaUrl || ''
+    firmaUrl.value = res.envio.firmaUrl || ''
   } catch {
     envio.value = null
   } finally {
@@ -330,7 +396,6 @@ onMounted(load)
   display: inline-flex; align-items: center; justify-content: center; gap: $space-2;
 }
 .qa.call { background: $ink-700; color: $fg-dark; }
-.qa.wa { background: #25D366; color: #06251A; }
 .meta-grid { display: flex; flex-wrap: wrap; gap: $space-3; }
 .meta-grid > div { flex: 1 1 100px; display: flex; flex-direction: column; gap: 2px; }
 .meta-grid span { color: $ink-400; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -378,6 +443,32 @@ textarea {
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .hint { color: $ink-400; font-size: 0.78rem; text-align: center; margin: 0; }
+.route-start {
+  display: flex; align-items: center; flex-wrap: wrap; gap: $space-3; padding: $space-4;
+  border: 1px solid rgba($signal-blue, 0.45); border-radius: 14px; background: rgba($signal-blue, 0.1);
+  transition: transform 180ms ease, border-color 180ms ease, opacity 180ms ease;
+  > i { color: $signal-blue; font-size: 1.4rem; }
+  > div { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; }
+  strong { color: $fg-dark; }
+  span { color: $ink-300; font-size: 0.82rem; }
+  button { border: 0; border-radius: 10px; padding: $space-3 $space-4; background: $signal-blue; color: #fff; font-weight: 800; cursor: pointer; }
+}
+.failure-box {
+  display: flex; flex-direction: column; gap: $space-2; padding-top: $space-4;
+  border-top: 1px solid rgba($signal-red, 0.3);
+  label { color: $signal-red; font-weight: 700; }
+}
+.failure-btn {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: $space-2; border: 1px solid $signal-red;
+  border-radius: 10px; padding: $space-3 $space-4; background: rgba($signal-red, 0.12); color: #ff8a8f;
+  font-weight: 800; cursor: pointer; transition: transform 180ms ease, background 180ms ease;
+  &:hover:not(:disabled) { transform: translateY(-2px); background: rgba($signal-red, 0.2); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-start, .failure-btn { transition: none; }
+  .failure-btn:hover:not(:disabled) { transform: none; }
+}
 .ev-img { width: 100%; max-height: 320px; object-fit: contain; border-radius: 12px; border: 1px solid $ink-700; }
 .ev-firma { width: 200px; background: #fff; border-radius: 8px; padding: 4px; }
 .muted { color: $ink-400; font-size: 0.85rem; margin: 0; }

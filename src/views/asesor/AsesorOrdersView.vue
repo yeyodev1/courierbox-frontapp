@@ -74,11 +74,11 @@ onMounted(loadOrders)
   <div class="orders-page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Órdenes de compra</h1>
-        <p class="page-subtitle">Todas las órdenes que has creado para tus clientes</p>
+        <h1 class="page-title">Órdenes históricas</h1>
+        <p class="page-subtitle">Archivo de solo lectura. Las operaciones nuevas viven en Gestiones de Compra.</p>
       </div>
-      <router-link :to="{ name: 'AsesorNewOrder' }" class="btn-primary">
-        <i class="fa-solid fa-plus" /> Nueva orden
+      <router-link :to="{ name: 'AsesorVentas' }" class="btn-primary">
+        <i class="fa-solid fa-plus" /> Nueva gestión
       </router-link>
     </div>
 
@@ -100,8 +100,8 @@ onMounted(loadOrders)
 
     <div v-else-if="filteredOrders.length === 0" class="empty">
       <i class="fa-solid fa-clipboard-list" />
-      <p>No tienes órdenes aún</p>
-      <router-link :to="{ name: 'AsesorNewOrder' }" class="btn-link">Crear primera orden</router-link>
+      <p>No tienes órdenes históricas</p>
+      <router-link :to="{ name: 'AsesorVentas' }" class="btn-link">Crear una gestión nueva</router-link>
     </div>
 
     <div v-else class="orders-list">

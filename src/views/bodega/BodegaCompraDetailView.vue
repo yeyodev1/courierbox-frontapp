@@ -191,7 +191,9 @@ const etaChips = ['Hoy mismo', '24 horas', '1 a 2 días', '3 a 5 días', '1 sema
 const clienteNombre = computed(() => (typeof gestion.value?.contactoId === 'object' && gestion.value?.contactoId ? gestion.value.contactoId.nombre : 'Cliente'))
 const clienteEmail = computed(() => (typeof gestion.value?.contactoId === 'object' && gestion.value?.contactoId ? (gestion.value.contactoId as any).email : ''))
 const asesorNombre = computed(() => (typeof gestion.value?.asesorId === 'object' && gestion.value?.asesorId ? (gestion.value.asesorId as any).name : '—'))
-const yaRecibido = computed(() => ['comprada', 'en_transito', 'entregada'].includes(gestion.value?.stage ?? ''))
+const yaRecibido = computed(() => gestion.value?.estadoBodega
+  ? ['recibida', 'preparando_despacho', 'despachada'].includes(gestion.value.estadoBodega)
+  : ['comprada', 'en_transito', 'entregada'].includes(gestion.value?.stage ?? ''))
 const trackingUrl = computed(() => (gestion.value?.viewToken ? `${window.location.origin}/compra/${gestion.value.viewToken}` : ''))
 
 function money(v: unknown) { return (Number(v) || 0).toFixed(2) }

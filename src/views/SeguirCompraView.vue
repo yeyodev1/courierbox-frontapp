@@ -34,6 +34,20 @@
       </section>
 
       <section class="card stage-reader">
+        <div class="milestone-strip">
+          <article class="milestone created done">
+            <span><i class="fa-solid fa-file-circle-plus" /></span>
+            <div><strong>Gestión creada</strong><small>{{ formatDate(gestion.createdAt) }}</small></div>
+          </article>
+          <article class="milestone paid" :class="{ done: gestion.estadoPago === 'confirmado' }">
+            <span><i class="fa-solid fa-circle-check" /></span>
+            <div><strong>Pago confirmado</strong><small>{{ gestion.pagoConfirmadoEn ? formatDate(gestion.pagoConfirmadoEn) : 'Pendiente' }}</small></div>
+          </article>
+          <article class="milestone delivered" :class="{ done: gestion.estadoEntrega === 'entregada' || gestion.stage === 'entregada' }">
+            <span><i class="fa-solid fa-box-open" /></span>
+            <div><strong>Entrega completada</strong><small>{{ gestion.envio?.entregadoEn ? formatDate(gestion.envio.entregadoEn) : 'Pendiente' }}</small></div>
+          </article>
+        </div>
         <div class="progress-track"><div class="progress-fill" :style="{ width: `${stageProgress}%` }" /></div>
         <div class="stage-steps">
           <div v-for="step in stageSteps" :key="step.value" class="stage-step" :class="{ active: gestion.stage === step.value, done: stageIndex(gestion.stage) > stageIndex(step.value) }">
@@ -43,6 +57,17 @@
               <p>{{ step.desc }}</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section v-if="gestion.envio?.estado === 'entregado'" class="card delivery-proof">
+        <div class="card-head">
+          <h3><i class="fa-solid fa-shield-check" aria-hidden="true" /> Comprobante de entrega</h3>
+          <span>{{ gestion.envio.recibidoPor || 'Entrega confirmada' }}</span>
+        </div>
+        <div class="proof-media">
+          <img v-if="gestion.envio.fotoEntregaUrl" :src="gestion.envio.fotoEntregaUrl" alt="Foto de entrega" />
+          <img v-if="gestion.envio.firmaUrl" :src="gestion.envio.firmaUrl" alt="Firma de recepción" class="signature" />
         </div>
       </section>
 
@@ -217,6 +242,21 @@ onMounted(async () => {
 .stage-hero__meta strong { font-size: 1.8rem; color: $fg-dark; }
 
 .stage-reader { padding: $space-5; display: flex; flex-direction: column; gap: $space-4; }
+.milestone-strip { display: flex; flex-wrap: wrap; gap: $space-3; }
+.milestone {
+  flex: 1 1 210px; display: flex; align-items: center; gap: $space-3; padding: $space-4;
+  border-radius: 16px; border: 1px solid rgba($brand-orange, .32); background: #120d08; opacity: .5;
+  transition: transform 200ms ease, opacity 200ms ease, border-color 200ms ease;
+  &.done { opacity: 1; transform: translateY(-2px); }
+  > span { width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  > div { display: flex; flex-direction: column; gap: 3px; }
+  small { color: #f2dcc7; }
+}
+.milestone.created > span { color: #7fb3ff; background: rgba(59, 130, 246, .16); }
+.milestone.paid.done { border-color: $signal-green; }
+.milestone.paid > span { color: $signal-green; background: rgba($signal-green, .15); }
+.milestone.delivered.done { border-color: #a78bfa; }
+.milestone.delivered > span { color: #c4b5fd; background: rgba(139, 92, 246, .16); }
 .progress-track { height: 4px; background: $ink-700; border-radius: 999px; overflow: hidden; }
 .progress-fill { height: 100%; background: $brand-orange; border-radius: 999px; transition: width 0.25s ease; }
 .stage-steps { display: flex; flex-wrap: wrap; gap: $space-3; }
@@ -231,6 +271,10 @@ onMounted(async () => {
 .stage-step p { margin: 2px 0 0; color: $ink-400; font-size: 0.8rem; }
 
 .gallery-card, .quick-card { padding: $space-5; }
+.delivery-proof { padding: $space-5; }
+.proof-media { display: flex; flex-wrap: wrap; gap: $space-4; }
+.proof-media img { flex: 1 1 280px; min-width: 0; max-height: 360px; object-fit: contain; border-radius: 14px; background: #120d08; border: 1px solid rgba($brand-orange, .3); }
+.proof-media img.signature { background: #fffaf2; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: $space-3; margin-bottom: $space-4; }
 .card-head h3 { display: flex; align-items: center; gap: $space-2; margin: 0; font-size: 1rem; }
 .card-head span { color: $ink-400; font-size: 0.82rem; }
@@ -275,4 +319,5 @@ onMounted(async () => {
   .stage-hero { flex-direction: column; }
   .stage-hero__meta { align-items: flex-start; }
 }
+@media (prefers-reduced-motion: reduce) { .milestone, .progress-fill { transition: none; } }
 </style>

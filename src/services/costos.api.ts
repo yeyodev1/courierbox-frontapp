@@ -106,6 +106,7 @@ class CostosAPI extends APIBase {
     valorPorLibra?: number
     valorTotal?: number
     valorPagado?: number
+    idempotencyKey?: string
   }) {
     const res = await this.post<{ gasto: Gasto }>('v1/costos', data)
     return res.data

@@ -30,6 +30,7 @@ const filtroHasta = ref(new Date().toISOString().slice(0, 10))
 const showFormModal = ref(false)
 const showDetailModal = ref(false)
 const selectedGasto = ref<Gasto | null>(null)
+const createIdempotencyKey = ref(crypto.randomUUID())
 
 const categoriasDisponibles = computed(() => {
   if (!filtroTipo.value) return []
@@ -95,6 +96,7 @@ watch(
 )
 
 function openCreate() {
+  createIdempotencyKey.value = crypto.randomUUID()
   selectedGasto.value = null
   showFormModal.value = true
 }
@@ -140,7 +142,7 @@ async function handleSave(payload: any, file: File | null) {
         await costosApi.uploadFactura(updated.gasto._id, file)
       }
     } else {
-      const created = await costosApi.create(payload)
+      const created = await costosApi.create({ ...payload, idempotencyKey: createIdempotencyKey.value })
       if (file && created.gasto?._id) {
         await costosApi.uploadFactura(created.gasto._id, file)
       }

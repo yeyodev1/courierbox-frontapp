@@ -81,7 +81,7 @@
           placeholder="Año"
         />
       </div>
-      <AppButton variant="outline" @click="loadGestiones">Filtrar</AppButton>
+      <AppButton variant="outline" @click="applyFilters">Filtrar</AppButton>
       <AppButton variant="ghost" @click="resetFilters">Limpiar</AppButton>
     </div>
 
@@ -153,11 +153,13 @@ import AppSelect from '@/components/ui/AppSelect.vue'
 import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import { adminApi } from '@/services/admin.api'
 import type { GestionCompra, GestionesStats } from '@/services/gestiones_compra.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const router = useRouter()
+const toast = useToastStore()
 
 const gestiones = ref<GestionCompra[]>([])
-const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, porEstado: {} })
+const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, sumaValorPagado: 0, ventasConfirmadas: 0, comisionGanada: 0, porEstado: {}, porEstadoPago: {} })
 const loading = ref(true)
 const statsLoading = ref(true)
 const exportLoading = ref(false)
@@ -224,7 +226,7 @@ function asesorNombre(g: GestionCompra) {
 }
 
 function margenNeto(g: GestionCompra) {
-  return Math.max(0, g.valorTotal - g.valorComision - g.costoVenta)
+  return g.valorTotal - g.valorComision - g.costoVenta
 }
 
 function formatDate(iso: string) {
@@ -266,6 +268,12 @@ async function loadStats() {
   }
 }
 
+function applyFilters() {
+  page.value = 1
+  loadGestiones()
+  loadStats()
+}
+
 async function loadAsesores() {
   try {
     const data = await adminApi.getUsers()
@@ -291,28 +299,27 @@ function changePage(p: number) {
 async function doExport(format: 'excel' | 'pdf') {
   exportLoading.value = true
   try {
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token') || ''
-    const url = gestionesCompraAPI.exportUrl({
+    const blob = await gestionesCompraAPI.downloadExport({
       format,
       estado: filters.value.estado || undefined,
       asesorId: filters.value.asesorId || undefined,
       mes: filters.value.mes ? Number(filters.value.mes) : undefined,
       año: filters.value.año ? Number(filters.value.año) : undefined,
     })
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    if (!res.ok) throw new Error('Error al exportar')
-    const blob = await res.blob()
+    if (!blob.size) throw new Error('El servidor devolvió un archivo vacío')
     const extension = format === 'excel' ? 'xlsx' : 'pdf'
     const filename = `gestiones_compra_${new Date().toISOString().slice(0, 10)}.${extension}`
     const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
+    const objectUrl = URL.createObjectURL(blob)
+    link.href = objectUrl
     link.download = filename
     document.body.appendChild(link)
     link.click()
     link.remove()
-    URL.revokeObjectURL(link.href)
-  } catch (err) {
-    alert(err instanceof Error ? err.message : 'Error al exportar')
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    toast.showNotification(`${format === 'excel' ? 'Excel' : 'PDF'} descargado correctamente`, 'success')
+  } catch (err: any) {
+    toast.showNotification(err?.message || 'No se pudo exportar el archivo', 'error')
   } finally {
     exportLoading.value = false
   }
@@ -343,8 +350,9 @@ onMounted(() => {
 .header-left { display: flex; flex-direction: column; }
 .header-actions { display: flex; gap: $space-3; flex-wrap: wrap; }
 
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: $space-4; }
+.kpi-row { display: flex; flex-wrap: wrap; gap: $space-4; }
 .kpi-card {
+  flex: 1 1 180px;
   background: $ink-900; border: 1px solid $ink-500; border-radius: 12px;
   padding: $space-4 $space-5; display: flex; flex-direction: column; gap: $space-1;
   &.kpi-highlight { border-color: $brand-orange; background: rgba(240,138,31,0.06); }

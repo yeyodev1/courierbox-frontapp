@@ -16,6 +16,22 @@ export interface Contacto {
   lastOrderDate: string
   firstOrderDate: string
   asesores: AsesorInfo[]
+  sources?: Array<'legacy' | 'gestion'>
+}
+
+export interface ContactoOrder {
+  _id: string
+  source: 'legacy' | 'gestion'
+  historical: boolean
+  asesorId?: AsesorInfo | string
+  storeName: string
+  description: string
+  totalAmount: number
+  serviceType: string
+  status: string
+  paymentStatus?: string
+  auditLog?: Array<{ timestamp: string; action: string; userName: string; notes?: string }>
+  createdAt: string
 }
 
 export interface ContactoDetail {
@@ -28,7 +44,7 @@ export interface ContactoDetail {
     lastOrderDate: string
     asesores?: AsesorInfo[]
   }
-  orders: any[]
+  orders: ContactoOrder[]
 }
 
 class ContactosAPI extends APIBase {

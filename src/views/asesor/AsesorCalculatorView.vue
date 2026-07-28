@@ -55,7 +55,7 @@ async function calculate() {
 function createOrder() {
   if (!result.value) return
   router.push({
-    name: 'AsesorNewOrder',
+    name: 'AsesorVentas',
     query: {
       productValue: String(result.value.baseAmount - (shippingValue.value || 0)),
       shippingValue: String(shippingValue.value || 0),
@@ -125,7 +125,7 @@ watch([productValue, shippingValue, configId], calculate, { deep: true })
 
         <button class="btn-primary" :disabled="loading || !result" @click="createOrder">
           <span v-if="loading">Calculando...</span>
-          <span v-else>Crear orden con este total</span>
+          <span v-else>Crear gestión con este total</span>
         </button>
       </section>
 
