@@ -82,6 +82,7 @@ export interface GestionesStats {
   sumaValorTotal: number
   sumaComision: number
   sumaCostoVenta: number
+  sumaMargenNeto: number
   porEstado: Record<string, number>
 }
 
@@ -95,6 +96,20 @@ export interface GestionesListResult {
 
 class GestionesCompraAPI extends APIBase {
   private readonly base = 'v1/gestiones-compra'
+
+  private buildBaseUrl(): string {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1'
+    const detected = origin.includes('testing-storybrand-frontend.bakano.ec')
+      ? 'https://testing-storybrand-backapp.bakano.ec/api'
+      : isLocalhost
+        ? 'http://localhost:8101/api'
+        : ''
+    const raw = detected || (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
+    const trimmed = raw.replace(/\/+$/, '')
+    return trimmed.endsWith('/api') || /\/api\//.test(trimmed) ? trimmed : `${trimmed}/api`
+  }
 
   async list(params?: {
     page?: number
@@ -179,6 +194,23 @@ class GestionesCompraAPI extends APIBase {
   ): Promise<GestionCompra> {
     const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/recepcion-bodega`, data)
     return res.data.gestion
+  }
+
+  exportUrl(params?: {
+    format: 'excel' | 'pdf'
+    estado?: string
+    asesorId?: string
+    mes?: number
+    año?: number
+  }): string {
+    const query = new URLSearchParams()
+    query.set('format', params?.format ?? 'excel')
+    if (params?.estado) query.set('estado', params.estado)
+    if (params?.asesorId) query.set('asesorId', params.asesorId)
+    if (params?.mes) query.set('mes', String(params.mes))
+    if (params?.año) query.set('año', String(params.año))
+
+    return `${this.buildBaseUrl()}/${this.base}/export/${params?.format === 'pdf' ? 'pdf' : 'excel'}?${query.toString()}`
   }
 }
 

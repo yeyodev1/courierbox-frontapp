@@ -83,7 +83,7 @@ import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import type { GestionCompra, GestionesStats } from '@/services/gestiones_compra.api'
 
 const gestiones = ref<GestionCompra[]>([])
-const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, porEstado: {} })
+const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, porEstado: {} })
 const loading = ref(true)
 const page = ref(1)
 const pages = ref(1)
