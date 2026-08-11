@@ -388,8 +388,15 @@ import { useAuthStore } from "@/stores/auth.store";
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(_to, _from, saved) {
+  scrollBehavior(to, from, saved) {
+    // Back/forward: put the reader back where they were.
     if (saved) return saved;
+
+    // Same screen, only the query or hash moved — a filter, a tab, a page of a
+    // table. Yanking the reader to the top there loses their place for nothing.
+    if (to.path === from.path) return false;
+
+    // A different screen does start at its top.
     return { left: 0, top: 0, behavior: "instant" as ScrollBehavior };
   },
 });
