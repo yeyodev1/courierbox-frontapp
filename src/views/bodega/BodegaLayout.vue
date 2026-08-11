@@ -37,7 +37,7 @@
     <div v-if="mobileOpen" class="scrim" @click="mobileOpen = false"></div>
 
     <!-- Main -->
-    <div class="main-col">
+    <div ref="contentPane" class="main-col" data-lenis-prevent>
       <header class="mobile-bar">
         <button class="burger" @click="mobileOpen = true" aria-label="Menú"><i class="fa-solid fa-bars" aria-hidden="true" /></button>
         <strong>Bodega</strong>
@@ -57,6 +57,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
 import BrandMark from '@/components/ui/BrandMark.vue'
+import { useContentScroll } from '@/composables/useContentScroll'
+
+useContentScroll()
 
 const auth = useAuthStore()
 const mobileOpen = ref(false)
@@ -71,7 +74,9 @@ onMounted(() => { if (!auth.profile) auth.bootstrap() })
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
-.bodega-shell { min-height: 100vh; display: flex; background: $ink-1000; }
+/* Pinned to one viewport so the sidebar stays still; scrolling lives in
+   .main-col. See AdminLayout for the full note. */
+.bodega-shell { height: 100vh; height: 100dvh; overflow: hidden; display: flex; background: $ink-1000; }
 
 .sidebar {
   position: sticky; top: 0; align-self: flex-start;
@@ -113,7 +118,9 @@ onMounted(() => { if (!auth.profile) auth.bootstrap() })
   border-radius: 10px; padding: $space-2 $space-3; cursor: pointer; font-weight: 600;
 }
 
-.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+// The scroller sits here and not on .main so the scrollbar tracks the edge of
+// the screen rather than the edge of .main's centred 1200px column.
+.main-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .mobile-bar { display: none; }
 .main { flex: 1; padding: $space-6; max-width: 1200px; width: 100%; margin: 0 auto; }
 .scrim { display: none; }

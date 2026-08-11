@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import BrandMark from '@/components/ui/BrandMark.vue'
+import { useContentScroll } from '@/composables/useContentScroll'
 
 const route = useRoute()
 const router = useRouter()
+useContentScroll()
 const authStore = useAuthStore()
 
 const sidebarExpanded = ref(true)
@@ -225,7 +227,12 @@ function navigate(path: string) {
         </div>
       </header>
 
-      <main class="main-content" id="admin-main-content">
+      <main
+        ref="contentPane"
+        class="main-content"
+        id="admin-main-content"
+        data-lenis-prevent
+      >
         <router-view v-slot="{ Component }">
           <transition name="fade-slide" mode="out-in">
             <component :is="Component" />
@@ -251,12 +258,17 @@ function navigate(path: string) {
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
+/* The shell is pinned to exactly one viewport and never scrolls itself. That is
+   what keeps the sidebar and the top bar still while only the content moves —
+   changing section no longer yanks the whole window back to the top.
+   Scrolling lives in .main-content. */
 .admin-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; // mobile: follows the browser chrome instead of hiding under it
   background: $ink-1000;
   color: $fg-dark;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────
@@ -619,7 +631,8 @@ function navigate(path: string) {
   transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0; // lets .main-content shrink and scroll instead of pushing the shell
   min-width: 0;
 
   .sidebar-collapsed & {
@@ -719,7 +732,10 @@ function navigate(path: string) {
   padding: $space-8;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0; // without this flex refuses to shrink and the scroll moves to the window
   min-width: 0;
+  overscroll-behavior: contain; // hitting the end here does not start scrolling the page behind
+  -webkit-overflow-scrolling: touch;
 
   @media (max-width: 768px) {
     padding: $space-4;

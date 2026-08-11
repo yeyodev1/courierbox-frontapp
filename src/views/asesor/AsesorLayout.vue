@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import BrandMark from '@/components/ui/BrandMark.vue'
+import { useContentScroll } from '@/composables/useContentScroll'
 
 const route = useRoute()
 const router = useRouter()
+useContentScroll()
 const authStore = useAuthStore()
 
 const sidebarExpanded = ref(true)
@@ -135,7 +137,7 @@ function navigate(path: string) {
         </div>
       </header>
 
-      <main class="main-content">
+      <main ref="contentPane" class="main-content" data-lenis-prevent>
         <router-view v-slot="{ Component }">
           <transition name="fade-slide" mode="out-in">
             <component :is="Component" />
@@ -161,9 +163,13 @@ function navigate(path: string) {
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
+/* Pinned to one viewport so the sidebar and top bar stay still; scrolling lives
+   in .main-content. See AdminLayout for the full note. */
 .asesor-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: $ink-1000;
   color: $fg-dark;
 }
@@ -475,7 +481,9 @@ function navigate(path: string) {
   transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
 
   .sidebar-collapsed & {
     margin-left: 72px;
@@ -561,6 +569,11 @@ function navigate(path: string) {
   flex: 1;
   padding: $space-8;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  min-width: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 
   @media (max-width: 768px) {
     padding: $space-4;
