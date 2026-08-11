@@ -46,8 +46,7 @@
     <p v-else class="loading">No se encontró la compra.</p>
 
     <!-- REGISTER MODAL -->
-    <transition name="modal">
-      <div v-if="showModal" class="overlay" @click.self="!sending && closeModal()">
+    <AppOverlay :open="showModal" label="Registrar recepción" :persistent="sending" @close="closeModal">
         <div class="reg-modal">
           <!-- Sending overlay (sophisticated, per-image progress) -->
           <transition name="fade">
@@ -149,13 +148,13 @@
             </button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { gestionesCompraAPI, type GestionCompra } from '@/services/gestiones_compra.api'
 import { useToastStore } from '@/stores/toast.store'
@@ -329,7 +328,6 @@ onMounted(async () => {
 .btn.primary { background: $brand-orange; color: $ink-1000; &:disabled { opacity: 0.5; cursor: not-allowed; } }
 .btn.ghost { background: transparent; border-color: rgba($ink-500, 0.5); color: $ink-300; }
 
-.overlay { position: fixed; inset: 0; z-index: 120; background: rgba($ink-1000, 0.82); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: $space-4; }
 .reg-modal { position: relative; width: min(620px, 100%); max-height: 92vh; overflow: auto; background: $ink-900; border: 1px solid $ink-700; border-radius: 22px; padding: $space-5; display: flex; flex-direction: column; gap: $space-4; }
 .rm-head { display: flex; align-items: center; justify-content: space-between; }
 .rm-head h3 { margin: 0; color: $fg-dark; }
@@ -397,10 +395,6 @@ onMounted(async () => {
 @keyframes pulseBox { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 @keyframes pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-active .reg-modal, .modal-leave-active .reg-modal { transition: transform 0.24s ease; }
-.modal-enter-from .reg-modal, .modal-leave-to .reg-modal { transform: translateY(18px) scale(0.96); }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .expand-enter-active, .expand-leave-active { transition: opacity 0.2s ease; }

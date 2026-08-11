@@ -3,6 +3,7 @@ import SiteNav from "@/layout/SiteNav.vue";
 import FooterEditorial from "@/components/sections/FooterEditorial.vue";
 import WhatsAppFab from "@/components/ui/WhatsAppFab.vue";
 import AppPreloader from "@/components/ui/AppPreloader.vue";
+import AppPwaStatus from "@/components/ui/AppPwaStatus.vue";
 import { useLenis } from "@/composables/useLenis";
 import { useToastStore } from "@/stores/toast.store";
 import { onMounted, onUnmounted } from "vue";
@@ -49,6 +50,8 @@ onMounted(() => {
         <p>{{ toastStore.message }}</p>
       </div>
     </transition>
+
+    <AppPwaStatus />
   </div>
 </template>
 

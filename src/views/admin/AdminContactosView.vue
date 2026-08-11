@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRouter } from 'vue-router'
 import { contactosApi, type Contacto, type ContactoDetail } from '@/services/contactos.api'
 import { useToastStore } from '@/stores/toast.store'
@@ -101,8 +102,8 @@ onMounted(loadContactos)
       </div>
     </div>
 
-    <div v-if="loading" class="loading">
-      <i class="fa-solid fa-circle-notch fa-spin" /> Cargando...
+    <div v-if="loading" class="loading" aria-busy="true" aria-live="polite">
+      <AppSkeleton variant="card" height="76px" :count="6" gap="0.75rem" />
     </div>
 
     <div v-else-if="contactos.length === 0" class="empty">
@@ -134,8 +135,10 @@ onMounted(loadContactos)
       </div>
 
       <div class="contacto-detail">
-        <div v-if="loadingDetail" class="loading">
-          <i class="fa-solid fa-circle-notch fa-spin" /> Cargando detalle...
+        <div v-if="loadingDetail" class="loading" aria-busy="true" aria-live="polite">
+          <AppSkeleton variant="title" />
+          <AppSkeleton variant="text" :count="3" />
+          <AppSkeleton variant="card" height="90px" :count="3" gap="0.75rem" />
         </div>
 
         <div v-else-if="!selectedContacto" class="detail-empty">

@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { adminApi } from '@/services/admin.api'
 import { useToastStore } from '@/stores/toast.store'
 import { useAuthStore } from '@/stores/auth.store'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 
 const toastStore = useToastStore()
 const authStore = useAuthStore()
@@ -185,22 +187,17 @@ onMounted(() => {
     </div>
 
     <!-- Modals -->
-    <transition name="fade">
-      <div v-if="showDeleteUserModal" class="modal-overlay" @click.self="showDeleteUserModal = false">
-        <div class="modal-card">
-          <div class="modal-icon-box danger"><i class="fa-solid fa-triangle-exclamation" /></div>
-          <h3>Eliminar Usuario</h3>
-          <p>¿Eliminar a <strong>{{ userToDelete?.name }}</strong>? No se puede deshacer.</p>
-          <div class="modal-actions">
-            <button class="btn-ghost" @click="showDeleteUserModal = false">Cancelar</button>
-            <button class="btn-danger" @click="executeDeleteUser">Sí, eliminar</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="showDeleteUserModal"
+      title="Eliminar Usuario"
+      :message="`¿Eliminar a ${userToDelete?.name ?? ''}? No se puede deshacer.`"
+      confirm-label="Sí, eliminar"
+      variant="danger"
+      @cancel="showDeleteUserModal = false"
+      @confirm="executeDeleteUser"
+    />
 
-    <transition name="fade">
-      <div v-if="showEditUserModal" class="modal-overlay" @click.self="showEditUserModal = false">
+    <AppOverlay :open="showEditUserModal" label="Editar usuario" @close="showEditUserModal = false">
         <div class="modal-card wide">
           <div class="modal-header-bar">
             <h3><i class="fa-solid fa-pen" /> Actualizar Perfil</h3>
@@ -247,8 +244,7 @@ onMounted(() => {
             </div>
           </form>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
@@ -616,17 +612,6 @@ onMounted(() => {
 }
 
 // MODALS
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900;

@@ -7,6 +7,7 @@ import DashboardResumenTab from '@/components/admin/DashboardResumenTab.vue'
 import DashboardPaymentsTab from '@/components/admin/DashboardPaymentsTab.vue'
 import DashboardUsersTab from '@/components/admin/DashboardUsersTab.vue'
 import DashboardTrackingTab from '@/components/admin/DashboardTrackingTab.vue'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -90,12 +91,6 @@ function handleTabNavigate(viewId: string) {
           <span class="nav-label" v-show="sidebarExpanded">Conciliación</span>
         </button>
 
-        <button class="nav-item" @click="navigateTo('/admin/metrics')" :title="!sidebarExpanded ? 'Métricas GHL' : ''">
-          <div class="nav-icon-wrapper">
-            <i class="fa-solid fa-chart-line" />
-          </div>
-          <span class="nav-label" v-show="sidebarExpanded">Métricas GHL</span>
-        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -144,19 +139,15 @@ function handleTabNavigate(viewId: string) {
     </div>
 
     <!-- ===================== MODALS ===================== -->
-    <transition name="fade">
-      <div v-if="showLogoutConfirm" class="modal-overlay" @click.self="showLogoutConfirm = false">
-        <div class="modal-card">
-          <div class="modal-icon-box warn"><i class="fa-solid fa-right-from-bracket" /></div>
-          <h3>Cerrar Sesión</h3>
-          <p>¿Estás seguro de que deseas cerrar sesión?</p>
-          <div class="modal-actions">
-            <button class="btn-ghost" @click="showLogoutConfirm = false">Cancelar</button>
-            <button class="btn-danger" @click="authStore.logout()">Sí, cerrar</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="showLogoutConfirm"
+      title="Cerrar Sesión"
+      message="¿Estás seguro de que deseas cerrar sesión?"
+      confirm-label="Sí, cerrar"
+      variant="warning"
+      @cancel="showLogoutConfirm = false"
+      @confirm="authStore.logout()"
+    />
   </div>
 </template>
 
@@ -602,17 +593,6 @@ function handleTabNavigate(viewId: string) {
 }
 
 // ─── MODALS ───────────────────────────────────────────
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900;

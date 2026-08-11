@@ -126,10 +126,6 @@ onMounted(() => {
             <div class="qa-icon"><i class="fa-solid fa-file-invoice" /></div>
             <span>Conciliación Bancaria</span>
           </button>
-          <button class="qa-btn" @click="emit('route', '/admin/metrics')">
-            <div class="qa-icon"><i class="fa-solid fa-chart-line" /></div>
-            <span>Métricas GHL</span>
-          </button>
         </div>
       </section>
     </div>

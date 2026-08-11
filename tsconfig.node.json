@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    // Without an outDir this project emitted vite.config.js next to the source.
+    // Vite resolves vite.config.js BEFORE vite.config.ts, so the stale emit shadowed
+    // every edit to vite.config.ts at build time. Keep the JS out of the source tree.
+    "outDir": "./node_modules/.tmp/node-config",
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",

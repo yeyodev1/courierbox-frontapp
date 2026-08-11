@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
-import AppButton from '@/components/ui/AppButton.vue'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,6 +49,7 @@ const menuGroups = computed(() => {
       items: [
         { path: p('/purchase-orders'), label: 'Histórico de Órdenes', icon: 'fa-solid fa-box-archive', match: (routePath: string) => routePath.startsWith(`${basePath.value}/purchase-orders`) },
         { path: p('/envios'), label: 'Envíos', icon: 'fa-solid fa-truck', match: (routePath: string) => routePath.startsWith(`${basePath.value}/envios`) },
+        { path: p('/homologacion'), label: 'Homologación', icon: 'fa-solid fa-people-arrows', match: (routePath: string) => routePath.startsWith(`${basePath.value}/homologacion`) },
         { path: p('/contactos'), label: 'Contactos', icon: 'fa-solid fa-address-book', match: (routePath: string) => routePath.startsWith(`${basePath.value}/contactos`) },
         { path: p('/notificaciones'), label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: (routePath: string) => routePath.startsWith(`${basePath.value}/notificaciones`) },
       ],
@@ -56,7 +57,8 @@ const menuGroups = computed(() => {
         {
           label: 'Finanzas',
           items: [
-            { path: p('/costos'), label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (routePath: string) => routePath.startsWith(`${basePath.value}/costos`) },
+            { path: '/bodega/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith('/bodega/facturacion') },
+        { path: p('/costos'), label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (routePath: string) => routePath.startsWith(`${basePath.value}/costos`) },
             { path: p('/proveedores'), label: 'Proveedores', icon: 'fa-solid fa-truck-fast', match: (routePath: string) => routePath.startsWith(`${basePath.value}/proveedores`) },
             { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: (routePath: string) => routePath.startsWith(`${basePath.value}/caja`) },
             { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith(`${basePath.value}/reportes`) },
@@ -110,9 +112,9 @@ const pageMeta = computed(() => {
     '/admin/caja': { title: 'Caja', sub: 'Movimientos de ingreso y egreso' },
     '/admin/produccion': { title: 'Producción Diaria', sub: 'Registro diario de producción y CRM' },
     '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
+    '/admin/homologacion': { title: 'Homologación de clientes', sub: 'Vincula los paquetes del manifiesto con su dueño' },
     '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
     '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
-    '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
     '/admin/gestiones-compra': { title: 'Gestiones de Compra', sub: 'Administra las gestiones de compra del equipo' },
     '/admin/cuentas-bancarias': { title: 'Cuentas Bancarias', sub: 'Configura las cuentas de cobro de reservas' },
     '/admin/notificaciones': { title: 'Notificaciones', sub: 'Supervisa y reintenta la entrega de correos' },
@@ -128,9 +130,6 @@ function navigate(path: string) {
   sidebarMobileOpen.value = false
 }
 
-function handleLogoutKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') showLogoutConfirm.value = false
-}
 </script>
 
 <template>
@@ -236,29 +235,15 @@ function handleLogoutKeydown(e: KeyboardEvent) {
     </div>
 
     <!-- ===== LOGOUT MODAL ===== -->
-    <transition name="fade">
-      <div
-        v-if="showLogoutConfirm"
-        class="modal-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="logout-modal-title"
-        @click.self="showLogoutConfirm = false"
-        @keydown.escape="handleLogoutKeydown"
-      >
-        <div class="modal-card">
-          <div class="modal-icon-box warn">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true" />
-          </div>
-          <h3 id="logout-modal-title" class="modal-title">Cerrar Sesión</h3>
-          <p>¿Estás seguro de que deseas cerrar sesión?</p>
-          <div class="modal-actions">
-            <AppButton variant="outline" @click="showLogoutConfirm = false">Cancelar</AppButton>
-            <AppButton variant="primary" @click="authStore.logout()">Sí, cerrar sesión</AppButton>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="showLogoutConfirm"
+      title="Cerrar Sesión"
+      message="¿Estás seguro de que deseas cerrar sesión?"
+      confirm-label="Sí, cerrar sesión"
+      variant="warning"
+      @cancel="showLogoutConfirm = false"
+      @confirm="authStore.logout()"
+    />
   </div>
 </template>
 
@@ -731,17 +716,6 @@ function handleLogoutKeydown(e: KeyboardEvent) {
 }
 
 // ─── MODAL ────────────────────────────────────────────
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900;

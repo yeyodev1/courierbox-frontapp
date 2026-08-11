@@ -3,7 +3,9 @@
     <h3 class="step__title">Seleccionar asesor</h3>
     <p class="step__desc">Elige el asesor responsable de esta gestión de compra.</p>
 
-    <div v-if="loading" class="loading-msg">Cargando asesores...</div>
+    <div v-if="loading" class="loading-msg" aria-busy="true" aria-live="polite">
+      <AppSkeleton variant="card" height="64px" :count="3" gap="0.6rem" />
+    </div>
     <div v-else class="asesor-grid">
       <button
         v-for="u in asesores"
@@ -24,6 +26,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
 import APIBase from '@/services/httpBase'
 

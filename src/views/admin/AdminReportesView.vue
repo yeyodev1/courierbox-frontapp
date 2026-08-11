@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { adminApi } from '@/services/admin.api'
+import AppChart from '@/components/ui/AppChart.vue'
 
 type FinancialSummary = {
   ingresos: number
@@ -53,6 +54,9 @@ const emptyReport: ExecutiveReport = {
   },
 }
 
+type VentaDiaria = { _id: string; total: number; cantidad: number }
+type ComisionAsesor = { asesorNombre?: string; ventas: number; comision: number; margenNeto: number }
+
 const today = new Date()
 const selectedMonth = ref(toMonthValue(today))
 const desde = ref(toDateValue(new Date(today.getFullYear(), today.getMonth(), 1)))
@@ -61,6 +65,52 @@ const loading = ref(false)
 const exporting = ref(false)
 const error = ref('')
 const report = ref<ExecutiveReport>(emptyReport)
+const ventasDiarias = ref<VentaDiaria[]>([])
+const comisiones = ref<ComisionAsesor[]>([])
+
+/**
+ * The proposal promises periods beyond the old 30-day window: monthly,
+ * quarterly and annual. The backend already accepts any desde/hasta, so these
+ * are just shortcuts onto the same range.
+ */
+function aplicarPreset(preset: 'mes' | 'trimestre' | 'anio') {
+  const now = new Date()
+  let inicio: Date
+  if (preset === 'mes') {
+    inicio = new Date(now.getFullYear(), now.getMonth(), 1)
+  } else if (preset === 'trimestre') {
+    inicio = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+  } else {
+    inicio = new Date(now.getFullYear(), 0, 1)
+  }
+  desde.value = toDateValue(inicio)
+  hasta.value = toDateValue(now)
+  void load()
+}
+
+const ventasChart = computed(() => ({
+  labels: ventasDiarias.value.map((v) => v._id.slice(5)),
+  series: [{ label: 'Ventas confirmadas', data: ventasDiarias.value.map((v) => Number(v.total) || 0) }],
+}))
+
+const enviosChart = computed(() => {
+  const filas = report.value.envios.filter((e) => e._id)
+  return {
+    labels: filas.map((e) => e._id ?? '—'),
+    series: [
+      { label: 'Cobrado', data: filas.map((e) => Number(e.cobrado) || 0), color: '#2BBB92' },
+      { label: 'Costo', data: filas.map((e) => Number(e.costo) || 0), color: '#E5484D' },
+    ],
+  }
+})
+
+const comisionesChart = computed(() => ({
+  labels: comisiones.value.map((c) => c.asesorNombre ?? 'Sin asesor'),
+  series: [
+    { label: 'Ventas', data: comisiones.value.map((c) => Number(c.ventas) || 0), color: '#2094D2' },
+    { label: 'Comisión', data: comisiones.value.map((c) => Number(c.comision) || 0), color: '#F08A1F' },
+  ],
+}))
 
 const periodLabel = computed(() => {
   const start = parseDate(desde.value)
@@ -152,7 +202,15 @@ async function load() {
   error.value = ''
   try {
     const query = new URLSearchParams({ desde: desde.value, hasta: hasta.value })
-    const response = await adminApi.getData(`v1/reportes/ejecutivo?${query.toString()}`)
+    // The charts read from dedicated endpoints; a failure there must not blank
+    // out the executive numbers, so they settle independently.
+    const [response, ventasRes, comisionesRes] = await Promise.all([
+      adminApi.getData(`v1/reportes/ejecutivo?${query.toString()}`),
+      adminApi.getData(`v1/reportes/ventas-diarias?${query.toString()}`).catch(() => ({ ventas: [] })),
+      adminApi.getData(`v1/reportes/comisiones?${query.toString()}`).catch(() => ({ comisiones: [] })),
+    ])
+    ventasDiarias.value = Array.isArray(ventasRes?.ventas) ? ventasRes.ventas : []
+    comisiones.value = Array.isArray(comisionesRes?.comisiones) ? comisionesRes.comisiones : []
     report.value = {
       finanzas: { ...emptyReport.finanzas, ...(response.finanzas || {}) },
       gastos: { ...emptyReport.gastos, ...(response.gastos || {}) },
@@ -210,6 +268,12 @@ onMounted(load)
     </header>
 
     <section class="period-panel" aria-label="Seleccionar periodo del reporte">
+      <div class="presets">
+        <span>Periodo</span>
+        <button type="button" :disabled="loading" @click="aplicarPreset('mes')">Este mes</button>
+        <button type="button" :disabled="loading" @click="aplicarPreset('trimestre')">Trimestre</button>
+        <button type="button" :disabled="loading" @click="aplicarPreset('anio')">Año</button>
+      </div>
       <div class="month-control">
         <label for="report-month">Ir a un mes</label>
         <div class="month-action">
@@ -268,6 +332,38 @@ onMounted(load)
           <span>Saldo de caja</span>
           <strong>{{ formatMoney(report.caja.utilidad) }}</strong>
           <small>{{ formatMoney(report.caja.ingresos) }} cobrado · {{ formatMoney(report.caja.egresos) }} pagado</small>
+        </article>
+      </section>
+
+      <section class="charts-grid" aria-label="Gráficas del periodo">
+        <article class="report-panel chart-panel chart-panel--wide">
+          <header class="chart-head">
+            <h3>Ventas confirmadas por día</h3>
+            <span>{{ periodLabel }}</span>
+          </header>
+          <AppChart
+            tipo="line"
+            moneda
+            alto="240px"
+            :labels="ventasChart.labels"
+            :series="ventasChart.series"
+          />
+        </article>
+
+        <article class="report-panel chart-panel">
+          <header class="chart-head">
+            <h3>Rentabilidad de envíos</h3>
+            <span>Cobrado vs costo por estado</span>
+          </header>
+          <AppChart moneda alto="240px" :labels="enviosChart.labels" :series="enviosChart.series" />
+        </article>
+
+        <article class="report-panel chart-panel">
+          <header class="chart-head">
+            <h3>Ventas y comisiones por asesor</h3>
+            <span>Solo gestiones con pago confirmado</span>
+          </header>
+          <AppChart moneda alto="240px" :labels="comisionesChart.labels" :series="comisionesChart.series" />
         </article>
       </section>
 
@@ -940,5 +1036,66 @@ $cream: $ink-100;
     transition: none;
   }
   .export-actions button:hover:not(:disabled) { transform: none; }
+}
+
+.presets {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  > span {
+    font-size: 0.78rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  button {
+    min-height: 34px;
+    padding: 0 0.9rem;
+    border-radius: 999px;
+    border: 1px solid rgba(245, 244, 241, 0.16);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &:hover:not(:disabled) {
+      border-color: rgba(240, 138, 31, 0.5);
+      background: rgba(240, 138, 31, 0.1);
+    }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  &--wide { grid-column: 1 / -1; }
+}
+
+.chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  h3 { margin: 0; font-size: 1rem; }
+  span { font-size: 0.78rem; opacity: 0.65; }
 }
 </style>

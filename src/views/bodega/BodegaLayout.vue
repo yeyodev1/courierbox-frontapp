@@ -14,6 +14,12 @@
         <router-link to="/bodega" exact-active-class="active" @click="mobileOpen = false">
           <i class="fa-solid fa-box" aria-hidden="true" /> <span>Compras</span>
         </router-link>
+        <router-link to="/bodega/counter" active-class="active" @click="mobileOpen = false">
+          <i class="fa-solid fa-signature" aria-hidden="true" /> <span>Counter</span>
+        </router-link>
+        <router-link to="/bodega/facturacion" active-class="active" @click="mobileOpen = false">
+          <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true" /> <span>Facturación</span>
+        </router-link>
         <router-link to="/bodega/envios" active-class="active" @click="mobileOpen = false">
           <i class="fa-solid fa-truck-fast" aria-hidden="true" /> <span>Envíos</span>
         </router-link>

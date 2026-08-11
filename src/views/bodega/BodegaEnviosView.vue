@@ -74,8 +74,7 @@
     </template>
 
     <!-- Create modal -->
-    <transition name="modal">
-      <div v-if="showCreate" class="overlay" @click.self="showCreate = false">
+    <AppOverlay :open="showCreate" label="Crear envío" :persistent="saving" @close="showCreate = false">
         <div class="card-modal">
           <div class="cm-head">
             <h3>Nuevo envío</h3>
@@ -136,6 +135,8 @@
             <div class="fg"><label>Notas / instrucciones</label><textarea v-model="form.notas" rows="2" placeholder="Referencias, horarios..."></textarea></div>
 
             <p v-if="error" class="err">{{ error }}</p>
+
+            <AppMargenLive :cobrado="form.valorCobrado" :costo="form.costoProveedor" />
           </div>
 
           <div class="cm-foot">
@@ -143,13 +144,14 @@
             <button class="btn primary" :disabled="saving" @click="create">{{ saving ? 'Guardando...' : 'Crear envío' }}</button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
+import AppMargenLive from '@/components/ui/AppMargenLive.vue'
 import { enviosApi, type EnvioDomicilio, type Motorizado } from '@/services/envios.api'
 import { proveedoresApi, type Proveedor } from '@/services/proveedores.api'
 import { gestionesCompraAPI, type GestionCompra } from '@/services/gestiones_compra.api'
@@ -372,7 +374,6 @@ onMounted(load)
 .btn.primary { background: $brand-orange; color: $ink-1000; &:disabled { opacity: 0.5; cursor: not-allowed; } }
 .btn.ghost { background: transparent; border-color: rgba($ink-500, 0.5); color: $ink-300; }
 
-.overlay { position: fixed; inset: 0; z-index: 120; background: rgba($ink-1000, 0.82); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: $space-4; }
 .card-modal { width: min(620px, 100%); max-height: 92vh; overflow: auto; background: $ink-900; border: 1px solid $ink-700; border-radius: 20px; padding: $space-5; display: flex; flex-direction: column; gap: $space-4; }
 .cm-head { display: flex; align-items: center; justify-content: space-between; }
 .cm-head h3 { margin: 0; color: $fg-dark; }
@@ -388,10 +389,6 @@ onMounted(load)
 .err { color: $signal-red; font-size: 0.85rem; margin: 0; }
 .cm-foot { display: flex; justify-content: flex-end; gap: $space-3; }
 
-.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-active .card-modal, .modal-leave-active .card-modal { transition: transform 0.24s ease; }
-.modal-enter-from .card-modal, .modal-leave-to .card-modal { transform: translateY(18px) scale(0.96); }
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (max-width: 640px) { .row, .modo-cards { flex-direction: column; } }

@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import {
   notificacionesApi,
   type Notificacion,
+  type NotificacionCanal,
+  type NotificacionEntrega,
   type NotificacionEstado,
   type NotificacionEvento,
 } from '@/services/notificaciones.api'
@@ -20,6 +22,7 @@ const reintentandoId = ref<string | null>(null)
 const filtros: Array<{ value: FiltroEstado; label: string }> = [
   { value: '', label: 'Todos' },
   { value: 'fallida', label: 'Fallidos' },
+  { value: 'parcial', label: 'Parciales' },
   { value: 'enviada', label: 'Enviados' },
   { value: 'pendiente', label: 'Pendientes' },
   { value: 'enviando', label: 'En proceso' },
@@ -29,7 +32,80 @@ const estadoLabels: Record<NotificacionEstado, string> = {
   pendiente: 'Pendiente',
   enviando: 'En proceso',
   enviada: 'Enviado',
+  parcial: 'Parcial',
   fallida: 'Fallido',
+}
+
+const canalLabels: Record<NotificacionCanal, string> = {
+  email: 'Correo',
+  whatsapp: 'WhatsApp',
+}
+
+const canalIconos: Record<NotificacionCanal, string> = {
+  email: 'fa-solid fa-envelope',
+  whatsapp: 'fa-brands fa-whatsapp',
+}
+
+const entregaLabels: Record<NotificacionEntrega['estado'], string> = {
+  pendiente: 'Pendiente',
+  enviando: 'Enviando',
+  listo: 'Listo para enviar',
+  enviada: 'Entregado',
+  fallida: 'Fallido',
+  omitida: 'Omitido',
+}
+
+const marcandoId = ref<string | null>(null)
+
+/**
+ * There is no WhatsApp API here: the operator opens the prefilled chat on the
+ * Courier Box line, sends it, and confirms so the ledger stops flagging it.
+ */
+async function abrirWhatsapp(notificacion: Notificacion, entrega: NotificacionEntrega) {
+  if (!entrega.enlace) return
+  window.open(entrega.enlace, '_blank', 'noopener,noreferrer')
+  await marcarEnviada(notificacion)
+}
+
+async function marcarEnviada(notificacion: Notificacion) {
+  if (marcandoId.value) return
+  marcandoId.value = notificacion._id
+  try {
+    const actualizada = await notificacionesApi.marcarEnviada(notificacion._id, 'whatsapp')
+    const index = notificaciones.value.findIndex((item) => item._id === actualizada._id)
+    if (index >= 0) notificaciones.value.splice(index, 1, actualizada)
+    toast.showNotification('WhatsApp marcado como enviado.', 'success')
+  } catch (error: unknown) {
+    toast.showNotification(getErrorMessage(error, 'No se pudo marcar el envío.'), 'error')
+  } finally {
+    marcandoId.value = null
+  }
+}
+
+/** Older documents predate per-channel tracking; show them as a single email row. */
+function entregasDe(notificacion: Notificacion): NotificacionEntrega[] {
+  if (notificacion.entregas?.length) return notificacion.entregas
+  return [
+    {
+      canal: notificacion.canal ?? 'email',
+      estado: notificacion.estado === 'parcial' ? 'enviada' : notificacion.estado,
+      intentos: notificacion.intentos,
+      providerId: notificacion.providerId,
+      ultimoError: notificacion.ultimoError,
+      enviadaEn: notificacion.enviadaEn,
+    },
+  ]
+}
+
+function destinoDe(notificacion: Notificacion, canal: NotificacionCanal): string {
+  if (canal === 'whatsapp') {
+    // The link always targets the Courier Box line; the client's own number is
+    // shown only as reference for the operator.
+    return notificacion.destinatarioTelefono
+      ? `Cliente: ${notificacion.destinatarioTelefono}`
+      : 'Mensaje listo para enviar'
+  }
+  return notificacion.destinatario || 'Sin correo'
 }
 
 const eventoLabels: Record<NotificacionEvento, string> = {
@@ -39,11 +115,13 @@ const eventoLabels: Record<NotificacionEvento, string> = {
   recepcion_bodega: 'Recepción en bodega',
   envio_en_camino: 'Envío en camino',
   entrega_completada: 'Entrega completada',
+  retiro_counter: 'Retiro en counter',
 }
 
 const resumen = computed(() => ({
   total: notificaciones.value.length,
   fallidas: notificaciones.value.filter((item) => item.estado === 'fallida').length,
+  parciales: notificaciones.value.filter((item) => item.estado === 'parcial').length,
   enviadas: notificaciones.value.filter((item) => item.estado === 'enviada').length,
 }))
 
@@ -65,11 +143,11 @@ async function seleccionarFiltro(estado: FiltroEstado) {
   await cargarNotificaciones()
 }
 
-async function reintentar(notificacion: Notificacion) {
+async function reintentar(notificacion: Notificacion, canal?: NotificacionCanal) {
   if (reintentandoId.value) return
   reintentandoId.value = notificacion._id
   try {
-    const actualizada = await notificacionesApi.reintentar(notificacion._id)
+    const actualizada = await notificacionesApi.reintentar(notificacion._id, canal)
     const index = notificaciones.value.findIndex((item) => item._id === actualizada._id)
 
     if (filtroEstado.value && actualizada.estado !== filtroEstado.value) {
@@ -78,12 +156,15 @@ async function reintentar(notificacion: Notificacion) {
       notificaciones.value.splice(index, 1, actualizada)
     }
 
-    const mensaje = actualizada.estado === 'enviada'
-      ? 'Correo reenviado correctamente.'
-      : 'El reintento terminó con un error.'
-    toast.showNotification(mensaje, actualizada.estado === 'enviada' ? 'success' : 'error')
+    const ok = actualizada.estado === 'enviada'
+    const mensaje = ok
+      ? 'Notificación reenviada correctamente.'
+      : actualizada.estado === 'parcial'
+        ? 'Se entregó por algunos canales; revisa el detalle.'
+        : 'El reintento terminó con un error.'
+    toast.showNotification(mensaje, ok ? 'success' : actualizada.estado === 'parcial' ? 'warning' : 'error')
   } catch (error: unknown) {
-    toast.showNotification(getErrorMessage(error, 'No se pudo reintentar el correo.'), 'error')
+    toast.showNotification(getErrorMessage(error, 'No se pudo reintentar la notificación.'), 'error')
   } finally {
     reintentandoId.value = null
   }
@@ -119,8 +200,8 @@ onMounted(cargarNotificaciones)
     <header class="intro">
       <div class="intro-copy">
         <span class="eyebrow">Centro de entrega</span>
-        <h2 id="notifications-title">Notificaciones por email</h2>
-        <p>Supervisa cada envío y recupera correos fallidos sin perder el contexto de la operación.</p>
+        <h2 id="notifications-title">Notificaciones omnicanal</h2>
+        <p>Correo y WhatsApp en un solo registro: revisa qué llegó por cada canal y reintenta lo que falló.</p>
       </div>
       <div class="summary" aria-label="Resumen del listado actual">
         <div class="summary-item">
@@ -130,6 +211,10 @@ onMounted(cargarNotificaciones)
         <div class="summary-item summary-item--danger">
           <span>Fallidos</span>
           <strong>{{ resumen.fallidas }}</strong>
+        </div>
+        <div class="summary-item summary-item--warning">
+          <span>Parciales</span>
+          <strong>{{ resumen.parciales }}</strong>
         </div>
         <div class="summary-item summary-item--success">
           <span>Enviados</span>
@@ -220,6 +305,48 @@ onMounted(cargarNotificaciones)
             </div>
           </div>
 
+          <ul class="channels" aria-label="Estado por canal">
+            <li
+              v-for="entrega in entregasDe(notificacion)"
+              :key="entrega.canal"
+              class="channel"
+              :class="`channel--${entrega.estado}`"
+            >
+              <i :class="canalIconos[entrega.canal]" aria-hidden="true" />
+              <div class="channel__body">
+                <strong>{{ canalLabels[entrega.canal] }}</strong>
+                <span class="channel__to">{{ destinoDe(notificacion, entrega.canal) }}</span>
+                <span v-if="entrega.mensaje" class="channel__msg" :title="entrega.mensaje">
+                  “{{ entrega.mensaje }}”
+                </span>
+                <span v-if="entrega.ultimoError" class="channel__err">{{ entrega.ultimoError }}</span>
+              </div>
+              <span class="channel__state">{{ entregaLabels[entrega.estado] }}</span>
+
+              <!-- WhatsApp is sent by hand: open the prefilled chat, then confirm. -->
+              <button
+                v-if="entrega.canal === 'whatsapp' && entrega.enlace && entrega.estado !== 'enviada'"
+                type="button"
+                class="channel__wa"
+                :disabled="marcandoId !== null"
+                title="Abrir el mensaje en WhatsApp y marcarlo como enviado"
+                @click="abrirWhatsapp(notificacion, entrega)"
+              >
+                <i class="fa-brands fa-whatsapp" aria-hidden="true" /> Abrir y enviar
+              </button>
+              <button
+                v-else-if="entrega.canal !== 'whatsapp' && entrega.estado !== 'enviada'"
+                type="button"
+                class="channel__retry"
+                :disabled="reintentandoId !== null"
+                :title="`Reintentar solo ${canalLabels[entrega.canal]}`"
+                @click="reintentar(notificacion, entrega.canal)"
+              >
+                <i class="fa-solid fa-rotate-right" aria-hidden="true" />
+              </button>
+            </li>
+          </ul>
+
           <div v-if="notificacion.ultimoError" class="last-error">
             <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" />
             <div>
@@ -229,7 +356,7 @@ onMounted(cargarNotificaciones)
           </div>
         </div>
 
-        <div v-if="notificacion.estado === 'fallida'" class="card-action">
+        <div v-if="notificacion.estado === 'fallida' || notificacion.estado === 'parcial'" class="card-action">
           <button
             type="button"
             class="retry-button"
@@ -333,6 +460,7 @@ $warning: #ffb347;
   span { color: $cream-muted; font-size: 0.7rem; text-transform: uppercase; }
   strong { color: #fff; font-size: 1.4rem; }
   &--danger strong { color: $danger; }
+  &--warning strong { color: $warning; }
   &--success strong { color: $success; }
 }
 
@@ -490,6 +618,117 @@ $warning: #ffb347;
   &--enviada { color: $success; background: rgba($success, 0.12); border-color: rgba($success, 0.3); }
   &--fallida { color: $danger; background: rgba($danger, 0.12); border-color: rgba($danger, 0.3); }
   &--enviando { color: $brand-orange; background: rgba($brand-orange, 0.12); border-color: rgba($brand-orange, 0.3); }
+  &--parcial { color: $warning; background: rgba($warning, 0.14); border-color: rgba($warning, 0.35); }
+}
+
+/* ── Per-channel delivery rows ── */
+.channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.channel {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-2 $space-3;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+
+  > i {
+    flex: 0 0 auto;
+    width: 20px;
+    text-align: center;
+    color: $cream-muted;
+  }
+
+  &--enviada {
+    border-color: rgba($success, 0.28);
+    > i { color: $success; }
+  }
+  &--fallida {
+    border-color: rgba($danger, 0.28);
+    > i { color: $danger; }
+  }
+  &--omitida {
+    opacity: 0.62;
+  }
+}
+
+.channel__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  strong { color: #fff; font-size: 0.82rem; }
+}
+
+.channel__to,
+.channel__err {
+  font-size: 0.74rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel__to { color: $cream-muted; }
+.channel__err { color: $danger; }
+
+.channel__msg {
+  color: rgba($cream, 0.55);
+  font-size: 0.72rem;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel__wa {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(37, 211, 102, 0.4);
+  background: rgba(37, 211, 102, 0.12);
+  color: #4ce08a;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: rgba(37, 211, 102, 0.2); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.channel__state {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: $cream-muted;
+}
+
+.channel__retry {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: $cream-muted;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { color: #fff; border-color: rgba($brand-orange, 0.4); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 
 .details {

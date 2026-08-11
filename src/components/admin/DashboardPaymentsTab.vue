@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { adminApi } from '@/services/admin.api'
 import { useToastStore } from '@/stores/toast.store'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 
 const toastStore = useToastStore()
 
@@ -166,19 +167,15 @@ onMounted(() => {
     </div>
 
     <!-- Modals -->
-    <transition name="fade">
-      <div v-if="showDeletePaymentModal" class="modal-overlay" @click.self="showDeletePaymentModal = false">
-        <div class="modal-card">
-          <div class="modal-icon-box danger"><i class="fa-solid fa-triangle-exclamation" /></div>
-          <h3>Eliminar Link de Pago</h3>
-          <p>¿Eliminar el link <strong>{{ paymentToDelete?.reference }}</strong>? Esta acción no se puede deshacer.</p>
-          <div class="modal-actions">
-            <button class="btn-ghost" @click="showDeletePaymentModal = false">Cancelar</button>
-            <button class="btn-danger" @click="executeDeletePayment">Sí, eliminar</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="showDeletePaymentModal"
+      title="Eliminar Link de Pago"
+      :message="`¿Eliminar el link ${paymentToDelete?.reference ?? ''}? Esta acción no se puede deshacer.`"
+      confirm-label="Sí, eliminar"
+      variant="danger"
+      @cancel="showDeletePaymentModal = false"
+      @confirm="executeDeletePayment"
+    />
   </div>
 </template>
 
@@ -503,17 +500,6 @@ onMounted(() => {
 }
 
 // MODALS
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900;

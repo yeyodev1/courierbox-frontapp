@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { asesoriaApi, type PurchaseOrder } from '@/services/asesoria.api'
 import { useToastStore } from '@/stores/toast.store'
 
@@ -59,7 +60,9 @@ onMounted(load)
       </select>
     </section>
 
-    <div v-if="loading" class="state">Cargando histórico...</div>
+    <div v-if="loading" class="state state--loading" aria-busy="true" aria-live="polite">
+      <AppSkeleton variant="card" height="110px" :count="5" gap="0.75rem" />
+    </div>
     <div v-else-if="!filtered.length" class="state">No hay órdenes históricas para estos filtros.</div>
     <section v-else class="history-list">
       <article v-for="order in filtered" :key="order._id" class="history-card">

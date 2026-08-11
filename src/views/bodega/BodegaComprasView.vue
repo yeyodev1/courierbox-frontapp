@@ -58,9 +58,8 @@
     </template>
 
     <!-- Quick "recibido" modal -->
-    <transition name="modal">
-      <div v-if="recibir" class="overlay" @click.self="!saving && (recibir = null)">
-        <div class="card-modal">
+    <AppOverlay :open="!!recibir" label="Registrar recepción" :persistent="saving" @close="recibir = null">
+        <div v-if="recibir" class="card-modal">
           <div class="cm-head">
             <h3>Marcar recibido en bodega</h3>
             <button class="close" :disabled="saving" @click="recibir = null"><i class="fa-solid fa-xmark" /></button>
@@ -106,12 +105,16 @@
             </button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- Second confirmation -->
-    <transition name="modal">
-      <div v-if="confirmAsk" class="overlay confirm-layer" @click.self="!saving && (confirmAsk = false)">
+    <AppOverlay
+      :open="confirmAsk"
+      layer="nested"
+      label="Confirmar recepción"
+      :persistent="saving"
+      @close="confirmAsk = false"
+    >
         <div class="card-modal small">
           <div v-if="saving" class="sending">
             <div class="spinner"><span class="ring"></span><span class="ring ring2"></span><i class="fa-solid fa-box"></i></div>
@@ -129,13 +132,13 @@
             </div>
           </template>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import { useRouter } from 'vue-router'
 import { gestionesCompraAPI, type GestionCompra } from '@/services/gestiones_compra.api'
 import { useToastStore } from '@/stores/toast.store'
@@ -368,7 +371,6 @@ onMounted(load)
 .btn.primary { background: $brand-orange; color: $ink-1000; &:disabled { opacity: 0.5; cursor: not-allowed; } }
 .btn.ghost { background: transparent; border-color: rgba($ink-500, 0.5); color: $ink-300; }
 
-.overlay { position: fixed; inset: 0; z-index: 120; background: rgba($ink-1000, 0.82); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: $space-4; }
 .card-modal { width: min(560px, 100%); max-height: 92vh; overflow: auto; background: $ink-900; border: 1px solid $ink-700; border-radius: 20px; padding: $space-5; display: flex; flex-direction: column; gap: $space-4; }
 .cm-head { display: flex; align-items: center; justify-content: space-between; }
 .cm-head h3 { margin: 0; color: $fg-dark; }
@@ -393,7 +395,6 @@ textarea { background: $ink-1000; border: 1px solid $ink-500; border-radius: 10p
 .err { color: $signal-red; font-size: 0.85rem; margin: 0; }
 .cm-foot { display: flex; justify-content: flex-end; gap: $space-3; }
 .cm-foot.center { justify-content: center; }
-.confirm-layer { z-index: 130; }
 .card-modal.small { max-width: 440px; text-align: center; align-items: center; }
 .card-modal.small h3 { margin: 0; color: $fg-dark; }
 .card-modal.small p { margin: 0; color: $ink-300; strong { color: $fg-dark; } }
@@ -411,10 +412,6 @@ textarea { background: $ink-1000; border: 1px solid $ink-500; border-radius: 10p
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulseBox { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 
-.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-active .card-modal, .modal-leave-active .card-modal { transition: transform 0.24s ease; }
-.modal-enter-from .card-modal, .modal-leave-to .card-modal { transform: translateY(18px) scale(0.96); }
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (max-width: 640px) { .card, .sk { max-width: 100%; } }

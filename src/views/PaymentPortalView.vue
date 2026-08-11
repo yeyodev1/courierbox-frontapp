@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { courierBridgeApi } from '@/services/courierbridge.api'
 import { useToastStore } from '@/stores/toast.store'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
@@ -16,6 +16,34 @@ const errorMsg = ref('')
 const comprobante = ref<File | null>(null)
 const referenciaPago = ref('')
 const submitting = ref(false)
+
+/**
+ * The proposal asks the client to pick which items they want to collect, so the
+ * payment covers exactly those invoices. Only `pendiente` ones are selectable —
+ * anything already `verificando` is locked until the cashier reviews it.
+ */
+const seleccion = ref<Set<string>>(new Set())
+
+const seleccionables = computed(() => facturas.value.filter((f: any) => f.estado === 'pendiente'))
+const seleccionadas = computed(() => seleccionables.value.filter((f: any) => seleccion.value.has(f._id)))
+const totalSeleccionado = computed(() =>
+  seleccionadas.value.reduce((sum: number, f: any) => sum + (Number(f.totalGeneral) || 0), 0),
+)
+const todasSeleccionadas = computed(
+  () => seleccionables.value.length > 0 && seleccionadas.value.length === seleccionables.value.length,
+)
+
+function alternar(id: string) {
+  const next = new Set(seleccion.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  seleccion.value = next
+}
+
+function alternarTodas() {
+  seleccion.value = todasSeleccionadas.value
+    ? new Set()
+    : new Set(seleccionables.value.map((f: any) => f._id))
+}
 
 async function buscarDeudas() {
   if (!casillero.value.trim()) return
@@ -34,6 +62,10 @@ async function buscarDeudas() {
     cliente.value = data.cliente
     facturas.value = data.facturas || []
     totalDeuda.value = data.totalDeuda || 0
+    // Start with everything ticked: paying the full balance is the common case.
+    seleccion.value = new Set(
+      (data.facturas || []).filter((f: any) => f.estado === 'pendiente').map((f: any) => f._id),
+    )
   } catch (err: any) {
     if (err.status === 404) {
       errorMsg.value = 'No encontramos un cliente con ese código de casillero'
@@ -47,12 +79,12 @@ async function buscarDeudas() {
 }
 
 async function enviarPago() {
-  if (!referenciaPago.value.trim() || !comprobante.value) return
+  if (!referenciaPago.value.trim() || !comprobante.value || !seleccionadas.value.length) return
   submitting.value = true
   try {
     const form = new FormData()
     if (comprobante.value) form.append('comprobante', comprobante.value)
-    form.append('facturaIds', JSON.stringify(facturas.value.map((f: any) => f._id)))
+    form.append('facturaIds', JSON.stringify(seleccionadas.value.map((f: any) => f._id)))
     form.append('referenciaPago', referenciaPago.value.trim())
 
     await courierBridgeApi.registrarPago(form)
@@ -141,8 +173,31 @@ function formatMoney(n: number) {
           <p>No tienes facturas pendientes. ¡Todo al día!</p>
         </div>
 
-        <div v-for="factura in facturas" :key="factura._id" class="factura-card glass-card">
+        <div v-if="seleccionables.length > 1" class="seleccion-bar glass-card">
+          <label class="select-all">
+            <input type="checkbox" :checked="todasSeleccionadas" @change="alternarTodas" />
+            <span>Seleccionar todas</span>
+          </label>
+          <span class="seleccion-count">
+            {{ seleccionadas.length }} de {{ seleccionables.length }} · {{ formatMoney(totalSeleccionado) }}
+          </span>
+        </div>
+
+        <div
+          v-for="factura in facturas"
+          :key="factura._id"
+          class="factura-card glass-card"
+          :class="{ 'is-selected': seleccion.has(factura._id), 'is-locked': factura.estado !== 'pendiente' }"
+        >
           <div class="factura-header">
+            <label v-if="factura.estado === 'pendiente'" class="factura-check">
+              <input
+                type="checkbox"
+                :checked="seleccion.has(factura._id)"
+                :aria-label="`Incluir factura ${factura.numeroFactura} en el pago`"
+                @change="alternar(factura._id)"
+              />
+            </label>
             <div>
               <h3>{{ factura.numeroFactura }}</h3>
               <span :class="['status-badge', factura.estado]">
@@ -187,6 +242,17 @@ function formatMoney(n: number) {
             <h2>Registrar Pago</h2>
           </div>
 
+          <div class="resumen-pago">
+            <span>Vas a pagar</span>
+            <strong>{{ formatMoney(totalSeleccionado) }}</strong>
+            <small>{{ seleccionadas.length }} factura(s) seleccionada(s)</small>
+          </div>
+
+          <p v-if="!seleccionadas.length" class="seleccion-vacia">
+            <i class="fa-solid fa-circle-info"></i>
+            Selecciona al menos una factura para registrar tu pago.
+          </p>
+
           <form @submit.prevent="enviarPago">
             <div class="form-group">
               <label>Referencia de Transferencia *</label>
@@ -207,7 +273,11 @@ function formatMoney(n: number) {
               />
             </div>
 
-            <button type="submit" :disabled="submitting || !referenciaPago.trim() || !comprobante" class="submit-btn">
+            <button
+              type="submit"
+              :disabled="submitting || !referenciaPago.trim() || !comprobante || !seleccionadas.length"
+              class="submit-btn"
+            >
               <span v-if="!submitting">Enviar Comprobante</span>
               <span v-else class="loader"></span>
             </button>
@@ -505,4 +575,70 @@ function formatMoney(n: number) {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Selección de facturas a pagar ── */
+.seleccion-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-weight: 600;
+
+  input { width: 18px; height: 18px; accent-color: #f57c00; }
+}
+
+.seleccion-count {
+  font-size: 0.88rem;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.factura-card {
+  transition: border-color 0.18s ease, opacity 0.18s ease;
+
+  &.is-selected { border-color: rgba(245, 124, 0, 0.55); }
+  &.is-locked { opacity: 0.65; }
+}
+
+.factura-check {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.75rem;
+  cursor: pointer;
+
+  input { width: 20px; height: 20px; accent-color: #f57c00; }
+}
+
+.resumen-pago {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: rgba(245, 124, 0, 0.1);
+  border: 1px solid rgba(245, 124, 0, 0.28);
+
+  span { font-size: 0.78rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; }
+  strong { font-size: 1.6rem; color: #f57c00; font-variant-numeric: tabular-nums; }
+  small { font-size: 0.78rem; opacity: 0.7; }
+}
+
+.seleccion-vacia {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
 </style>

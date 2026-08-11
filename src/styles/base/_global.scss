@@ -110,6 +110,32 @@ body {
   width: min(100%, 860px);
 }
 
+// ─── Skeleton primitives ─────────────────────────────
+// One shimmer definition for the whole app. Views used to redefine @keyframes
+// per file; new work should use AppSkeleton or the .u-skel-* classes below.
+@keyframes cb-skeleton-sweep {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.u-skel {
+  display: block;
+  border-radius: $radius-sm;
+  background: linear-gradient(
+    90deg,
+    rgba($ink-100, 0.04) 25%,
+    rgba($ink-100, 0.09) 37%,
+    rgba($ink-100, 0.04) 63%
+  );
+  background-size: 200% 100%;
+  animation: cb-skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+// Body scroll-lock applied by useModalBehavior.
+body.has-modal-open {
+  overflow: hidden;
+}
+
 // Lenis smooth-scroll classes
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }

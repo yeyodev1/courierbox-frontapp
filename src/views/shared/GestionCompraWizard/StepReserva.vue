@@ -36,7 +36,9 @@
       <div class="field-actions">
         <button class="link-action" @click="openCreateCuenta">+ Agregar cuenta</button>
       </div>
-      <div v-if="loadingCuentas" class="muted">Cargando cuentas...</div>
+      <div v-if="loadingCuentas" aria-busy="true" aria-live="polite">
+        <AppSkeleton variant="card" height="58px" :count="3" gap="0.6rem" />
+      </div>
       <div v-else class="cuentas-list">
         <button
           v-for="c in cuentas"
@@ -55,8 +57,7 @@
       </div>
     </div>
 
-    <transition name="fade">
-      <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateCuenta">
+    <AppOverlay :open="showCreateModal" label="Nueva cuenta bancaria" @close="closeCreateCuenta">
         <div class="modal-card">
           <div class="modal-head">
             <div>
@@ -88,8 +89,7 @@
             </AppButton>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- Confirmación de reserva (solo admin) -->
     <div v-if="isAdmin" class="confirm-section">
@@ -110,6 +110,8 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
@@ -250,11 +252,6 @@ defineExpose({
 .muted { color: $ink-400; font-size: 0.85rem; }
 .field-error { color: $signal-red; font-size: 0.82rem; }
 
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 120;
-  background: rgba($ink-1000, 0.78); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center; padding: $space-4;
-}
 .modal-card {
   width: min(640px, 100%); background: $ink-1000; border: 1px solid rgba($brand-orange, 0.18);
   border-radius: 20px; padding: $space-5; box-shadow: 0 24px 80px rgba(0,0,0,0.45);

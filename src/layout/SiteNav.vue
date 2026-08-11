@@ -30,6 +30,16 @@ watch(() => route.fullPath, () => { open.value = false; });
       <div class="nav__right">
         <AppButton
           as="router-link"
+          to="/comprar-por-mi"
+          variant="primary"
+          size="sm"
+          class="nav__cta nav__cta--shop"
+        >
+          Comprar por mí
+        </AppButton>
+
+        <AppButton
+          as="router-link"
           to="/rastrear"
           variant="outline"
           size="sm"
@@ -159,6 +169,14 @@ watch(() => route.fullPath, () => { open.value = false; });
     .nav__menu-icon span:nth-child(1) { transform: rotate(45deg); width: 16px; }
     .nav__menu-icon span:nth-child(2) { transform: rotate(-45deg); width: 16px; }
     .nav__menu { background: rgba($ink-100, 0.06); border-color: var(--border-strong); }
+  }
+}
+
+/* The shop CTA is the primary action, but two buttons plus the menu is too
+   much on a narrow phone — the mega menu still carries the link there. */
+.nav__cta--shop {
+  @media (max-width: 560px) {
+    display: none;
   }
 }
 </style>

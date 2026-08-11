@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -134,9 +135,8 @@ function formatMoney(n: number) {
 
       <!-- Pagos a verificar -->
       <div v-if="activeTab === 'verificando'" class="tab-content">
-        <div v-if="loading" class="loading-state">
-          <span class="loader"></span>
-          <p>Cargando pagos...</p>
+        <div v-if="loading" class="loading-state" aria-busy="true" aria-live="polite">
+          <AppSkeleton variant="card" height="96px" :count="4" gap="0.75rem" />
         </div>
 
         <div v-else-if="facturasVerificando.length === 0" class="empty-state">

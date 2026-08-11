@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRouter } from 'vue-router'
 import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import type { GestionCompra } from '@/services/gestiones_compra.api'
@@ -155,8 +156,8 @@ onMounted(() => {
         <router-link to="/asesor/gestiones-compra" class="btn-link">Ver todas</router-link>
       </div>
 
-      <div v-if="loading" class="loading">
-        <i class="fa-solid fa-circle-notch fa-spin" />
+      <div v-if="loading" class="loading" aria-busy="true" aria-live="polite">
+        <AppSkeleton variant="card" height="72px" :count="4" gap="0.75rem" />
       </div>
 
       <div v-else-if="stats.recentGestiones.length === 0" class="empty">

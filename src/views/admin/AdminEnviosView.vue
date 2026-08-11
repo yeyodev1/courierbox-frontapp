@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import { enviosApi, type EnvioDomicilio, type PaqueteSimple } from '@/services/envios.api'
 import { proveedoresApi, type Proveedor } from '@/services/proveedores.api'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
+import AppMargenLive from '@/components/ui/AppMargenLive.vue'
 import { useToastStore } from '@/stores/toast.store'
 
 // ── Tab state ──
@@ -108,6 +110,16 @@ function selectPaquete(p: PaqueteSimple) {
   searchResults.value = []
   searchQuery.value = ''
 }
+
+/**
+ * What the route costs us. Interprovincial pays one provider; a local delivery
+ * pays both legs, so the margin has to add them up.
+ */
+const costoRuta = computed(() =>
+  form.value.modo === 'interprovincial'
+    ? Number(form.value.valorPagadoProveedor) || 0
+    : (Number(form.value.usaCosto) || 0) + (Number(form.value.localCosto) || 0),
+)
 
 function openCreate() {
   form.value = {
@@ -501,8 +513,7 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
     </template>
 
     <!-- ─── Modal: Crear envío ─── -->
-    <transition name="fade">
-      <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+    <AppOverlay :open="showModal" label="Envío a domicilio" @close="showModal = false">
         <div class="modal-card wide">
           <div class="modal-icon-box info"><i class="fa-solid fa-truck" /></div>
           <h3>Nuevo envío</h3>
@@ -621,6 +632,8 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
             </section>
             <textarea v-model="form.notas" class="field-input" rows="2" placeholder="Notas adicionales..." />
           </div>
+          <AppMargenLive :cobrado="form.valorCobrado" :costo="costoRuta" />
+
           <div class="modal-actions">
             <button class="btn-ghost" @click="showModal = false">Cancelar</button>
             <button class="btn-primary" @click="create" :disabled="!form.paqueteId || !form.clienteNombre || !form.clienteDireccion">
@@ -628,12 +641,15 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
             </button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- ─── Modal: Crear/Editar proveedor ─── -->
-    <transition name="fade">
-      <div v-if="showProvModal" class="modal-overlay" @click.self="showProvModal = false">
+    <AppOverlay
+      :open="showProvModal"
+      layer="nested"
+      label="Proveedor"
+      @close="showProvModal = false"
+    >
         <div class="modal-card">
           <div class="modal-icon-box info"><i class="fa-solid fa-truck-field" /></div>
           <h3>{{ editingProv ? 'Editar' : 'Nuevo' }} proveedor</h3>
@@ -658,8 +674,7 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
             </button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
@@ -826,10 +841,6 @@ watch([filtroEstado, filtroDesde, filtroHasta], load)
   &:hover { border-color: rgba($brand-orange, 0.3); color: $brand-orange; }
 }
 
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba($ink-1000, 0.75); backdrop-filter: blur(6px); z-index: 100;
-  display: flex; align-items: center; justify-content: center; padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900; border: 1px solid rgba($ink-500, 0.15); border-radius: 20px; padding: $space-6;

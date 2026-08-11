@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useToastStore } from '@/stores/toast.store'
 import AppSelect from '@/components/ui/AppSelect.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 
 const roleOptions = [
   { value: 'admin', label: 'Administrador' },
@@ -301,8 +302,7 @@ async function executeDeleteUser() {
     </section>
 
     <!-- Create modal -->
-    <transition name="modal-scale">
-      <div v-if="showCreateModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="create-modal-title" @click.self="cancelCreate" @keydown.escape="cancelCreate">
+    <AppOverlay :open="showCreateModal" labelledby="create-modal-title" @close="cancelCreate">
         <div class="modal-card wide">
           <div class="modal-header-bar">
             <h3 id="create-modal-title"><i class="fa-solid fa-user-plus" aria-hidden="true" /> Nuevo Usuario</h3>
@@ -374,12 +374,10 @@ async function executeDeleteUser() {
             </div>
           </form>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- Edit modal -->
-    <transition name="modal-scale">
-      <div v-if="showEditModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" @click.self="cancelEdit" @keydown.escape="cancelEdit">
+    <AppOverlay :open="showEditModal" labelledby="edit-modal-title" @close="cancelEdit">
         <div class="modal-card wide">
           <div class="modal-header-bar">
             <h3 id="edit-modal-title"><i class="fa-solid fa-pen" aria-hidden="true" /> Actualizar Perfil</h3>
@@ -426,12 +424,15 @@ async function executeDeleteUser() {
             </div>
           </form>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- Delete modal -->
-    <transition name="modal-scale">
-      <div v-if="showDeleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" @click.self="showDeleteModal = false" @keydown.escape="showDeleteModal = false">
+    <AppOverlay
+      :open="showDeleteModal"
+      labelledby="delete-modal-title"
+      :persistent="deletingUser"
+      @close="showDeleteModal = false"
+    >
         <div class="modal-card">
           <div class="modal-icon-box danger"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true" /></div>
           <h3 id="delete-modal-title">Eliminar Usuario</h3>
@@ -441,12 +442,14 @@ async function executeDeleteUser() {
             <AppButton type="button" variant="primary" :loading="deletingUser" @click="executeDeleteUser">Sí, eliminar</AppButton>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- Protected delete modal -->
-    <transition name="modal-scale">
-      <div v-if="showProtectedDeleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="protected-delete-modal-title" @click.self="showProtectedDeleteModal = false" @keydown.escape="showProtectedDeleteModal = false">
+    <AppOverlay
+      :open="showProtectedDeleteModal"
+      labelledby="protected-delete-modal-title"
+      @close="showProtectedDeleteModal = false"
+    >
         <div class="modal-card">
           <div class="modal-icon-box danger"><i class="fa-solid fa-shield-halved" aria-hidden="true" /></div>
           <h3 id="protected-delete-modal-title">Acceso denegado</h3>
@@ -455,8 +458,7 @@ async function executeDeleteUser() {
             <AppButton type="button" variant="primary" @click="showProtectedDeleteModal = false">Entendido</AppButton>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
@@ -666,18 +668,7 @@ async function executeDeleteUser() {
 }
 
 // ─── MODALS ──────────────────────────────────────────
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
-
+// Backdrop, motion, scroll-lock and focus trap live in AppOverlay.
 .modal-card {
   background: $ink-900;
   border: 1px solid rgba($ink-500, 0.15);
@@ -918,38 +909,4 @@ async function executeDeleteUser() {
   to { transform: rotate(360deg); }
 }
 
-// ─── TRANSITIONS ─────────────────────────────────────
-.modal-scale-enter-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-
-  .modal-card {
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-}
-
-.modal-scale-leave-active {
-  transition: all 0.2s ease;
-
-  .modal-card {
-    transition: all 0.2s ease;
-  }
-}
-
-.modal-scale-enter-from {
-  opacity: 0;
-
-  .modal-card {
-    opacity: 0;
-    transform: scale(0.92) translateY(12px);
-  }
-}
-
-.modal-scale-leave-to {
-  opacity: 0;
-
-  .modal-card {
-    opacity: 0;
-    transform: scale(0.96) translateY(-8px);
-  }
-}
 </style>

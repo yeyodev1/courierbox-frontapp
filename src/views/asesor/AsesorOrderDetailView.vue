@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { asesoriaApi, type PurchaseOrder } from '@/services/asesoria.api'
 import { useToastStore } from '@/stores/toast.store'
@@ -24,7 +25,11 @@ onMounted(load)
 <template>
   <main class="legacy-detail">
     <button class="back" type="button" @click="router.push('/asesor/ordenes')"><i class="fa-solid fa-arrow-left" /> Histórico</button>
-    <div v-if="loading" class="state">Cargando...</div>
+    <div v-if="loading" class="state state--loading" aria-busy="true" aria-live="polite">
+      <AppSkeleton variant="title" />
+      <AppSkeleton variant="card" height="140px" />
+      <AppSkeleton variant="card" height="200px" />
+    </div>
     <template v-else-if="order">
       <header class="hero">
         <div><span class="eyebrow">Orden histórica · solo lectura</span><h1>{{ order.clientName }}</h1><p>{{ order.description }}</p></div>

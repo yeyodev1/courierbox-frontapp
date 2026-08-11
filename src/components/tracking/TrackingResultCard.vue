@@ -178,7 +178,9 @@ function copyCodigo() {
     </section>
 
     <!-- GALLERY ──────────────────────────────────────────── -->
-    <section v-if="data.imagenes.length" class="card__section">
+    <!-- Optional chaining on purpose: the payload comes from a scraper, and a
+         partial result used to white-screen the public tracking page. -->
+    <section v-if="data.imagenes?.length" class="card__section">
       <div class="section-head">
         <span class="section-head__eyebrow">Comprobantes · {{ data.imagenes.length }} fotos</span>
       </div>
@@ -188,10 +190,10 @@ function copyCodigo() {
     <!-- TIMELINE ─────────────────────────────────────────── -->
     <section class="card__section">
       <div class="section-head">
-        <span class="section-head__eyebrow">Historial · {{ data.eventos.length }} eventos</span>
+        <span class="section-head__eyebrow">Historial · {{ data.eventos?.length ?? 0 }} eventos</span>
         <span class="section-head__sub">Más reciente arriba</span>
       </div>
-      <TrackingTimeline :eventos="data.eventos" />
+      <TrackingTimeline :eventos="data.eventos ?? []" />
     </section>
 
     <!-- FOOTER META ──────────────────────────────────────── -->

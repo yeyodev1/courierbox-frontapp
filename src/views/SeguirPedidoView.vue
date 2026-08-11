@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { useToastStore } from '@/stores/toast.store'
@@ -106,8 +107,10 @@ onMounted(async () => {
 <template>
   <main class="seguir-page">
     <div class="seguir-container">
-      <div v-if="loading" class="loading">
-        <i class="fa-solid fa-circle-notch fa-spin" /> Cargando...
+      <div v-if="loading" class="loading" aria-busy="true" aria-live="polite">
+        <AppSkeleton variant="title" />
+        <AppSkeleton variant="card" height="200px" />
+        <AppSkeleton variant="text" :count="3" />
       </div>
 
       <template v-else-if="order">

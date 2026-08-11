@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import { useRouter } from 'vue-router'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -158,9 +159,7 @@ onMounted(loadContactos)
       </aside>
     </div>
 
-    <transition name="fade">
-      <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
-        <transition name="modal-pop" appear>
+    <AppOverlay :open="showCreateModal" label="Nuevo contacto" @close="closeCreateModal">
           <div class="modal-card">
             <div class="modal-head">
               <div>
@@ -195,9 +194,7 @@ onMounted(loadContactos)
               </AppButton>
             </div>
           </div>
-        </transition>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
@@ -252,17 +249,6 @@ onMounted(loadContactos)
 .cta-points span { display: inline-flex; align-items: center; gap: $space-2; }
 .cta-points span::before { content: '•'; color: $brand-orange; }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba($ink-1000, 0.78);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   width: min(760px, 100%);

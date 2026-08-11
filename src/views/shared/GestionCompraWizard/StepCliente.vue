@@ -89,9 +89,7 @@
       </button>
     </div>
 
-    <transition name="fade">
-      <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
-        <transition name="modal-pop" appear>
+    <AppOverlay :open="showCreateModal" label="Nuevo cliente" @close="closeCreateModal">
           <div class="modal-card">
             <div class="modal-head">
               <div>
@@ -140,14 +138,13 @@
               </AppButton>
             </div>
           </div>
-        </transition>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { contactosCbAPI } from '@/services/contactos_cb.api'
@@ -384,20 +381,12 @@ defineExpose({ isValid: () => !!store.formData.contactoId })
 }
 .field-error { color: $signal-red; font-size: 0.82rem; margin: 0; }
 
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 100;
-  background: rgba($ink-1000, 0.78); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center; padding: $space-4;
-}
 .modal-card {
   width: min(760px, 100%);
   background: linear-gradient(180deg, rgba($ink-900, 0.98), rgba($ink-1000, 0.98));
   border: 1px solid rgba($brand-orange, 0.18); border-radius: 24px; padding: $space-6;
   box-shadow: 0 30px 80px rgba(0,0,0,0.45);
 }
-.modal-pop-enter-active, .modal-pop-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
-.modal-pop-enter-from, .modal-pop-leave-to { transform: translateY(18px) scale(0.96); opacity: 0; }
-.modal-pop-enter-to, .modal-pop-leave-from { transform: translateY(0) scale(1); opacity: 1; }
 .modal-head {
   display: flex; justify-content: space-between; align-items: flex-start; gap: $space-4; margin-bottom: $space-5;
 }

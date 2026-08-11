@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +17,7 @@ const menuGroups = [
     label: 'Mi panel',
     items: [
       { path: '/asesor', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (p: string) => p === '/asesor' },
+      { path: '/asesor/solicitudes', label: 'Solicitudes web', icon: 'fa-solid fa-inbox', match: (p: string) => p.startsWith('/asesor/solicitudes') },
       { path: '/asesor/calculadora', label: 'Calculadora', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/asesor/calculadora') },
       { path: '/asesor/ventas', label: 'Ventas', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ventas') || p.startsWith('/asesor/gestiones-compra/nueva') },
     ],
@@ -142,19 +144,15 @@ function navigate(path: string) {
       </main>
     </div>
 
-    <transition name="fade">
-      <div v-if="showLogoutConfirm" class="modal-overlay" @click.self="showLogoutConfirm = false">
-        <div class="modal-card">
-          <div class="modal-icon-box warn"><i class="fa-solid fa-right-from-bracket" /></div>
-          <h3>Cerrar Sesión</h3>
-          <p>¿Estás seguro de que deseas cerrar sesión?</p>
-          <div class="modal-actions">
-            <button class="btn-ghost" @click="showLogoutConfirm = false">Cancelar</button>
-            <button class="btn-danger" @click="authStore.logout()">Sí, cerrar</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="showLogoutConfirm"
+      title="Cerrar Sesión"
+      message="¿Estás seguro de que deseas cerrar sesión?"
+      confirm-label="Sí, cerrar"
+      variant="warning"
+      @cancel="showLogoutConfirm = false"
+      @confirm="authStore.logout()"
+    />
   </div>
 </template>
 
@@ -558,17 +556,6 @@ function navigate(path: string) {
   }
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900;

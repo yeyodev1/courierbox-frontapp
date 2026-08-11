@@ -125,9 +125,8 @@
     </div>
 
     <!-- RESUME MODAL (after reload restored a draft) -->
-    <transition name="modal">
-      <div v-if="showResumeModal" class="overlay" @click.self="resumeContinue">
-        <div class="card leave-modal" role="dialog" aria-modal="true">
+    <AppOverlay :open="showResumeModal" label="Retomar venta" @close="resumeContinue">
+        <div class="card leave-modal">
           <div class="leave-icon info"><i class="fa-solid fa-rotate-left" aria-hidden="true" /></div>
           <h2>Retomamos tu venta</h2>
           <p>Recuperamos una venta en progreso que no habías terminado. ¿Quieres continuar donde quedaste?</p>
@@ -136,13 +135,11 @@
             <button class="primary-action" @click="resumeContinue"><i class="fa-solid fa-play" aria-hidden="true" /> Continuar</button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- LEAVE WARNING MODAL -->
-    <transition name="modal">
-      <div v-if="showLeaveModal" class="overlay" @click.self="cancelLeave">
-        <div class="card leave-modal" role="dialog" aria-modal="true">
+    <AppOverlay :open="showLeaveModal" layer="nested" label="Salir de la venta" @close="cancelLeave">
+        <div class="card leave-modal">
           <div class="leave-icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true" /></div>
           <h2>¿Salir de la venta?</h2>
           <p>Tienes una venta en progreso. Si sales ahora <strong>se perderá el progreso</strong> que no hayas confirmado.</p>
@@ -151,13 +148,11 @@
             <button class="danger-action" @click="confirmLeave"><i class="fa-solid fa-xmark" aria-hidden="true" /> Salir y descartar</button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- TYPE SELECTION MODAL -->
-    <transition name="modal">
-      <div v-if="showTypeModal" class="overlay" @click.self="closeTypeModal">
-          <div class="card type-modal" role="dialog" aria-modal="true">
+    <AppOverlay :open="showTypeModal" label="Elige el tipo de gestión" @close="closeTypeModal">
+          <div class="card type-modal">
             <div class="tm-head">
               <div>
                 <span class="eyebrow"><i class="fa-solid fa-compass" aria-hidden="true" /> Paso 1</span>
@@ -190,13 +185,13 @@
               </button>
             </div>
           </div>
-      </div>
-    </transition>
+    </AppOverlay>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
 import { onBeforeRouteLeave, useRouter, type RouteLocationRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useGestionCompraFormStore } from '@/stores/gestion_compra_form.store'
@@ -457,10 +452,6 @@ onMounted(() => {
 .state-cancelado { background: rgba(229,72,77,0.15); color: $signal-red; }
 
 /* TYPE MODAL */
-.overlay {
-  position: fixed; inset: 0; z-index: 120; background: rgba($ink-1000, 0.82); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center; padding: $space-4;
-}
 .type-modal {
   width: min(560px, 100%); background: linear-gradient(180deg, rgba($ink-900, 0.98), rgba($ink-1000, 0.98));
   border: 1px solid rgba($brand-orange, 0.18); border-radius: 24px; padding: $space-6;
@@ -518,10 +509,6 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 /* Unified modal transition — animates backdrop AND card, on enter and exit */
-.modal-enter-active, .modal-leave-active { transition: opacity 0.22s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-active .card, .modal-leave-active .card { transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
-.modal-enter-from .card, .modal-leave-to .card { transform: translateY(22px) scale(0.95); opacity: 0; }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 

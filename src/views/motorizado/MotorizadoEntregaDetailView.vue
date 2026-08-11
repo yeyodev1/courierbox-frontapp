@@ -4,7 +4,11 @@
       <i class="fa-solid fa-arrow-left" aria-hidden="true" /> Mis entregas
     </button>
 
-    <div v-if="loading" class="loading">Cargando entrega...</div>
+    <div v-if="loading" class="loading" aria-busy="true" aria-live="polite">
+      <AppSkeleton variant="title" />
+      <AppSkeleton variant="card" height="150px" />
+      <AppSkeleton variant="card" height="220px" />
+    </div>
 
     <template v-else-if="envio">
       <section class="info-card">
@@ -128,6 +132,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { enviosApi, type EnvioDomicilio } from '@/services/envios.api'
 import { useToastStore } from '@/stores/toast.store'

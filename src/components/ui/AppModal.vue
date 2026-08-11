@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { computed, ref, toRef, useId } from 'vue'
+import { useModalBehavior } from '@/composables/useModalBehavior'
 
 const props = defineProps({
   show: {
@@ -36,72 +37,122 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
+const cardRef = ref<HTMLElement | null>(null)
+const titleId = `modal-title-${useId()}`
+
+const canClose = computed(() => !props.preventCloseOnOverlay && !props.disableClose)
+
+useModalBehavior({
+  isOpen: toRef(props, 'show'),
+  container: cardRef,
+  closable: () => canClose.value,
+  onEscape: () => emit('close'),
+})
+
 function handleOverlayClick() {
-  if (!props.preventCloseOnOverlay && !props.disableClose) {
-    emit('close')
-  }
+  if (canClose.value) emit('close')
 }
-
-function handleEscape(e: KeyboardEvent) {
-  if (props.show && e.key === 'Escape' && !props.preventCloseOnOverlay && !props.disableClose) {
-    emit('close')
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleEscape)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleEscape)
-})
 </script>
 
 <template>
-  <transition name="fade">
-    <div v-if="show" class="modal-overlay" @click.self="handleOverlayClick">
-      <div class="modal-card" :style="{ maxWidth: maxWidth }">
-        <button
-          v-if="!disableClose"
-          type="button"
-          class="modal-close-btn"
-          aria-label="Cerrar modal"
-          @click="emit('close')"
+  <Teleport to="body">
+    <Transition name="modal" appear>
+      <div v-if="show" class="modal-overlay" @click.self="handleOverlayClick">
+        <div
+          ref="cardRef"
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="title ? titleId : undefined"
+          tabindex="-1"
+          :style="{ maxWidth: maxWidth }"
         >
-          <i class="fa-solid fa-xmark" />
-        </button>
+          <button
+            v-if="!disableClose"
+            type="button"
+            class="modal-close-btn"
+            data-modal-dismiss
+            aria-label="Cerrar modal"
+            @click="emit('close')"
+          >
+            <i class="fa-solid fa-xmark" />
+          </button>
 
-        <slot name="header"></slot>
+          <slot name="header"></slot>
 
-        <div class="modal-scroll" data-lenis-prevent>
-          <div v-if="icon" class="modal-icon-box" :class="iconVariant">
-            <i :class="icon" />
+          <div class="modal-scroll" data-lenis-prevent>
+            <div v-if="icon" class="modal-icon-box" :class="iconVariant">
+              <i :class="icon" />
+            </div>
+            <h3 v-if="title" :id="titleId">{{ title }}</h3>
+
+            <slot></slot>
           </div>
-          <h3 v-if="title">{{ title }}</h3>
-          
-          <slot></slot>
-        </div>
 
-        <div v-if="$slots.footer" class="modal-actions-fixed">
-          <slot name="footer"></slot>
+          <div v-if="$slots.footer" class="modal-actions-fixed">
+            <slot name="footer"></slot>
+          </div>
         </div>
       </div>
-    </div>
-  </transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <style lang="scss" scoped>
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s ease;
+/* Overlay fades; the card rises and settles with a slight overshoot.
+   Leaving is faster than entering so dismissing never feels sluggish. */
+.modal-enter-active {
+  transition: opacity 0.28s ease;
+
+  .modal-card {
+    transition:
+      opacity 0.34s ease,
+      transform 0.42s cubic-bezier(0.16, 1.02, 0.3, 1);
+  }
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+
+  .modal-card {
+    transition:
+      opacity 0.18s ease,
+      transform 0.2s cubic-bezier(0.4, 0, 1, 1);
+  }
+}
+
+.modal-enter-from,
+.modal-leave-to {
   opacity: 0;
+
+  .modal-card {
+    opacity: 0;
+    transform: translateY(18px) scale(0.965);
+  }
+}
+
+.modal-leave-to .modal-card {
+  transform: translateY(8px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-active,
+  .modal-leave-active {
+    transition-duration: 0.01ms;
+
+    .modal-card {
+      transition-duration: 0.01ms;
+      transform: none !important;
+    }
+  }
+
+  .modal-enter-from .modal-card,
+  .modal-leave-to .modal-card {
+    transform: none;
+  }
 }
 
 .modal-overlay {
@@ -109,7 +160,7 @@ onUnmounted(() => {
   inset: 0;
   background: rgba($ink-1000, 0.75);
   backdrop-filter: blur(6px);
-  z-index: 100;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -128,7 +179,8 @@ onUnmounted(() => {
   width: 100%;
   text-align: left;
   position: relative;
-  
+  will-change: transform, opacity;
+
   /* Flex layout to enforce strict heights for scrolling */
   height: calc(100svh - 4rem) !important;
   max-height: 800px !important;
@@ -136,6 +188,10 @@ onUnmounted(() => {
   display: flex !important;
   flex-direction: column !important;
   padding: 0 !important;
+
+  &:focus {
+    outline: none;
+  }
 
   @media (max-width: 640px) {
     max-width: none !important;
@@ -167,6 +223,11 @@ onUnmounted(() => {
     border-color: rgba($signal-red, 0.35);
     background: rgba($signal-red, 0.12);
   }
+
+  &:focus-visible {
+    outline: 2px solid $brand-orange;
+    outline-offset: 2px;
+  }
 }
 
 .modal-scroll {
@@ -184,7 +245,7 @@ onUnmounted(() => {
     text-align: center;
     font-size: 1.15rem;
     margin: 0 0 $space-6;
-    
+
     @media (max-width: 640px) {
       font-size: 1.05rem;
       margin-bottom: $space-4;

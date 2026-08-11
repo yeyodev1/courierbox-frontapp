@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRouter } from 'vue-router'
 import { asesoriaApi } from '@/services/asesoria.api'
 import type { PurchaseOrder } from '@/services/asesoria.api'
@@ -93,9 +94,8 @@ onMounted(loadOrders)
       </label>
     </div>
 
-    <div v-if="loading" class="loading">
-      <i class="fa-solid fa-circle-notch fa-spin" />
-      <span>Cargando órdenes...</span>
+    <div v-if="loading" class="loading" aria-busy="true" aria-live="polite">
+      <AppSkeleton variant="card" height="100px" :count="5" gap="0.75rem" />
     </div>
 
     <div v-else-if="filteredOrders.length === 0" class="empty">

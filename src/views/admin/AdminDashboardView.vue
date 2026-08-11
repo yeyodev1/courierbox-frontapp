@@ -110,7 +110,6 @@ const quickActions = computed<QuickAction[]>(() => ([
   { label: 'Registrar Usuario', icon: 'fa-user-plus', route: '/admin/users', badge: formatCompact(resumen.value.totalUsers), note: 'Usuarios totales' },
   { label: 'Conciliación', icon: 'fa-file-invoice', route: '/admin/conciliacion', badge: formatCompact(resumen.value.totalFacturas), note: 'Facturas por revisar' },
   { label: 'Gastos', icon: 'fa-receipt', route: '/admin/costos', badge: formatCurrency(resumen.value.totalGastos), note: 'Monto acumulado' },
-  { label: 'Métricas GHL', icon: 'fa-chart-line', route: '/admin/metrics', badge: formatCompact(resumen.value.recentPayments), note: 'Pagos recientes' },
 ]))
 
 onMounted(async () => {

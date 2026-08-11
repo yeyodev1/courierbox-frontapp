@@ -20,6 +20,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "Cotizar envío · Courier Box" },
   },
   {
+    path: "/comprar-por-mi",
+    name: "PersonalShopper",
+    component: () => import("@/views/PersonalShopperView.vue"),
+    meta: { title: "Personal Shopper · Nosotros te lo compramos · Courier Box" },
+  },
+  {
     path: "/rastrear",
     name: "Tracking",
     component: () => import("@/views/TrackingView.vue"),
@@ -127,6 +133,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "Envíos a Domicilio · Courier Box" },
       },
       {
+        path: "homologacion",
+        name: "AdminHomologacion",
+        component: () => import("@/views/admin/AdminHomologacionView.vue"),
+        meta: { title: "Homologación de clientes · Courier Box" },
+      },
+      {
         path: "contactos",
         name: "AdminContactos",
         component: () => import("@/views/admin/AdminContactosView.vue"),
@@ -137,12 +149,6 @@ const routes: RouteRecordRaw[] = [
         name: "AdminConciliacion",
         component: () => import("@/views/admin/ConciliacionView.vue"),
         meta: { title: "Conciliación · Courier Box" },
-      },
-      {
-        path: "metrics",
-        name: "AdminMetrics",
-        component: () => import("@/views/admin/MetricsView.vue"),
-        meta: { title: "Métricas GHL · Courier Box" },
       },
       // --- Gestiones de Compra ---
       {
@@ -218,6 +224,12 @@ const routes: RouteRecordRaw[] = [
         name: "AsesorDashboard",
         component: () => import("@/views/asesor/AsesorDashboardView.vue"),
         meta: { title: "Dashboard Asesor · Courier Box" },
+      },
+      {
+        path: "solicitudes",
+        name: "AsesorSolicitudes",
+        component: () => import("@/views/asesor/AsesorSolicitudesView.vue"),
+        meta: { title: "Solicitudes de compra · Courier Box" },
       },
       {
         path: "calculadora",
@@ -317,6 +329,18 @@ const routes: RouteRecordRaw[] = [
         name: "BodegaCompraDetail",
         component: () => import("@/views/bodega/BodegaCompraDetailView.vue"),
         meta: { title: "Recepción · Courier Box" },
+      },
+      {
+        path: "counter",
+        name: "BodegaCounter",
+        component: () => import("@/views/bodega/BodegaCounterView.vue"),
+        meta: { title: "Counter digital · Courier Box" },
+      },
+      {
+        path: "facturacion",
+        name: "BodegaFacturacion",
+        component: () => import("@/views/bodega/BodegaFacturacionView.vue"),
+        meta: { title: "Facturación · Courier Box" },
       },
       {
         path: "envios",

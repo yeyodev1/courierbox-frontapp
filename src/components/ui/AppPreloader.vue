@@ -1,32 +1,129 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import BrandMark from "@/components/ui/BrandMark.vue";
 
-const isLoaded = ref(false);
+/**
+ * The curtain used to lift on a hard-coded 2.2s timer, so it hid a fast load
+ * and lied about a slow one. It now tracks real signals — router readiness,
+ * webfonts, and the window load event — bounded by a minimum on-screen time so
+ * it doesn't flash, and a hard cap so a stalled asset can't trap the user.
+ */
 
-onMounted(() => {
-  // Wait a bit to let the reveal animation finish and fake loading
-  setTimeout(() => {
-    isLoaded.value = true;
-  }, 2200);
+const MIN_VISIBLE_MS = 700;
+const MAX_VISIBLE_MS = 5000;
+const SESSION_KEY = 'cb:preloader-shown';
+
+// Milestone weights: the bar advances when something real completes.
+const MILESTONES = { mounted: 20, router: 45, fonts: 75, window: 100 } as const;
+
+const isLoaded = ref(false);
+const dismissed = ref(false);
+const progress = ref(0);
+
+const router = useRouter();
+const startedAt = Date.now();
+const timers: number[] = [];
+let removeWindowLoad: (() => void) | null = null;
+
+const barScale = computed(() => Math.min(1, progress.value / 100));
+
+function advance(to: number) {
+  if (to > progress.value) progress.value = to;
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function finish() {
+  if (isLoaded.value) return;
+  advance(100);
+  const elapsed = Date.now() - startedAt;
+  const wait = Math.max(0, MIN_VISIBLE_MS - elapsed);
+  timers.push(
+    window.setTimeout(() => {
+      isLoaded.value = true;
+      // Unmount once the curtain finished sliding so it can never eat clicks.
+      timers.push(window.setTimeout(() => (dismissed.value = true), 1100));
+    }, wait)
+  );
+}
+
+onMounted(async () => {
+  // Already greeted this session (or motion is unwelcome) — don't replay it.
+  if (sessionStorage.getItem(SESSION_KEY) || prefersReducedMotion()) {
+    dismissed.value = true;
+    return;
+  }
+  sessionStorage.setItem(SESSION_KEY, '1');
+
+  advance(MILESTONES.mounted);
+
+  // Hard cap: never hold the page hostage to a stalled asset.
+  timers.push(window.setTimeout(finish, MAX_VISIBLE_MS));
+
+  const signals: Promise<unknown>[] = [
+    router.isReady().then(() => advance(MILESTONES.router)),
+  ];
+
+  if (document.fonts?.ready) {
+    signals.push(document.fonts.ready.then(() => advance(MILESTONES.fonts)));
+  } else {
+    advance(MILESTONES.fonts);
+  }
+
+  signals.push(
+    new Promise<void>((resolve) => {
+      if (document.readyState === 'complete') {
+        advance(MILESTONES.window);
+        resolve();
+        return;
+      }
+      const onLoad = () => {
+        advance(MILESTONES.window);
+        resolve();
+      };
+      window.addEventListener('load', onLoad, { once: true });
+      removeWindowLoad = () => window.removeEventListener('load', onLoad);
+    })
+  );
+
+  await Promise.allSettled(signals);
+  finish();
+});
+
+onBeforeUnmount(() => {
+  timers.forEach((t) => window.clearTimeout(t));
+  removeWindowLoad?.();
 });
 </script>
 
 <template>
-  <div class="preloader-curtain" :class="{ 'is-loaded': isLoaded }">
+  <div v-if="!dismissed" class="preloader-curtain" :class="{ 'is-loaded': isLoaded }">
     <div class="curtain-panel curtain-left"></div>
     <div class="curtain-panel curtain-right"></div>
-    
+
     <div class="preloader-content">
       <div class="logo-wrapper">
         <div class="brand-logo-container">
            <BrandMark :size="72" with-word />
         </div>
-        
+
         <div class="loading-status">
           <div class="loading-text">Cargando experiencia...</div>
-          <div class="progress-line">
-            <div class="progress-line-inner"></div>
+          <div
+            class="progress-line"
+            role="progressbar"
+            aria-label="Cargando"
+            :aria-valuenow="Math.round(progress)"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <div class="progress-line-inner" :style="{ transform: `scaleX(${barScale})` }"></div>
           </div>
         </div>
       </div>
@@ -117,7 +214,9 @@ onMounted(() => {
   width: 100%;
   background: #ff5e00; // brand orange
   transform-origin: left;
-  animation: progressAnim 2.2s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  transform: scaleX(0);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 // When loaded
@@ -143,13 +242,6 @@ onMounted(() => {
 @keyframes fadeIn {
   0% { opacity: 0; transform: translateY(10px); }
   100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes progressAnim {
-  0% { transform: scaleX(0); }
-  20% { transform: scaleX(0.25); }
-  60% { transform: scaleX(0.7); }
-  100% { transform: scaleX(1); }
 }
 
 @keyframes pulseGlow {

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { adminApi } from '@/services/admin.api'
 import { useToastStore } from '@/stores/toast.store'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 
 const toastStore = useToastStore()
 
@@ -170,19 +171,15 @@ function copyToClipboard(text: string) {
     </div>
 
     <!-- Delete modal -->
-    <transition name="fade">
-      <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-        <div class="modal-card">
-          <div class="modal-icon-box danger"><i class="fa-solid fa-triangle-exclamation" /></div>
-          <h3>Eliminar Link de Pago</h3>
-          <p>¿Eliminar el link <strong>{{ paymentToDelete?.reference }}</strong>? No se puede deshacer.</p>
-          <div class="modal-actions">
-            <button class="btn-ghost" @click="showDeleteModal = false">Cancelar</button>
-            <button class="btn-danger" @click="executeDeletePayment">Sí, eliminar</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="showDeleteModal"
+      title="Eliminar Link de Pago"
+      :message="`¿Eliminar el link ${paymentToDelete?.reference ?? ''}? No se puede deshacer.`"
+      confirm-label="Sí, eliminar"
+      variant="danger"
+      @cancel="showDeleteModal = false"
+      @confirm="executeDeletePayment"
+    />
   </div>
 </template>
 
@@ -388,17 +385,6 @@ function copyToClipboard(text: string) {
 }
 
 // ─── MODAL ────────────────────────────────────────────
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba($ink-1000, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-4;
-}
 
 .modal-card {
   background: $ink-900;

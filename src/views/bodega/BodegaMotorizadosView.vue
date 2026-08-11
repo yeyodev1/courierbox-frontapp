@@ -27,8 +27,7 @@
     </template>
 
     <!-- Create modal -->
-    <transition name="modal">
-      <div v-if="showCreate" class="overlay" @click.self="showCreate = false">
+    <AppOverlay :open="showCreate" label="Nuevo motorizado" :persistent="saving" @close="showCreate = false">
         <div class="card-modal">
           <div class="cm-head">
             <h3>Nuevo motorizado</h3>
@@ -65,28 +64,26 @@
             <button class="btn primary" :disabled="saving" @click="create">{{ saving ? 'Creando...' : 'Crear' }}</button>
           </div>
         </div>
-      </div>
-    </transition>
+    </AppOverlay>
 
     <!-- Delete modal -->
-    <transition name="modal">
-      <div v-if="toDelete" class="overlay" @click.self="toDelete = null">
-        <div class="card-modal small">
-          <div class="del-icon"><i class="fa-solid fa-triangle-exclamation" /></div>
-          <h3>¿Eliminar motorizado?</h3>
-          <p>Se quitará <strong>{{ toDelete.name }}</strong>. Sus entregas ya realizadas se conservan.</p>
-          <div class="cm-foot center">
-            <button class="btn ghost" @click="toDelete = null">Cancelar</button>
-            <button class="btn danger" :disabled="saving" @click="confirmDelete">{{ saving ? 'Eliminando...' : 'Eliminar' }}</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AppConfirmModal
+      :open="!!toDelete"
+      title="¿Eliminar motorizado?"
+      :message="`Se quitará ${toDelete?.name ?? ''}. Sus entregas ya realizadas se conservan.`"
+      confirm-label="Eliminar"
+      variant="danger"
+      :confirm-loading="saving"
+      @cancel="toDelete = null"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import AppOverlay from '@/components/ui/AppOverlay.vue'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { enviosApi, type Motorizado } from '@/services/envios.api'
 import { useToastStore } from '@/stores/toast.store'
 
@@ -200,7 +197,6 @@ onMounted(load)
 .btn.danger { background: rgba($signal-red, 0.14); color: $signal-red; border-color: rgba($signal-red, 0.4); }
 .btn.danger.ghost { background: transparent; }
 
-.overlay { position: fixed; inset: 0; z-index: 120; background: rgba($ink-1000, 0.82); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: $space-4; }
 .card-modal { width: min(520px, 100%); background: $ink-900; border: 1px solid $ink-700; border-radius: 20px; padding: $space-5; display: flex; flex-direction: column; gap: $space-4; }
 .card-modal.small { max-width: 420px; text-align: center; align-items: center; }
 .cm-head { display: flex; align-items: center; justify-content: space-between; }
@@ -225,10 +221,6 @@ onMounted(load)
 .card-modal.small h3 { margin: 0; color: $fg-dark; }
 .card-modal.small p { margin: 0; color: $ink-300; strong { color: $fg-dark; } }
 
-.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-active .card-modal, .modal-leave-active .card-modal { transition: transform 0.24s ease; }
-.modal-enter-from .card-modal, .modal-leave-to .card-modal { transform: translateY(18px) scale(0.96); }
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (max-width: 640px) { .row { flex-direction: column; } }
