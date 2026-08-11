@@ -223,6 +223,15 @@ function navigate(path: string) {
   border-bottom: 1px solid rgba($ink-500, 0.1);
   position: relative;
 
+  /* At 72px there is no room for mark and button side by side. */
+  .sidebar-collapsed & {
+    flex-direction: column;
+    gap: $space-3;
+    padding: $space-5 $space-2;
+
+    .collapse-btn { margin-left: 0; }
+  }
+
   .brand-icon {
     flex-shrink: 0;
     .logo-mark {
@@ -259,12 +268,12 @@ function navigate(path: string) {
     }
   }
 
+  /* This used to hang outside the sidebar with `right: -12px`, but the sidebar
+     clips its overflow, so the button was rendered sliced in half at the edge.
+     It is a normal flex item now, pushed right, and can never be cut. */
   .collapse-btn {
-    position: absolute;
-    right: -12px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 40;
+    margin-left: auto;
+    flex: 0 0 auto;
     width: 30px;
     height: 30px;
     background: linear-gradient(180deg, $brand-orange, darken($brand-orange, 12%));
@@ -280,7 +289,7 @@ function navigate(path: string) {
     transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
 
     &:hover {
-      transform: translateY(-50%) scale(1.05);
+      transform: scale(1.05);
       box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(240, 138, 31, 0.22);
     }
 
@@ -366,10 +375,12 @@ function navigate(path: string) {
         background: rgba($brand-orange, 0.15);
       }
 
+      /* Anchored to the item, not to the sidebar edge: at -$space-3 it landed on
+         x=0 and showed up as a stray orange sliver against the window. */
       &::before {
         content: '';
         position: absolute;
-        left: -$space-3;
+        left: 0;
         top: 50%;
         transform: translateY(-50%);
         width: 3px;

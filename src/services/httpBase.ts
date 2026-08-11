@@ -54,7 +54,11 @@ class APIBase {
       : isLocalhost
         ? 'http://localhost:8101/api'
         : ''
-    const raw = detected || (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
+    // An explicit VITE_API_BASE_URL wins over the detected default. It used to
+    // lose, so a dev machine could never point at staging or at an API on a
+    // different port — the localhost guess always took over.
+    const configured = (import.meta.env.VITE_API_BASE_URL as string) || ''
+    const raw = configured || detected || 'http://localhost:8101/api'
     const trimmed = raw.replace(/\/+$/, '')
     this.baseUrl = trimmed.endsWith('/api') || /\/api\//.test(trimmed)
       ? trimmed
