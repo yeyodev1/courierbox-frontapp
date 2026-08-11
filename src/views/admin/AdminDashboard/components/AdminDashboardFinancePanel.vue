@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import DashboardPanelShell from './DashboardPanelShell.vue'
+import { formatCount, formatCurrency } from '@/utils/format'
 
+// Nullable on purpose: a source that failed shows "—", never a zero the reader
+// would take for a real, settled figure.
 defineProps<{
-  totalGastos: number
-  recentPayments: number
-  totalFacturas: number
+  totalGastos: number | null
+  recentPayments: number | null
+  totalFacturas: number | null
 }>()
-
-function formatCurrency(value: number) {
-  return '$' + Number(value || 0).toFixed(2)
-}
 </script>
 
 <template>
@@ -22,11 +21,11 @@ function formatCurrency(value: number) {
     <div class="mini-stack">
       <div class="mini-row">
         <span>Pagos recientes</span>
-        <strong>{{ recentPayments }}</strong>
+        <strong>{{ formatCount(recentPayments) }}</strong>
       </div>
       <div class="mini-row">
         <span>Facturas en conciliación</span>
-        <strong>{{ totalFacturas }}</strong>
+        <strong>{{ formatCount(totalFacturas) }}</strong>
       </div>
     </div>
   </DashboardPanelShell>

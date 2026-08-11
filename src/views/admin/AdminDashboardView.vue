@@ -13,23 +13,34 @@ import {
   AdminDashboardQuickActions,
   AdminDashboardSkeleton,
 } from './AdminDashboard/components'
+import type { OperationalStat } from './AdminDashboard/components/AdminDashboardActivityPanel.vue'
+import { formatCount as formatCompact, formatCurrency } from '@/utils/format'
 
 const router = useRouter()
 const pageLoading = ref(true)
 
+/**
+ * Every figure is nullable and every request fills its own field. A failed call
+ * leaves null, which renders as "—". The previous version swallowed each error
+ * and left the field at 0, so an API that was down looked exactly like a day
+ * with no gastos and no facturas — the one reading a finance panel can least
+ * afford to get wrong.
+ */
+type Metric = number | null
+
 interface ResumenData {
-  totalPayments: number
-  recentPayments: number
-  pendingPayments: number
-  totalUsers: number
-  totalPaquetesPendientes: number
-  totalFacturas: number
-  totalGastos: number
-  gestionesMes: number
-  gestionesValorMes: number
-  gestionesComisionMes: number
-  gestionesCostoMes: number
-  gestionesMargenMes: number
+  totalPayments: Metric
+  recentPayments: Metric
+  pendingPayments: Metric
+  totalUsers: Metric
+  totalPaquetesPendientes: Metric
+  totalFacturas: Metric
+  totalGastos: Metric
+  gestionesMes: Metric
+  gestionesValorMes: Metric
+  gestionesComisionMes: Metric
+  gestionesCostoMes: Metric
+  gestionesMargenMes: Metric
 }
 
 interface KpiCard {
@@ -38,6 +49,7 @@ interface KpiCard {
   detail: string
   icon: string
   tone: 'purple' | 'orange' | 'green' | 'blue' | 'teal' | 'red'
+  route?: string
 }
 
 interface QuickAction {
@@ -48,61 +60,69 @@ interface QuickAction {
   note: string
 }
 
-interface OperationalBar {
-  label: string
-  value: number
-  tone: 'purple' | 'orange' | 'green' | 'blue' | 'teal'
-  width: number
-}
-
 const resumen = ref<ResumenData>({
-  totalPayments: 0,
-  recentPayments: 0,
-  pendingPayments: 0,
-  totalUsers: 0,
-  totalPaquetesPendientes: 0,
-  totalFacturas: 0,
-  totalGastos: 0,
-  gestionesMes: 0,
-  gestionesValorMes: 0,
-  gestionesComisionMes: 0,
-  gestionesCostoMes: 0,
-  gestionesMargenMes: 0,
+  totalPayments: null,
+  recentPayments: null,
+  pendingPayments: null,
+  totalUsers: null,
+  totalPaquetesPendientes: null,
+  totalFacturas: null,
+  totalGastos: null,
+  gestionesMes: null,
+  gestionesValorMes: null,
+  gestionesComisionMes: null,
+  gestionesCostoMes: null,
+  gestionesMargenMes: null,
 })
 
-function formatCurrency(value: number) {
-  return '$' + Number(value || 0).toFixed(2)
-}
+/** How many of the panel's sources came back empty-handed. */
+const fallos = ref(0)
 
-function formatCompact(value: number) {
-  return Number(value || 0).toLocaleString('es-EC')
-}
-
+/**
+ * Gestiones de compra get a dedicated panel below with valor, comisión, costo
+ * and margen, so they are deliberately absent here — repeating them as two more
+ * cards was most of what made the strip feel like noise.
+ */
 const kpiCards = computed<KpiCard[]>(() => ([
-  { label: 'Links de Pago', value: formatCompact(resumen.value.totalPayments), detail: `${resumen.value.recentPayments} esta semana`, icon: 'fa-link', tone: 'purple' },
-  { label: 'Pendientes', value: formatCompact(resumen.value.pendingPayments), detail: 'Pagos en espera', icon: 'fa-clock', tone: 'orange' },
-  { label: 'Usuarios', value: formatCompact(resumen.value.totalUsers), detail: 'Cuentas activas', icon: 'fa-users', tone: 'green' },
-  { label: 'Gestiones del Mes', value: formatCurrency(resumen.value.gestionesValorMes), detail: `${resumen.value.gestionesMes} operaciones`, icon: 'fa-bag-shopping', tone: 'teal' },
-  { label: 'Facturas', value: formatCompact(resumen.value.totalFacturas), detail: 'Conciliación', icon: 'fa-file-invoice', tone: 'blue' },
-  { label: 'Gastos', value: formatCurrency(resumen.value.totalGastos), detail: 'Costo acumulado', icon: 'fa-receipt', tone: 'red' },
-  { label: 'Margen Neto Gestiones', value: formatCurrency(resumen.value.gestionesMargenMes), detail: `${resumen.value.gestionesMes} gestiones · ${formatCurrency(resumen.value.gestionesValorMes)} facturado`, icon: 'fa-bag-shopping', tone: 'teal', route: '/admin/gestiones-compra' },
+  { label: 'Links de Pago', value: formatCompact(resumen.value.totalPayments), detail: `${formatCompact(resumen.value.recentPayments)} esta semana`, icon: 'fa-link', tone: 'purple', route: '/admin/payments' },
+  { label: 'Pendientes', value: formatCompact(resumen.value.pendingPayments), detail: 'Pagos en espera', icon: 'fa-clock', tone: 'orange', route: '/admin/payments' },
+  { label: 'Usuarios', value: formatCompact(resumen.value.totalUsers), detail: 'Cuentas activas', icon: 'fa-users', tone: 'green', route: '/admin/users' },
+  { label: 'Facturas', value: formatCompact(resumen.value.totalFacturas), detail: 'Por conciliar', icon: 'fa-file-invoice', tone: 'blue', route: '/admin/conciliacion' },
+  { label: 'Gastos', value: formatCurrency(resumen.value.totalGastos), detail: 'Costo acumulado', icon: 'fa-receipt', tone: 'red', route: '/admin/costos' },
 ]))
 
-const operationalBars = computed<OperationalBar[]>(() => {
-  const items = [
-    { label: 'Links de Pago', value: resumen.value.totalPayments, tone: 'purple' },
-    { label: 'Pendientes', value: resumen.value.pendingPayments, tone: 'orange' },
-    { label: 'Usuarios', value: resumen.value.totalUsers, tone: 'green' },
-    { label: 'Paquetes', value: resumen.value.totalPaquetesPendientes, tone: 'blue' },
-    { label: 'Facturas', value: resumen.value.totalFacturas, tone: 'teal' },
-  ] as Array<{ label: string; value: number; tone: OperationalBar['tone'] }>
-
-  const total = Math.max(1, items.reduce((sum, item) => sum + item.value, 0))
-  return items.map((item) => ({
-    ...item,
-    width: item.value > 0 ? Math.max(8, Math.round((item.value / total) * 100)) : 0,
-  }))
-})
+const operationalStats = computed<OperationalStat[]>(() => ([
+  {
+    label: 'Pagos sin cobrar',
+    value: resumen.value.pendingPayments,
+    of: resumen.value.totalPayments ?? undefined,
+    hint: 'de los links emitidos siguen en espera',
+    tone: 'orange',
+    route: '/admin/payments',
+  },
+  {
+    label: 'Paquetes sin homologar',
+    value: resumen.value.totalPaquetesPendientes,
+    hint: 'sin dueño asignado: no se pueden facturar ni entregar en counter',
+    tone: 'blue',
+    alert: (resumen.value.totalPaquetesPendientes ?? 0) > 0,
+    route: '/admin/homologacion',
+  },
+  {
+    label: 'Facturas por conciliar',
+    value: resumen.value.totalFacturas,
+    hint: 'pendientes de cruzar contra el banco',
+    tone: 'teal',
+    route: '/admin/conciliacion',
+  },
+  {
+    label: 'Usuarios con acceso',
+    value: resumen.value.totalUsers,
+    hint: 'cuentas que pueden entrar al panel',
+    tone: 'green',
+    route: '/admin/users',
+  },
+]))
 
 const quickActions = computed<QuickAction[]>(() => ([
   { label: 'Gestiones de Compra', icon: 'fa-bag-shopping', route: '/admin/gestiones-compra', badge: formatCompact(resumen.value.gestionesMes), note: `${formatCurrency(resumen.value.gestionesMargenMes)} margen neto` },
@@ -112,29 +132,42 @@ const quickActions = computed<QuickAction[]>(() => ([
   { label: 'Gastos', icon: 'fa-receipt', route: '/admin/costos', badge: formatCurrency(resumen.value.totalGastos), note: 'Monto acumulado' },
 ]))
 
-onMounted(async () => {
+/** Runs one source, records a failure instead of quietly writing a zero. */
+async function cargar(fn: () => Promise<void>) {
   try {
-    const [payData, usersData] = await Promise.all([adminApi.getPayments(), adminApi.getUsers()])
-    const payments = payData.payments || []
-    const users = usersData.users || []
-    resumen.value = {
-      totalPayments: payments.length,
-      recentPayments: payments.filter((p: any) => new Date(p.createdAt) > new Date(Date.now() - 7 * 86400000)).length,
-      pendingPayments: payments.filter((p: any) => p.status === 'pending' || p.status === 'waiting').length,
-      totalUsers: users.length,
-      totalPaquetesPendientes: 0,
-      totalFacturas: 0,
-      totalGastos: 0,
-      gestionesMes: 0,
-      gestionesValorMes: 0,
-      gestionesComisionMes: 0,
-      gestionesCostoMes: 0,
-      gestionesMargenMes: 0,
-    }
-    try { const etlData = await adminApi.getData('v1/etl/pendientes'); resumen.value.totalPaquetesPendientes = etlData.paquetes?.length || 0 } catch { /* empty */ }
-    try { const concData = await adminApi.getData('v1/conciliacion/resumen'); resumen.value.totalFacturas = concData.resumen?.total || 0 } catch { /* empty */ }
-    try { const costosData = await costosApi.resumen(); resumen.value.totalGastos = costosData.resumen?.total?.total || 0 } catch { /* empty */ }
-    try {
+    await fn()
+  } catch {
+    fallos.value += 1
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([
+    cargar(async () => {
+      const payData = await adminApi.getPayments()
+      const payments = payData.payments || []
+      const semana = Date.now() - 7 * 86400000
+      resumen.value.totalPayments = payments.length
+      resumen.value.recentPayments = payments.filter((p: any) => new Date(p.createdAt).getTime() > semana).length
+      resumen.value.pendingPayments = payments.filter((p: any) => p.status === 'pending' || p.status === 'waiting').length
+    }),
+    cargar(async () => {
+      const usersData = await adminApi.getUsers()
+      resumen.value.totalUsers = (usersData.users || []).length
+    }),
+    cargar(async () => {
+      const etlData = await adminApi.getData('v1/etl/pendientes')
+      resumen.value.totalPaquetesPendientes = etlData.paquetes?.length || 0
+    }),
+    cargar(async () => {
+      const concData = await adminApi.getData('v1/conciliacion/resumen')
+      resumen.value.totalFacturas = concData.resumen?.total || 0
+    }),
+    cargar(async () => {
+      const costosData = await costosApi.resumen()
+      resumen.value.totalGastos = costosData.resumen?.total?.total || 0
+    }),
+    cargar(async () => {
       const now = new Date()
       const gcStats = await gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 })
       resumen.value.gestionesMes = gcStats.totalGestiones
@@ -142,10 +175,9 @@ onMounted(async () => {
       resumen.value.gestionesComisionMes = gcStats.sumaComision
       resumen.value.gestionesCostoMes = gcStats.sumaCostoVenta
       resumen.value.gestionesMargenMes = (gcStats as any).sumaMargenNeto ?? 0
-    } catch { /* empty */ }
-  } catch { /* empty */ } finally {
-    pageLoading.value = false
-  }
+    }),
+  ])
+  pageLoading.value = false
 })
 </script>
 
@@ -153,6 +185,12 @@ onMounted(async () => {
   <div class="page-content dashboard-shell">
     <AdminDashboardSkeleton v-if="pageLoading" />
     <template v-else>
+      <p v-if="fallos > 0" class="load-warning" role="status">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" />
+        {{ fallos === 1 ? 'Un dato del panel' : `${fallos} datos del panel` }}
+        no se pudo cargar y aparece como «—». El resto sí está al día.
+      </p>
+
       <AdminDashboardHero
         :total-payments="resumen.totalPayments"
         :pending-payments="resumen.pendingPayments"
@@ -181,13 +219,14 @@ onMounted(async () => {
       </section>
 
       <section class="panel-row">
-        <AdminDashboardActivityPanel :bars="operationalBars" />
+        <AdminDashboardActivityPanel :stats="operationalStats" @navigate="router.push" />
       </section>
     </template>
   </div>
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
 
 .dashboard-shell {
@@ -201,6 +240,19 @@ onMounted(async () => {
   justify-content: flex-start;
   padding: $space-3 $space-4;
   box-sizing: border-box;
+}
+
+.load-warning {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  margin: 0;
+  padding: $space-3 $space-4;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: $brand-orange;
+  background: rgba($brand-orange, 0.08);
+  border: 1px solid rgba($brand-orange, 0.22);
 }
 
 .panel-row {

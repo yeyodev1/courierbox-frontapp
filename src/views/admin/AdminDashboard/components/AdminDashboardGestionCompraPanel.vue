@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import DashboardPanelShell from './DashboardPanelShell.vue'
+import { formatCount, formatCurrency as fmtCurrency } from '@/utils/format'
 
+// Nullable on purpose — see AdminDashboardFinancePanel.
 interface Props {
-  totalGestiones: number
-  valorTotal: number
-  comision: number
-  costoVenta: number
-  margenNeto: number
+  totalGestiones: number | null
+  valorTotal: number | null
+  comision: number | null
+  costoVenta: number | null
+  margenNeto: number | null
 }
 
 defineProps<Props>()
 const emit = defineEmits<{ navigate: [] }>()
-
-function fmtCurrency(value: number) {
-  return '$' + Number(value || 0).toFixed(2)
-}
 </script>
 
 <template>
@@ -22,7 +20,7 @@ function fmtCurrency(value: number) {
     <div class="gc-panel">
       <div class="gc-metric primary">
         <span class="gc-label">Gestiones del mes</span>
-        <span class="gc-value">{{ totalGestiones }}</span>
+        <span class="gc-value">{{ formatCount(totalGestiones) }}</span>
         <span class="gc-note">operaciones registradas</span>
       </div>
 

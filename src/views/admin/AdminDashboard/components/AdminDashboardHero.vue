@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatCount, formatCurrency } from '@/utils/format'
 
+// null means the figure could not be loaded. Showing it as 0 would read as a
+// real, reassuring zero — on money that is the wrong thing to imply.
 const props = defineProps<{
-  totalPayments: number
-  pendingPayments: number
-  totalGastos: number
+  totalPayments: number | null
+  pendingPayments: number | null
+  totalGastos: number | null
 }>()
 
-function formatCurrency(value: number) {
-  return '$' + Number(value || 0).toFixed(2)
-}
-
 const chips = computed(() => ([
-  { value: props.totalPayments, label: 'links' },
-  { value: props.pendingPayments, label: 'pendientes' },
+  { value: formatCount(props.totalPayments), label: 'links' },
+  { value: formatCount(props.pendingPayments), label: 'pendientes' },
   { value: formatCurrency(props.totalGastos), label: 'gastos' },
 ]))
 </script>

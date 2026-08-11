@@ -67,6 +67,38 @@ describe('AdminDashboardView', () => {
     expect(mocks.push).toHaveBeenCalledWith('/admin/costos')
   })
 
+  it('muestra "—" y avisa cuando una fuente falla, en vez de un 0 inventado', async () => {
+    mocks.costosResumen.mockRejectedValue(new Error('502'))
+
+    const wrapper = mount(AdminDashboardView)
+    await flushPromises()
+
+    // El 0 sería indistinguible de un día sin gastos reales.
+    expect(wrapper.text()).not.toContain('$0.00')
+    expect(wrapper.text()).toContain('—')
+    expect(wrapper.text()).toContain('no se pudo cargar')
+  })
+
+  it('una fuente caída no impide que las demás se muestren', async () => {
+    mocks.getData.mockRejectedValue(new Error('502'))
+
+    const wrapper = mount(AdminDashboardView)
+    await flushPromises()
+
+    // Antes las llamadas iban encadenadas dentro de un solo try, así que la
+    // primera en fallar dejaba en cero todo lo que venía después.
+    expect(wrapper.text()).toContain('$123.45')
+  })
+
+  it('separa los miles en los montos', async () => {
+    mocks.costosResumen.mockResolvedValue({ resumen: { total: { total: 12280.5 } } })
+
+    const wrapper = mount(AdminDashboardView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('$12,280.50')
+  })
+
   it('muestra skeleton mientras carga los datos', async () => {
     mocks.getPayments.mockReturnValue(new Promise(() => {}))
     mocks.getUsers.mockReturnValue(new Promise(() => {}))
