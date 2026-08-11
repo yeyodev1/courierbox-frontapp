@@ -52,6 +52,7 @@ vi.mock('vue-router', async () => {
 })
 
 const VIEWS: Array<[string, () => Promise<any>]> = [
+  ['NotFoundView.vue', () => import('@/views/NotFoundView.vue')],
   ['asesor/AsesorSolicitudesView.vue', () => import('@/views/asesor/AsesorSolicitudesView.vue')],
   ['PersonalShopperView.vue', () => import('@/views/PersonalShopperView.vue')],
   ['bodega/BodegaFacturacionView.vue', () => import('@/views/bodega/BodegaFacturacionView.vue')],

@@ -28,7 +28,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <AppPreloader v-if="!$route.path.startsWith('/admin') && !$route.path.startsWith('/superadmin') && !$route.path.startsWith('/login')" />
+  <!-- The brand curtain belongs on the landing page. It used to cover every
+       public route, so someone opening a tracking link, the payment portal or
+       a 404 stared at a black screen before seeing what they came for. -->
+  <AppPreloader v-if="$route.name === 'Home'" />
   <div class="app">
     <SiteNav v-if="!$route.meta.hideNavigation" />
     <RouterView v-slot="{ Component, route }">

@@ -375,8 +375,11 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "Mi Compra · Courier Box", hideNavigation: true },
   },
   {
+    // A silent redirect to "/" reads as a broken site; say what happened instead.
     path: "/:pathMatch(.*)*",
-    redirect: "/",
+    name: "NotFound",
+    component: () => import("@/views/NotFoundView.vue"),
+    meta: { title: "Página no encontrada · Courier Box", hideNavigation: true },
   },
 ];
 

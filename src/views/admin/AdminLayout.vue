@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
+import BrandMark from '@/components/ui/BrandMark.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -147,13 +148,12 @@ function navigate(path: string) {
     <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }" aria-label="Barra de navegación">
       <div class="sidebar-brand">
-        <div class="brand-icon">
-          <span class="logo-mark">C</span>
-        </div>
-        <div class="brand-text" v-show="sidebarExpanded">
-          <span class="brand-name">Courier Box</span>
-          <span class="brand-role">{{ roleLabel }}</span>
-        </div>
+        <BrandMark
+          :size="30"
+          :with-word="sidebarExpanded"
+          :subtitle="sidebarExpanded ? roleLabel : ''"
+          variant="plate"
+        />
         <button
           class="collapse-btn"
           :aria-label="sidebarExpanded ? 'Colapsar sidebar' : 'Expandir sidebar'"

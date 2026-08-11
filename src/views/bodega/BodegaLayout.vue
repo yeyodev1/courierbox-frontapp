@@ -2,13 +2,7 @@
   <div class="bodega-shell">
     <!-- Sidebar -->
     <aside class="sidebar" :class="{ open: mobileOpen }">
-      <div class="brand">
-        <span class="brand-mark"><i class="fa-solid fa-warehouse" aria-hidden="true" /></span>
-        <div class="brand-copy">
-          <strong>Courier Box</strong>
-          <span>Bodega</span>
-        </div>
-      </div>
+      <BrandMark :size="32" with-word subtitle="Bodega y counter" variant="plate" class="brand" />
 
       <nav class="nav">
         <router-link to="/bodega" exact-active-class="active" @click="mobileOpen = false">
@@ -62,6 +56,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
+import BrandMark from '@/components/ui/BrandMark.vue'
 
 const auth = useAuthStore()
 const mobileOpen = ref(false)

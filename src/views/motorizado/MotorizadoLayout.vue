@@ -1,13 +1,7 @@
 <template>
   <div class="moto-shell">
     <header class="moto-topbar">
-      <div class="brand">
-        <span class="brand-mark"><i class="fa-solid fa-motorcycle" aria-hidden="true" /></span>
-        <div class="brand-copy">
-          <strong>Courier Box</strong>
-          <span>Mis entregas</span>
-        </div>
-      </div>
+      <BrandMark :size="28" with-word subtitle="Mis entregas" variant="plate" class="brand" />
       <div class="moto-user">
         <span class="moto-name">{{ userName }}</span>
         <button class="logout-btn" @click="auth.logout()" aria-label="Salir">
@@ -29,6 +23,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
+import BrandMark from '@/components/ui/BrandMark.vue'
 
 const auth = useAuthStore()
 const userName = computed(() => auth.currentUser?.name || auth.profile?.name || 'Motorizado')

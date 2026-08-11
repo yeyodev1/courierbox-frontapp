@@ -8,6 +8,7 @@ import DashboardPaymentsTab from '@/components/admin/DashboardPaymentsTab.vue'
 import DashboardUsersTab from '@/components/admin/DashboardUsersTab.vue'
 import DashboardTrackingTab from '@/components/admin/DashboardTrackingTab.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
+import BrandMark from '@/components/ui/BrandMark.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -51,13 +52,12 @@ function handleTabNavigate(viewId: string) {
     <!-- ===================== SIDEBAR ===================== -->
     <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }">
       <div class="sidebar-brand">
-        <div class="brand-icon">
-          <span class="logo-mark">C</span>
-        </div>
-        <div class="brand-text" v-show="sidebarExpanded">
-          <span class="brand-name">Courier Box</span>
-          <span class="brand-role">Admin Panel</span>
-        </div>
+        <BrandMark
+          :size="30"
+          :with-word="sidebarExpanded"
+          :subtitle="sidebarExpanded ? 'Administración' : ''"
+          variant="plate"
+        />
         <button class="collapse-btn" @click="sidebarExpanded = !sidebarExpanded" :title="sidebarExpanded ? 'Colapsar' : 'Expandir'">
           <i class="fa-solid fa-chevron-left" :class="{ rotated: !sidebarExpanded }" />
         </button>
