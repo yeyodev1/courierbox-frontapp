@@ -45,6 +45,7 @@ watch(active, (v) => { if (v == null) document.body.style.overflow = ""; });
         <div
           v-if="active != null"
           class="lightbox"
+          data-lenis-prevent
           role="dialog"
           aria-modal="true"
           aria-label="Visor de fotos"

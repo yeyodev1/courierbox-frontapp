@@ -1,69 +1,52 @@
 <script setup lang="ts">
+/** Drag-and-drop file field with an inline preview of what was chosen. */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import FileUploadSelected from './FileUpload/FileUploadSelected.vue'
 
-interface Props {
-  modelValue: File | null
-  label?: string
-  hint?: string
-  accept?: string
-  disabled?: boolean
-  error?: string
-  id?: string
-  variant?: 'default' | 'proof'
-}
+const props = withDefaults(
+  defineProps<{
+    modelValue: File | null
+    label?: string
+    hint?: string
+    accept?: string
+    disabled?: boolean
+    error?: string
+    id?: string
+    variant?: 'default' | 'proof'
+  }>(),
+  {
+    hint: 'Arrastra el archivo aquí o selecciónalo manualmente',
+    accept: '*/*',
+    disabled: false,
+    variant: 'default',
+  },
+)
 
-const props = withDefaults(defineProps<Props>(), {
-  hint: 'Arrastra el archivo aquí o selecciónalo manualmente',
-  accept: '*/*',
-  disabled: false,
-  variant: 'default',
-})
-
-const emit = defineEmits<{
-  'update:modelValue': [value: File | null]
-}>()
+const emit = defineEmits<{ 'update:modelValue': [value: File | null] }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
 const previewUrl = ref('')
-const fieldId = computed(() => props.id ?? `upload-${Math.random().toString(36).slice(2, 9)}`)
 
-const selectedFile = computed(() => props.modelValue)
-const fileName = computed(() => selectedFile.value?.name ?? '')
-const fileSize = computed(() => formatFileSize(selectedFile.value?.size ?? 0))
-const isImage = computed(() => !!selectedFile.value?.type.startsWith('image/'))
-const fileLabel = computed(() => {
-  if (!selectedFile.value) return ''
-  if (selectedFile.value.type === 'application/pdf') return 'PDF'
-  if (selectedFile.value.type.startsWith('image/')) return 'Imagen'
-  return 'Archivo'
+const fieldId = computed(() => props.id ?? `upload-${Math.random().toString(36).slice(2, 9)}`)
+const isProof = computed(() => props.variant === 'proof')
+
+// Object URLs leak until revoked, so swap and clean up on every change.
+watch(
+  () => props.modelValue,
+  (file) => {
+    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = file?.type.startsWith('image/') ? URL.createObjectURL(file) : ''
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
 })
 
-function formatFileSize(bytes: number) {
-  if (!bytes) return ''
-  const units = ['B', 'KB', 'MB', 'GB']
-  let value = bytes
-  let unitIndex = 0
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024
-    unitIndex += 1
-  }
-  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`
-}
-
-function syncPreview(file: File | null) {
-  if (previewUrl.value) {
-    URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = ''
-  }
-  if (file?.type.startsWith('image/')) {
-    previewUrl.value = URL.createObjectURL(file)
-  }
-}
-
 function pickFile(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0] || null
-  emit('update:modelValue', file)
+  emit('update:modelValue', (event.target as HTMLInputElement).files?.[0] || null)
 }
 
 function clearFile() {
@@ -83,23 +66,19 @@ function onDrop(event: DragEvent) {
   const file = event.dataTransfer?.files?.[0] || null
   if (file) emit('update:modelValue', file)
 }
-
-watch(
-  () => props.modelValue,
-  (file) => syncPreview(file),
-  { immediate: true }
-)
-
-onBeforeUnmount(() => {
-  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
-})
 </script>
 
 <template>
-  <div :class="['app-file-upload', `app-file-upload--${variant}`, { 'is-dragging': isDragging, 'has-file': !!selectedFile, 'has-error': !!error, 'is-disabled': disabled }]">
+  <div
+    class="app-file-upload"
+    :class="[
+      `app-file-upload--${variant}`,
+      { 'is-dragging': isDragging, 'has-file': !!modelValue, 'has-error': !!error, 'is-disabled': disabled },
+    ]"
+  >
     <label v-if="label" :for="fieldId" class="app-file-upload__label">{{ label }}</label>
 
-    <div v-if="variant === 'proof'" class="app-file-upload__banner">
+    <div v-if="isProof" class="app-file-upload__banner">
       <span class="banner-chip"><i class="fa-solid fa-shield-halved" /> Cloudinary secure</span>
       <span class="banner-chip secondary"><i class="fa-solid fa-wand-magic-sparkles" /> Vista premium</span>
     </div>
@@ -125,36 +104,21 @@ onBeforeUnmount(() => {
       @dragleave.prevent="isDragging = false"
       @drop="onDrop"
     >
-      <div v-if="selectedFile" class="app-file-upload__selected">
-        <div class="preview" :class="{ 'is-image': isImage }">
-          <img v-if="isImage && previewUrl" :src="previewUrl" :alt="fileName" />
-          <i v-else class="fa-solid" :class="selectedFile.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file-lines'" />
-        </div>
-
-        <div class="meta">
-          <span class="badge">{{ fileLabel }}</span>
-          <span v-if="variant === 'proof'" class="badge badge-alt">Verificado visualmente</span>
-          <strong>{{ fileName }}</strong>
-          <small>{{ fileSize }} · listo para subir a Cloudinary</small>
-          <div v-if="variant === 'proof'" class="meta-line">
-            <span><i class="fa-solid fa-circle-check" /> Nítido</span>
-            <span><i class="fa-solid fa-lock" /> Privado</span>
-            <span><i class="fa-solid fa-cloud" /> Procesado en la nube</span>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button type="button" class="action-btn" @click.stop="openPicker">Cambiar</button>
-          <button type="button" class="action-btn danger" @click.stop="clearFile">Quitar</button>
-        </div>
-      </div>
+      <FileUploadSelected
+        v-if="modelValue"
+        :file="modelValue"
+        :preview-url="previewUrl"
+        :proof="isProof"
+        @change="openPicker"
+        @clear="clearFile"
+      />
 
       <div v-else class="app-file-upload__empty">
         <div class="empty-icon"><i class="fa-solid fa-cloud-arrow-up" /></div>
         <div>
-          <strong>{{ variant === 'proof' ? 'Sube tu factura o comprobante' : 'Selecciona o arrastra tu archivo' }}</strong>
+          <strong>{{ isProof ? 'Sube tu factura o comprobante' : 'Selecciona o arrastra tu archivo' }}</strong>
           <p>{{ hint }}</p>
-          <div v-if="variant === 'proof'" class="empty-pills">
+          <div v-if="isProof" class="empty-pills">
             <span>PDF</span>
             <span>JPG</span>
             <span>PNG</span>
@@ -186,41 +150,12 @@ onBeforeUnmount(() => {
     color: $ink-300;
   }
 
-  &__input {
-    display: none;
-  }
-
-  &--proof {
-    .app-file-upload__dropzone {
-      border-style: solid;
-      border-color: rgba($brand-orange, 0.18);
-      background:
-        radial-gradient(circle at top left, rgba($brand-orange, 0.18), transparent 36%),
-        linear-gradient(180deg, rgba($ink-1000, 0.55), rgba($ink-900, 0.98));
-    }
-  }
+  &__input { display: none; }
 
   &__banner {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-  }
-
-  .banner-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.7rem;
-    border-radius: 999px;
-    background: rgba($brand-orange, 0.14);
-    color: $brand-orange;
-    font-size: 0.72rem;
-    font-weight: 700;
-
-    &.secondary {
-      background: rgba($ink-700, 0.75);
-      color: $ink-200;
-    }
   }
 
   &__dropzone {
@@ -239,181 +174,28 @@ onBeforeUnmount(() => {
     }
   }
 
+  &--proof &__dropzone {
+    border-style: solid;
+    border-color: rgba($brand-orange, 0.18);
+    background:
+      radial-gradient(circle at top left, rgba($brand-orange, 0.18), transparent 36%),
+      linear-gradient(180deg, rgba($ink-1000, 0.55), rgba($ink-900, 0.98));
+  }
+
   &.is-dragging &__dropzone {
     border-color: $brand-orange;
     background: rgba($brand-orange, 0.08);
   }
 
-  &__empty,
-  &__selected {
+  &__empty {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: $space-4;
-  }
-
-  &__empty {
     min-height: 100px;
 
-    strong {
-      display: block;
-      color: $fg-dark;
-      margin-bottom: 0.25rem;
-    }
-
-    p {
-      margin: 0;
-      color: $ink-400;
-      font-size: 0.85rem;
-    }
-
-    .empty-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-      margin-top: 0.75rem;
-
-      span {
-        padding: 0.28rem 0.55rem;
-        border-radius: 999px;
-        background: rgba($brand-orange, 0.1);
-        color: $brand-orange;
-        font-size: 0.7rem;
-        font-weight: 700;
-      }
-    }
-  }
-
-  .empty-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba($brand-orange, 0.12);
-    color: $brand-orange;
-    font-size: 1.2rem;
-    flex: 0 0 auto;
-  }
-
-  &__selected {
-    .preview {
-      width: 72px;
-      height: 72px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      background: rgba($ink-700, 0.6);
-      overflow: hidden;
-      flex: 0 0 auto;
-
-      &.is-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      i {
-        font-size: 1.5rem;
-        color: $brand-orange;
-      }
-    }
-
-    .meta {
-      flex: 1 1 auto;
-      min-width: 0;
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: rgba($brand-orange, 0.14);
-        color: $brand-orange;
-        font-size: 0.72rem;
-        font-weight: 700;
-        margin-bottom: 0.45rem;
-      }
-
-      strong {
-        display: block;
-        color: $fg-dark;
-        font-size: 0.95rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      small {
-        color: $ink-400;
-      }
-
-      .badge-alt {
-        margin-left: 0.4rem;
-        background: rgba($signal-green, 0.12);
-        color: $signal-green;
-      }
-
-      .meta-line {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.55rem;
-
-        span {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.35rem;
-          padding: 0.32rem 0.55rem;
-          border-radius: 999px;
-          background: rgba($ink-700, 0.6);
-          color: $ink-300;
-          font-size: 0.72rem;
-        }
-      }
-    }
-
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      flex: 0 0 auto;
-    }
-  }
-
-  .action-btn,
-  .browse-btn {
-    border: none;
-    border-radius: 12px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 600;
-  }
-
-  .action-btn {
-    padding: 0.6rem 0.9rem;
-    background: rgba($ink-700, 0.8);
-    color: $fg-dark;
-
-    &:hover {
-      background: rgba($ink-600, 0.9);
-    }
-
-    &.danger {
-      background: rgba($signal-red, 0.12);
-      color: #ff8a8f;
-    }
-  }
-
-  .browse-btn {
-    padding: 0.75rem 1rem;
-    background: $brand-orange;
-    color: $ink-1000;
-
-    &:hover {
-      background: color.adjust($brand-orange, $lightness: 6%);
-    }
+    strong { display: block; color: $fg-dark; margin-bottom: 0.25rem; }
+    p { margin: 0; color: $ink-400; font-size: 0.85rem; }
   }
 
   &__error {
@@ -421,5 +203,67 @@ onBeforeUnmount(() => {
     font-size: 0.8rem;
     color: #ff8a8f;
   }
+}
+
+.banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba($brand-orange, 0.14);
+  color: $brand-orange;
+  font-size: 0.72rem;
+  font-weight: 700;
+
+  &.secondary { background: rgba($ink-700, 0.75); color: $ink-200; }
+}
+
+.empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba($brand-orange, 0.12);
+  color: $brand-orange;
+  font-size: 1.2rem;
+  flex: 0 0 auto;
+}
+
+.empty-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+
+  span {
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    background: rgba($brand-orange, 0.1);
+    color: $brand-orange;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+}
+
+.browse-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: $brand-orange;
+  color: $ink-1000;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover { background: color.adjust($brand-orange, $lightness: 6%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-file-upload__dropzone,
+  .browse-btn { transition: none; }
+  .app-file-upload__dropzone:hover { transform: none; }
 }
 </style>

@@ -1,0 +1,45 @@
+// Shared palette and surfaces for the notifications centre. Components `@use`
+// these from inside their own scoped <style>, keeping rules scoped per component.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+$cream: #f3ede1;
+$cream-muted: #c9c0b1;
+$black-soft: #11100f;
+$black-raised: #181613;
+$success: #2bbb92;
+$danger: #ef5b61;
+$warning: #ffb347;
+
+@mixin surface {
+  background: $black-soft;
+  border: 1px solid rgba($cream, 0.12);
+}
+
+@mixin interactive-button {
+  font: inherit;
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+
+  &:focus-visible {
+    outline: 2px solid $brand-orange;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.55;
+  }
+}
+
+@mixin spinner {
+  .spinning { animation: spin 800ms linear infinite; }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinning { animation-duration: 2s; }
+  }
+}

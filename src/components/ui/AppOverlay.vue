@@ -3,6 +3,10 @@
  * Unopinionated modal shell: backdrop, entrance/exit motion, body scroll-lock,
  * focus trap, Escape and focus restoration.
  *
+ * The scroll container carries `data-lenis-prevent`: Lenis runs smooth-wheel on
+ * the document and would otherwise swallow the wheel events of this teleported
+ * overlay, leaving tall modals impossible to scroll with the mouse.
+ *
  * It owns none of the card styling — pass your existing markup through the
  * default slot. Because slot content is compiled in the parent, the parent's
  * scoped styles keep applying even though the overlay is teleported to <body>.
@@ -61,6 +65,7 @@ function onBackdrop() {
         v-if="open"
         class="app-overlay"
         :class="[`app-overlay--${layer}`, `app-overlay--${align}`]"
+        data-lenis-prevent
         @click.self="onBackdrop"
       >
         <div

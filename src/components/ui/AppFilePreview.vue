@@ -105,7 +105,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 
   <Teleport to="body">
     <transition name="fade">
-      <div v-if="isZoomOpen" class="file-lightbox" @click.self="closeZoom">
+      <div v-if="isZoomOpen" class="file-lightbox" data-lenis-prevent @click.self="closeZoom">
         <button type="button" class="file-lightbox-close" aria-label="Cerrar ampliación" @click="closeZoom">
           <i class="fa-solid fa-xmark" />
         </button>

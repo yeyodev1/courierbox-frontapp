@@ -54,9 +54,12 @@ useModalBehavior({
 <template>
   <Teleport to="body">
     <Transition name="confirm" appear>
+      <!-- data-lenis-prevent: Lenis smooth-wheel would otherwise eat the wheel
+           events of this teleported overlay and block scrolling on tall cards. -->
       <div
         v-if="open"
         class="confirm-modal"
+        data-lenis-prevent
         @click.self="!confirmLoading && emit('cancel')"
       >
         <div

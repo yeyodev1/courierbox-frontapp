@@ -1,61 +1,21 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth.store'
+/** Asesor shell — same frame as the admin one, with the asesor's own menu. */
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
-import BrandMark from '@/components/ui/BrandMark.vue'
+import ShellSidebar from '@/components/layout/ShellSidebar.vue'
+import ShellTopBar from '@/components/layout/ShellTopBar.vue'
 import { useContentScroll } from '@/composables/useContentScroll'
+import { useAsesorMenu } from './useAsesorMenu'
 
-const route = useRoute()
 const router = useRouter()
 useContentScroll()
-const authStore = useAuthStore()
+
+const menu = useAsesorMenu()
 
 const sidebarExpanded = ref(true)
 const sidebarMobileOpen = ref(false)
 const showLogoutConfirm = ref(false)
-
-const menuGroups = [
-  {
-    label: 'Mi panel',
-    items: [
-      { path: '/asesor', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (p: string) => p === '/asesor' },
-      { path: '/asesor/solicitudes', label: 'Solicitudes web', icon: 'fa-solid fa-inbox', match: (p: string) => p.startsWith('/asesor/solicitudes') },
-      { path: '/asesor/calculadora', label: 'Calculadora', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/asesor/calculadora') },
-      { path: '/asesor/ventas', label: 'Ventas', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ventas') || p.startsWith('/asesor/gestiones-compra/nueva') },
-    ],
-  },
-  {
-    label: 'Gestión de Compra',
-    items: [
-      { path: '/asesor/gestiones-compra', label: 'Mis Gestiones', icon: 'fa-solid fa-cart-plus', match: (p: string) => p.startsWith('/asesor/gestiones-compra') },
-      { path: '/asesor/ordenes', label: 'Histórico', icon: 'fa-solid fa-box-archive', match: (p: string) => p.startsWith('/asesor/ordenes') },
-      { path: '/asesor/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: (p: string) => p.startsWith('/asesor/contactos') },
-    ],
-  },
-]
-
-const currentPath = computed(() => route.path)
-
-const userDisplayName = computed(() => {
-  const u = authStore.currentUser
-  return u?.name || u?.email || 'Asesor'
-})
-const userEmail = computed(() => authStore.currentUser?.email || '')
-const userInitial = computed(() => userDisplayName.value.charAt(0).toUpperCase())
-
-const pageMeta = computed(() => {
-  const map: Record<string, { title: string; sub: string }> = {
-    '/asesor': { title: 'Dashboard', sub: 'Resumen de tus gestiones y pagos' },
-    '/asesor/calculadora': { title: 'Calculadora de gestión', sub: 'Cotiza el fee de gestión de compra' },
-    '/asesor/ventas': { title: 'Ventas', sub: 'Registra ventas, historial y comprobantes' },
-    '/asesor/ordenes': { title: 'Histórico', sub: 'Órdenes anteriores en modo de solo lectura' },
-    '/asesor/gestiones-compra': { title: 'Mis Gestiones de Compra', sub: 'Administra tus gestiones del mes' },
-    '/asesor/gestiones-compra/nueva': { title: 'Nueva Venta', sub: 'Registra una nueva venta de compra' },
-    '/asesor/contactos': { title: 'Contactos', sub: 'Gestiona el historial de tus clientes' },
-  }
-  return map[route.path] || { title: 'Asesor', sub: '' }
-})
 
 function navigate(path: string) {
   router.push(path)
@@ -66,76 +26,32 @@ function navigate(path: string) {
 <template>
   <div class="asesor-shell" :class="{ 'sidebar-collapsed': !sidebarExpanded }">
     <transition name="fade">
-      <div v-if="sidebarMobileOpen" class="mobile-overlay" @click="sidebarMobileOpen = false" />
+      <div v-if="sidebarMobileOpen" class="mobile-overlay" aria-hidden="true" @click="sidebarMobileOpen = false" />
     </transition>
 
-    <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }">
-      <div class="sidebar-brand">
-        <BrandMark
-          :size="30"
-          :with-word="sidebarExpanded"
-          :subtitle="sidebarExpanded ? 'Panel asesor' : ''"
-          variant="plate"
-        />
-        <button
-          class="collapse-btn"
-          @click="sidebarExpanded = !sidebarExpanded"
-          :title="sidebarExpanded ? 'Colapsar' : 'Expandir'"
-        >
-          <i class="fa-solid fa-chevron-left" :class="{ rotated: !sidebarExpanded }" />
-        </button>
-      </div>
-
-      <nav class="sidebar-nav">
-        <template v-for="group in menuGroups" :key="group.label">
-          <span class="nav-section-label" v-show="sidebarExpanded">{{ group.label }}</span>
-          <button
-            v-for="item in group.items"
-            :key="item.path"
-            class="nav-item"
-            :class="{ active: item.match(currentPath) }"
-            @click="navigate(item.path)"
-            :title="!sidebarExpanded ? item.label : ''"
-          >
-            <div class="nav-icon-wrapper">
-              <i :class="item.icon" />
-            </div>
-            <span class="nav-label" v-show="sidebarExpanded">{{ item.label }}</span>
-          </button>
-        </template>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div class="user-avatar-mini">{{ userInitial }}</div>
-          <div class="user-info-text" v-show="sidebarExpanded">
-            <span class="user-name">{{ userDisplayName }}</span>
-            <span class="user-email">{{ userEmail }}</span>
-          </div>
-        </div>
-        <button class="logout-icon-btn" @click="showLogoutConfirm = true" title="Cerrar sesión">
-          <i class="fa-solid fa-right-from-bracket" />
-        </button>
-      </div>
-    </aside>
+    <ShellSidebar
+      :groups="menu.menuGroups"
+      :current-path="menu.currentPath.value"
+      :expanded="sidebarExpanded"
+      :mobile-open="sidebarMobileOpen"
+      brand-subtitle="Panel asesor"
+      :user-display-name="menu.userDisplayName.value"
+      :user-email="menu.userEmail.value"
+      :user-initial="menu.userInitial.value"
+      @toggle="sidebarExpanded = !sidebarExpanded"
+      @navigate="navigate"
+      @logout="showLogoutConfirm = true"
+    />
 
     <div class="main-area">
-      <header class="top-bar">
-        <div class="top-bar-left">
-          <button class="hamburger" @click="sidebarMobileOpen = true">
-            <i class="fa-solid fa-bars" />
-          </button>
-          <div class="page-title-group">
-            <h2 class="page-title">{{ pageMeta.title }}</h2>
-            <p class="page-subtitle">{{ pageMeta.sub }}</p>
-          </div>
-        </div>
-        <div class="top-bar-right">
-          <div class="user-avatar" @click="showLogoutConfirm = true" :title="userDisplayName">
-            {{ userInitial }}
-          </div>
-        </div>
-      </header>
+      <ShellTopBar
+        :title="menu.pageMeta.value.title"
+        :subtitle="menu.pageMeta.value.sub"
+        :user-display-name="menu.userDisplayName.value"
+        :user-initial="menu.userInitial.value"
+        @open-sidebar="sidebarMobileOpen = true"
+        @logout="showLogoutConfirm = true"
+      />
 
       <main ref="contentPane" class="main-content" data-lenis-prevent>
         <router-view v-slot="{ Component }">
@@ -153,532 +69,15 @@ function navigate(path: string) {
       confirm-label="Sí, cerrar"
       variant="warning"
       @cancel="showLogoutConfirm = false"
-      @confirm="authStore.logout()"
+      @confirm="menu.authStore.logout()"
     />
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use 'sass:color';
-@use '@/styles/tokens/colors' as *;
-@use '@/styles/tokens/space' as *;
+@use '@/components/layout/shell' as shell;
 
-/* Pinned to one viewport so the sidebar and top bar stay still; scrolling lives
-   in .main-content. See AdminLayout for the full note. */
-.asesor-shell {
-  display: flex;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
-  background: $ink-1000;
-  color: $fg-dark;
-}
+@include shell.frame;
 
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 280px;
-  height: 100vh;
-  background: $ink-900;
-  border-right: 1px solid rgba($ink-500, 0.12);
-  display: flex;
-  flex-direction: column;
-  z-index: 50;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-
-  .sidebar-collapsed & {
-    width: 72px;
-  }
-
-  @media (max-width: 768px) {
-    left: -280px;
-    transition: left 0.3s ease;
-    width: 280px;
-
-    &.mobile-open {
-      left: 0;
-      box-shadow: 20px 0 40px rgba(0,0,0,0.5);
-    }
-
-    .sidebar-collapsed & {
-      left: -280px;
-      width: 280px;
-    }
-  }
-}
-
-.mobile-overlay {
-  display: none;
-  @media (max-width: 768px) {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba($ink-1000, 0.7);
-    backdrop-filter: blur(4px);
-    z-index: 40;
-  }
-}
-
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  padding: $space-6 $space-4;
-  border-bottom: 1px solid rgba($ink-500, 0.1);
-  position: relative;
-
-  /* At 72px there is no room for mark and button side by side. */
-  .sidebar-collapsed & {
-    flex-direction: column;
-    gap: $space-3;
-    padding: $space-5 $space-2;
-
-    .collapse-btn { margin-left: 0; }
-  }
-
-  .brand-icon {
-    flex-shrink: 0;
-    .logo-mark {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, $brand-orange, $brand-orange-deep);
-      color: $ink-1000;
-      border-radius: 12px;
-      font-weight: 800;
-      font-size: 1.2rem;
-    }
-  }
-
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-
-    .brand-name {
-      font-weight: 700;
-      font-size: 1rem;
-      white-space: nowrap;
-    }
-
-    .brand-role {
-      font-size: 0.7rem;
-      color: $ink-400;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      white-space: nowrap;
-    }
-  }
-
-  /* This used to hang outside the sidebar with `right: -12px`, but the sidebar
-     clips its overflow, so the button was rendered sliced in half at the edge.
-     It is a normal flex item now, pushed right, and can never be cut. */
-  .collapse-btn {
-    margin-left: auto;
-    flex: 0 0 auto;
-    width: 30px;
-    height: 30px;
-    background: linear-gradient(180deg, $brand-orange, darken($brand-orange, 12%));
-    border: 1px solid rgba($brand-orange, 0.6);
-    color: $ink-1000;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 0.7rem;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(240, 138, 31, 0.12);
-    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-
-    &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(240, 138, 31, 0.22);
-    }
-
-    i {
-      transition: transform 0.3s ease;
-      &.rotated {
-        transform: rotate(180deg);
-      }
-    }
-
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-}
-
-.sidebar-nav {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: $space-4 $space-3;
-  overflow-y: auto;
-
-  .nav-section-label {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: $ink-500;
-    padding: $space-3 $space-3 $space-2;
-    font-weight: 600;
-  }
-
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: $space-3;
-    width: 100%;
-    padding: $space-3 $space-3;
-    background: transparent;
-    border: none;
-    border-radius: 10px;
-    color: $ink-300;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: left;
-    position: relative;
-    font-family: inherit;
-
-    .nav-icon-wrapper {
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 10px;
-      background: transparent;
-      flex-shrink: 0;
-      transition: all 0.2s;
-      font-size: 1rem;
-    }
-
-    .nav-label {
-      font-size: 0.9rem;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    &:hover {
-      background: rgba($ink-600, 0.3);
-      color: $fg-dark;
-
-      .nav-icon-wrapper {
-        background: rgba($ink-500, 0.2);
-      }
-    }
-
-    &.active {
-      background: rgba($brand-orange, 0.08);
-      color: $brand-orange;
-
-      .nav-icon-wrapper {
-        background: rgba($brand-orange, 0.15);
-      }
-
-      /* Anchored to the item, not to the sidebar edge: at -$space-3 it landed on
-         x=0 and showed up as a stray orange sliver against the window. */
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3px;
-        height: 20px;
-        background: $brand-orange;
-        border-radius: 0 3px 3px 0;
-
-        @media (max-width: 768px) {
-          left: -$space-4;
-        }
-      }
-    }
-  }
-}
-
-.sidebar-footer {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  padding: $space-4;
-  border-top: 1px solid rgba($ink-500, 0.1);
-
-  .sidebar-user {
-    display: flex;
-    align-items: center;
-    gap: $space-3;
-    flex: 1;
-    overflow: hidden;
-
-    .user-avatar-mini {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, $brand-orange, $brand-orange-deep);
-      color: $ink-1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.85rem;
-      flex-shrink: 0;
-    }
-
-    .user-info-text {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-
-      .user-name {
-        font-size: 0.85rem;
-        font-weight: 600;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-
-      .user-email {
-        font-size: 0.7rem;
-        color: $ink-400;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-    }
-  }
-
-  .logout-icon-btn {
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid rgba($ink-500, 0.2);
-    border-radius: 10px;
-    color: $ink-400;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba($signal-red, 0.1);
-      color: #ff8a8f;
-      border-color: rgba($signal-red, 0.2);
-    }
-  }
-}
-
-.main-area {
-  flex: 1;
-  margin-left: 280px;
-  transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-
-  .sidebar-collapsed & {
-    margin-left: 72px;
-  }
-
-  @media (max-width: 768px) {
-    margin-left: 0 !important;
-  }
-}
-
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $space-5 $space-8;
-  border-bottom: 1px solid rgba($ink-500, 0.08);
-  background: rgba($ink-1000, 0.6);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 30;
-
-  @media (max-width: 768px) {
-    padding: $space-4;
-  }
-
-  .top-bar-left {
-    display: flex;
-    align-items: center;
-    gap: $space-4;
-
-    .hamburger {
-      display: none;
-      @media (max-width: 768px) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        background: rgba($ink-600, 0.3);
-        border: 1px solid rgba($ink-500, 0.2);
-        border-radius: 10px;
-        color: $fg-dark;
-        cursor: pointer;
-        font-size: 1rem;
-      }
-    }
-
-    .page-title-group {
-      .page-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin: 0;
-        letter-spacing: -0.01em;
-      }
-
-      .page-subtitle {
-        font-size: 0.8rem;
-        color: $ink-400;
-        margin: 2px 0 0;
-      }
-    }
-  }
-
-  .top-bar-right {
-    .user-avatar {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, $brand-orange, $brand-orange-deep);
-      color: $ink-1000;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-  }
-}
-
-.main-content {
-  flex: 1;
-  padding: $space-8;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-  min-width: 0;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-
-  @media (max-width: 768px) {
-    padding: $space-4;
-  }
-}
-
-
-.modal-card {
-  background: $ink-900;
-  border: 1px solid rgba($ink-500, 0.15);
-  border-radius: 20px;
-  padding: $space-8;
-  max-width: 420px;
-  width: 100%;
-  text-align: center;
-
-  .modal-icon-box {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto $space-4;
-    font-size: 1.2rem;
-
-    &.warn { background: rgba($signal-amber, 0.12); color: $signal-amber; }
-  }
-
-  h3 {
-    font-size: 1.15rem;
-    margin: 0 0 $space-2;
-  }
-
-  p {
-    color: $ink-300;
-    font-size: 0.9rem;
-    margin: 0 0 $space-6;
-  }
-
-  .modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: $space-3;
-
-    @media (max-width: 640px) {
-      grid-template-columns: 1fr;
-    }
-  }
-}
-
-.btn-ghost {
-  padding: 0.75rem 1.5rem;
-  background: transparent;
-  border: 1px solid rgba($ink-500, 0.3);
-  border-radius: 10px;
-  color: $ink-300;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-
-  &:hover {
-    background: rgba($ink-500, 0.15);
-    color: $fg-dark;
-  }
-}
-
-.btn-danger {
-  padding: 0.75rem 1.5rem;
-  background: $signal-red;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: color.adjust($signal-red, $lightness: -8%);
-  }
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.fade-slide-enter-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.fade-slide-leave-active {
-  transition: all 0.2s ease;
-}
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
-}
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
+.asesor-shell { @include shell.root; }
 </style>

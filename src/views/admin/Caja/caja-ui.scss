@@ -1,0 +1,178 @@
+// Shared surfaces for the Caja screen. Components `@use` the mixins they need
+// from inside their own scoped <style>, so rules stay scoped per component.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin panel {
+  .panel {
+    background: rgba($ink-900, 0.72);
+    border: 1px solid rgba($ink-500, 0.12);
+    border-radius: 20px;
+    padding: $space-5;
+  }
+
+  .section-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: $space-3;
+
+    h3,
+    h4 { margin: 0; }
+    p { color: $ink-400; margin: 0; }
+
+    &.between {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: end;
+
+      @media (max-width: 640px) { flex-direction: column; align-items: flex-start; }
+    }
+  }
+}
+
+@mixin badges {
+  .badge {
+    display: inline-flex;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &.ingreso { background: rgba(#2bbb92, 0.12); color: #2bbb92; }
+    &.egreso { background: rgba(#e5484d, 0.12); color: #e5484d; }
+  }
+
+  .money {
+    color: $brand-orange;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .file-link { color: $brand-orange; text-decoration: none; font-weight: 600; }
+}
+
+@mixin buttons {
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: 0.6rem 1.25rem;
+    background: $brand-orange;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.7; cursor: not-allowed; }
+  }
+
+  .btn-ghost {
+    padding: 0.6rem 1.25rem;
+    background: transparent;
+    border: 1px solid rgba($ink-500, 0.3);
+    border-radius: 10px;
+    color: $ink-300;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+
+    &:hover { background: rgba($ink-500, 0.15); color: $fg-dark; }
+  }
+
+  .btn-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid rgba($ink-500, 0.15);
+    background: transparent;
+    color: $ink-300;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    &.danger:hover:not(:disabled) {
+      border-color: rgba($signal-red, 0.35);
+      color: #ff8a8f;
+      background: rgba($signal-red, 0.08);
+    }
+  }
+
+  .text-link {
+    border: none;
+    background: transparent;
+    color: $brand-orange;
+    font: inherit;
+    padding: 0;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+@mixin fields {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+
+    span { font-size: 0.8rem; color: $ink-400; font-weight: 600; }
+  }
+
+  .field-input {
+    width: 100%;
+    background: $ink-900;
+    border: 1px solid rgba($ink-500, 0.2);
+    border-radius: 10px;
+    padding: $space-2 $space-3;
+    color: $fg-dark;
+    font-family: inherit;
+    outline: none;
+
+    &:focus { border-color: $brand-orange; }
+  }
+
+  .modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-4;
+
+    &.single-col { grid-template-columns: 1fr; }
+
+    @media (max-width: 640px) { grid-template-columns: 1fr; }
+  }
+
+  .full { grid-column: 1 / -1; }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-3;
+
+    @media (max-width: 640px) { flex-direction: column-reverse; }
+  }
+}
+
+@mixin empty-state {
+  .empty-state {
+    display: flex;
+    align-items: center;
+    gap: $space-4;
+    justify-content: center;
+    padding: $space-10 0;
+    text-align: left;
+    color: $ink-400;
+
+    &.compact { padding: $space-6 0; justify-content: flex-start; }
+
+    i { font-size: 1.5rem; color: $brand-orange; }
+    strong { color: $fg-dark; }
+    p { margin: 0; }
+  }
+}

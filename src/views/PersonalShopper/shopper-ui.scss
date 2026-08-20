@@ -1,0 +1,106 @@
+// Shared controls for the personal-shopper form. Components `@use` these from
+// inside their own scoped <style>, so rules stay scoped per component.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+@use '@/styles/tokens/motion' as *;
+
+@mixin fields {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+
+    > span { font-size: 0.82rem; color: $ink-300; }
+
+    input {
+      min-height: 46px;
+      padding: 0 $space-3;
+      border-radius: $radius-md;
+      border: 1px solid rgba($ink-500, 0.25);
+      background: $ink-850;
+      color: $fg-dark;
+      font: inherit;
+      outline: none;
+      transition: border-color $dur-fast ease;
+
+      &:focus { border-color: rgba($brand-orange, 0.55); }
+      &.invalid { border-color: rgba($signal-red, 0.6); }
+    }
+  }
+
+  .field-error { color: #ff8a8f; font-size: 0.75rem; }
+
+  .grid-2,
+  .grid-3 { display: grid; gap: $space-3; }
+
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+  @media (max-width: 560px) {
+    .grid-2,
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .field input { transition: none; }
+  }
+}
+
+@mixin card {
+  .item-card,
+  .datos-card {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    padding: $space-5;
+    border-radius: $radius-lg;
+    border: 1px solid rgba($ink-500, 0.2);
+    background: $ink-900;
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: $ink-400;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+  }
+}
+
+@mixin buttons {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    min-height: 48px;
+    padding: 0 $space-5;
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    &.full { width: 100%; }
+    &.primary { background: $brand-orange; color: $ink-1000; }
+    &.ghost { background: rgba($ink-700, 0.7); border-color: rgba($ink-500, 0.25); color: $ink-200; }
+    &.wa { background: #25d366; color: #062514; }
+  }
+
+  .link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: $brand-orange;
+
+    &.danger { color: #ff8a8f; }
+    &:hover { text-decoration: underline; }
+  }
+}

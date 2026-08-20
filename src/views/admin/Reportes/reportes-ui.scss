@@ -1,0 +1,68 @@
+// Shared surface for the executive report panels. Each component `@use`s the
+// mixins it needs from inside its own scoped <style>, so the rules stay scoped
+// per component while the visual language lives in one place.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+$signal-purple: #956ee8;
+$cream: $ink-100;
+
+@mixin panel {
+  .report-panel {
+    padding: $space-6;
+    border: 1px solid rgba($cream, 0.12);
+    border-radius: $radius-lg;
+    background: $ink-900;
+
+    @media (max-width: 680px) { padding: $space-4; }
+  }
+
+  .panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-4;
+    margin-bottom: $space-6;
+
+    h3 { margin: $space-1 0 0; font-size: 1.35rem; }
+  }
+
+  .panel-note {
+    color: rgba($cream, 0.62);
+    font-size: 0.76rem;
+  }
+
+  .section-kicker {
+    color: $brand-orange;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .empty-state {
+    margin: 0;
+    color: rgba($cream, 0.68);
+  }
+}
+
+/** Horizontal progress bar used by the funnel steps and the provider ranking. */
+@mixin bar {
+  .bar-track {
+    overflow: hidden;
+    height: 6px;
+    border-radius: $radius-pill;
+    background: rgba($cream, 0.1);
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      transition: width 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bar-track span { transition: none; }
+  }
+}

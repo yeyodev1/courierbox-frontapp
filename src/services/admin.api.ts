@@ -47,7 +47,15 @@ class AdminAPI extends APIBase {
     return res.data;
   }
 
-  async createUser(payload: { email: string; password?: string; name: string; role?: string }) {
+  async createUser(payload: {
+    email: string;
+    password?: string;
+    name: string;
+    role?: string;
+    /** Mails the credentials to the new user; loginUrl is the link they receive. */
+    sendEmail?: boolean;
+    loginUrl?: string;
+  }) {
     const res = await this.post<any>("users", payload);
     return res.data;
   }

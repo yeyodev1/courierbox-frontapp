@@ -1,91 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+/** The asesor's home: month KPIs, shortcuts and their latest sales. */
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
-import type { GestionCompra } from '@/services/gestiones_compra.api'
+import AsesorRecientes from './Dashboard/AsesorRecientes.vue'
+import { QUICK_ACTIONS, formatMoney, useAsesorDashboard } from './Dashboard/useAsesorDashboard'
 
 const router = useRouter()
+const d = useAsesorDashboard()
 
-const stats = ref({
-  totalGestiones: 0,
-  pendingPayment: 0,
-  totalSold: 0,
-  sumaComision: 0,
-  recentGestiones: [] as GestionCompra[],
-})
-const loading = ref(false)
-
-const actions = [
-  {
-    label: 'Nueva gestión',
-    sub: 'Registrar una compra',
-    icon: 'fa-solid fa-plus',
-    route: '/asesor/ventas',
-  },
-  {
-    label: 'Calculadora',
-    sub: 'Cotizar fee de gestión',
-    icon: 'fa-solid fa-calculator',
-    route: '/asesor/calculadora',
-  },
-  {
-    label: 'Mis gestiones',
-    sub: 'Ver historial operativo',
-    icon: 'fa-solid fa-bag-shopping',
-    route: '/asesor/gestiones-compra',
-  },
-  {
-    label: 'Contactos',
-    sub: 'Ver historial y clientes',
-    icon: 'fa-solid fa-address-book',
-    route: '/asesor/contactos',
-  },
-]
-
-const paymentBadge = {
-  pendiente: { label: 'Pendiente', class: 'badge-amber' },
-  verificando: { label: 'Verificando', class: 'badge-blue' },
-  confirmado: { label: 'Confirmado', class: 'badge-green' },
-  rechazado: { label: 'Rechazado', class: 'badge-red' },
-}
-
-async function loadStats() {
-  loading.value = true
-  try {
-    const now = new Date()
-    const [summary, recent] = await Promise.all([
-      gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 }),
-      gestionesCompraAPI.list({ page: 1, limit: 5 }),
-    ])
-    stats.value = {
-      totalGestiones: summary.totalGestiones,
-      pendingPayment: (summary.porEstadoPago?.pendiente || 0) + (summary.porEstadoPago?.verificando || 0),
-      totalSold: summary.ventasConfirmadas || 0,
-      sumaComision: summary.comisionGanada || 0,
-      recentGestiones: recent.gestiones,
-    }
-  } catch (e) {
-    console.error('[asesor dashboard] stats error:', e)
-  } finally {
-    loading.value = false
-  }
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('es-EC', {
-    day: '2-digit',
-    month: 'short',
-  })
-}
-
-function formatMoney(amount: number) {
-  return `$${Number(amount).toFixed(2)}`
-}
-
-onMounted(() => {
-  loadStats()
-})
+onMounted(d.load)
 </script>
 
 <template>
@@ -103,39 +26,39 @@ onMounted(() => {
       <div class="stat-card">
         <div class="stat-icon"><i class="fa-solid fa-bag-shopping" /></div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.totalGestiones }}</span>
+          <span class="stat-value">{{ d.stats.value.totalGestiones }}</span>
           <span class="stat-label">Gestiones del mes</span>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon"><i class="fa-solid fa-clock" /></div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.pendingPayment }}</span>
+          <span class="stat-value">{{ d.stats.value.pendingPayment }}</span>
           <span class="stat-label">Pendientes de pago</span>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon"><i class="fa-solid fa-dollar-sign" /></div>
         <div class="stat-info">
-          <span class="stat-value">{{ formatMoney(stats.totalSold) }}</span>
+          <span class="stat-value">{{ formatMoney(d.stats.value.totalSold) }}</span>
           <span class="stat-label">Vendido confirmado</span>
         </div>
       </div>
-      <div class="stat-card stat-card--highlight" @click="router.push('/asesor/gestiones-compra')" style="cursor:pointer">
+      <button class="stat-card stat-card--highlight" @click="router.push('/asesor/gestiones-compra')">
         <div class="stat-icon stat-icon--orange"><i class="fa-solid fa-cart-plus" /></div>
         <div class="stat-info">
-          <span class="stat-value">{{ formatMoney(stats.sumaComision) }}</span>
+          <span class="stat-value">{{ formatMoney(d.stats.value.sumaComision) }}</span>
           <span class="stat-label">Comisión del mes</span>
           <span class="stat-sub">Ganada sobre pagos confirmados</span>
         </div>
-      </div>
+      </button>
     </div>
 
     <section class="actions-section">
       <h3 class="section-title">Acciones rápidas</h3>
       <div class="actions-grid">
         <button
-          v-for="action in actions"
+          v-for="action in QUICK_ACTIONS"
           :key="action.route"
           class="action-card"
           @click="router.push(action.route)"
@@ -150,44 +73,11 @@ onMounted(() => {
       </div>
     </section>
 
-    <section class="recent-section">
-      <div class="section-header">
-        <h3 class="section-title">Gestiones recientes</h3>
-        <router-link to="/asesor/gestiones-compra" class="btn-link">Ver todas</router-link>
-      </div>
-
-      <div v-if="loading" class="loading" aria-busy="true" aria-live="polite">
-        <AppSkeleton variant="card" height="72px" :count="4" gap="0.75rem" />
-      </div>
-
-      <div v-else-if="stats.recentGestiones.length === 0" class="empty">
-        <p>No tienes gestiones recientes</p>
-      </div>
-
-      <div v-else class="recent-list">
-        <div
-          v-for="gestion in stats.recentGestiones"
-          :key="gestion._id"
-          class="recent-item"
-          @click="router.push(`/asesor/gestiones-compra/${gestion._id}`)"
-        >
-          <div class="recent-main">
-            <span class="recent-client">{{ typeof gestion.contactoId === 'object' ? gestion.contactoId.nombre : 'Cliente' }}</span>
-            <span class="recent-desc">{{ gestion.paginaCompra }}</span>
-          </div>
-          <div class="recent-side">
-            <span
-              class="badge"
-              :class="paymentBadge[(gestion.estadoPago || 'pendiente') as keyof typeof paymentBadge]?.class || 'badge-amber'"
-            >
-              {{ paymentBadge[(gestion.estadoPago || 'pendiente') as keyof typeof paymentBadge]?.label || gestion.estadoPago }}
-            </span>
-            <span class="recent-total">{{ formatMoney(gestion.valorTotal) }}</span>
-            <span class="recent-date">{{ formatDate(gestion.createdAt) }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
+    <AsesorRecientes
+      :gestiones="d.stats.value.recentGestiones"
+      :loading="d.loading.value"
+      @open="(id) => router.push(`/asesor/gestiones-compra/${id}`)"
+    />
   </div>
 </template>
 
@@ -207,17 +97,8 @@ onMounted(() => {
   border-radius: 20px;
   padding: $space-8;
 
-  .page-title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin: 0 0 $space-2;
-  }
-
-  .page-subtitle {
-    color: $ink-300;
-    margin: 0;
-    max-width: 600px;
-  }
+  .page-title { font-size: 1.6rem; font-weight: 700; margin: 0 0 $space-2; }
+  .page-subtitle { color: $ink-300; margin: 0; max-width: 600px; }
 }
 
 .stats-grid {
@@ -225,9 +106,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: $space-5;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
+  @media (max-width: 768px) { flex-direction: column; }
 }
 
 .stat-card {
@@ -239,6 +118,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: $space-4;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 
   .stat-icon {
     width: 48px;
@@ -252,33 +134,18 @@ onMounted(() => {
     font-size: 1.2rem;
   }
 
-  .stat-info {
-    display: flex;
-    flex-direction: column;
+  .stat-info { display: flex; flex-direction: column; }
+  .stat-value { font-size: 1.6rem; font-weight: 700; color: $fg-dark; }
+  .stat-label { font-size: 0.85rem; color: $ink-400; }
+  .stat-sub { font-size: 0.75rem; color: $ink-400; }
+
+  &--highlight {
+    border-color: rgba($brand-orange, 0.35);
+    background: rgba($brand-orange, 0.05);
+    cursor: pointer;
+
+    .stat-value { color: $brand-orange; }
   }
-
-  .stat-value {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: $fg-dark;
-  }
-
-  .stat-label {
-    font-size: 0.85rem;
-    color: $ink-400;
-  }
-
-  .stat-sub {
-    font-size: 0.75rem;
-    color: $ink-400;
-  }
-}
-
-.stat-card--highlight {
-  border-color: rgba($brand-orange, 0.35);
-  background: rgba($brand-orange, 0.05);
-
-  .stat-value { color: $brand-orange; }
 }
 
 .stat-icon--orange {
@@ -292,18 +159,12 @@ onMounted(() => {
   margin: 0 0 $space-4;
 }
 
-.actions-section {
-  margin-top: $space-2;
-}
+.actions-section { margin-top: $space-2; }
 
 .actions-grid {
   display: flex;
   flex-wrap: wrap;
   gap: $space-4;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .action-card {
@@ -321,10 +182,7 @@ onMounted(() => {
   font-family: inherit;
   color: inherit;
 
-  &:hover {
-    border-color: rgba($brand-orange, 0.25);
-    transform: translateY(-2px);
-  }
+  &:hover { border-color: rgba($brand-orange, 0.25); transform: translateY(-2px); }
 
   .action-icon {
     width: 44px;
@@ -343,130 +201,15 @@ onMounted(() => {
     flex-direction: column;
     flex: 1;
 
-    strong {
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    span {
-      font-size: 0.8rem;
-      color: $ink-400;
-    }
+    strong { font-size: 1rem; font-weight: 600; }
+    span { font-size: 0.8rem; color: $ink-400; }
   }
 
-  .action-arrow {
-    color: $ink-500;
-    font-size: 0.8rem;
-  }
+  .action-arrow { color: $ink-500; font-size: 0.8rem; }
 }
 
-.recent-section {
-  background: $ink-900;
-  border: 1px solid rgba($ink-500, 0.12);
-  border-radius: 20px;
-  padding: $space-6;
+@media (prefers-reduced-motion: reduce) {
+  .action-card { transition: none; }
+  .action-card:hover { transform: none; }
 }
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: $space-4;
-}
-
-.btn-link {
-  color: $brand-orange;
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-.loading,
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-8 0;
-  color: $ink-500;
-}
-
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: $space-2;
-}
-
-.recent-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: $space-4;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba($ink-500, 0.08);
-  }
-
-  @media (max-width: 640px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $space-3;
-  }
-}
-
-.recent-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recent-client {
-  font-weight: 600;
-}
-
-.recent-desc {
-  font-size: 0.85rem;
-  color: $ink-400;
-}
-
-.recent-side {
-  display: flex;
-  align-items: center;
-  gap: $space-4;
-
-  @media (max-width: 640px) {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-.recent-total {
-  font-weight: 700;
-  color: $brand-orange;
-}
-
-.recent-date {
-  font-size: 0.8rem;
-  color: $ink-500;
-}
-
-.badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  text-transform: uppercase;
-}
-
-.badge-amber { background: rgba($signal-amber, 0.12); color: $signal-amber; }
-.badge-blue { background: rgba($signal-blue, 0.12); color: $signal-blue; }
-.badge-green { background: rgba($signal-green, 0.12); color: $signal-green; }
-.badge-red { background: rgba($signal-red, 0.12); color: #ff8a8f; }
-.badge-gray { background: rgba($ink-500, 0.12); color: $ink-400; }
 </style>

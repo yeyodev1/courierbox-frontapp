@@ -1,0 +1,73 @@
+// Shared controls for the proveedor dialogs. Components `@use` these from inside
+// their own scoped <style>, so rules stay scoped per component.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin hero {
+  .modal-subtitle {
+    margin: 0;
+    color: $ink-400;
+    text-align: center;
+  }
+
+  .hero-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    background: rgba($ink-800, 0.75);
+    border: 1px solid rgba($ink-500, 0.14);
+    color: $ink-200;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+}
+
+@mixin fields {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+
+    span { color: $ink-400; font-size: 0.85rem; font-weight: 600; }
+  }
+
+  .field-input {
+    background: $ink-1000;
+    border: 1px solid rgba($ink-500, 0.2);
+    border-radius: 12px;
+    padding: $space-3 $space-4;
+    color: $fg-dark;
+    font-family: inherit;
+    outline: none;
+
+    &::placeholder { color: rgba($ink-400, 0.75); }
+  }
+
+  .full { grid-column: 1 / -1; }
+}
+
+@mixin buttons {
+  .btn-primary,
+  .btn-secondary {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: 12px;
+    padding: 0.65rem 0.95rem;
+    font-weight: 700;
+
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+
+  .btn-primary { background: $brand-orange; color: $ink-1000; }
+  .btn-secondary { background: rgba($ink-700, 0.8); color: $fg-dark; }
+}

@@ -1,0 +1,265 @@
+// Shared look for the Envíos screen. Each component `@use`s this from inside its
+// own scoped <style>, so the rules stay scoped per component while the visual
+// language stays defined in exactly one place.
+@use 'sass:color';
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin table {
+  .table-wrapper {
+    overflow-x: auto;
+    background: $ink-900;
+    border: 1px solid rgba($ink-500, 0.12);
+    border-radius: 16px;
+  }
+
+  .envios-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th,
+    td {
+      padding: $space-2 $space-3;
+      text-align: left;
+      border-bottom: 1px solid rgba($ink-500, 0.08);
+      white-space: nowrap;
+    }
+
+    th {
+      color: $ink-400;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .mono { font-variant-numeric: tabular-nums; font-family: monospace; font-size: 0.8rem; }
+    .cell-sub { color: $ink-400; font-size: 0.75rem; margin-top: 2px; }
+    .costo { color: $brand-orange; font-weight: 700; }
+  }
+}
+
+@mixin badges {
+  .badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+
+    &.badge-blue { background: rgba(#64b5f6, 0.12); color: #64b5f6; }
+    &.badge-orange { background: rgba($brand-orange, 0.12); color: $brand-orange; }
+    &.badge-green { background: rgba(#81c784, 0.12); color: #81c784; }
+    &.badge-gray { background: rgba($ink-500, 0.15); color: $ink-400; }
+  }
+}
+
+@mixin buttons {
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: 0.6rem 1.25rem;
+    background: $brand-orange;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+
+    &:hover { background: color.adjust($brand-orange, $lightness: -8%); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .btn-ghost {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 1px solid rgba($ink-500, 0.3);
+    border-radius: 10px;
+    color: $ink-300;
+    font-weight: 500;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+
+    &:hover { background: rgba($ink-500, 0.15); color: $fg-dark; }
+  }
+
+  .btn-icon {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba($ink-500, 0.15);
+    border-radius: 8px;
+    color: $ink-400;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover { border-color: rgba($brand-orange, 0.3); color: $brand-orange; }
+  }
+
+  .btn-sm {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $ink-700;
+    border: 1px solid rgba($ink-500, 0.2);
+    border-radius: 10px;
+    color: $fg-dark;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover { background: $ink-600; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .btn-link {
+    border: none;
+    background: transparent;
+    color: $ink-300;
+    font: inherit;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover { color: $brand-orange; }
+  }
+}
+
+@mixin fields {
+  .field-row { display: flex; gap: $space-2; }
+
+  .field-input {
+    width: 100%;
+    background: $ink-800;
+    border: 1px solid rgba($ink-500, 0.2);
+    border-radius: 10px;
+    padding: $space-2 $space-3;
+    color: $fg-dark;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+
+    &::placeholder { color: $ink-400; }
+    &:focus { border-color: $brand-orange; }
+    &.cost { max-width: 160px; }
+  }
+
+  .filter {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    color: $ink-300;
+    font-size: 0.9rem;
+
+    .field-input {
+      background: $ink-900;
+      border: 1px solid rgba($ink-500, 0.2);
+      border-radius: 10px;
+      padding: $space-2 $space-3;
+    }
+  }
+}
+
+@mixin modal-card {
+  .modal-card {
+    background: $ink-900;
+    border: 1px solid rgba($ink-500, 0.15);
+    border-radius: 20px;
+    padding: $space-6;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+
+    &.wide { max-width: 640px; }
+
+    .modal-icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto $space-4;
+      font-size: 1.2rem;
+
+      &.info { background: rgba($brand-orange, 0.12); color: $brand-orange; }
+    }
+
+    h3 { font-size: 1.15rem; margin: 0 0 $space-4; }
+  }
+
+  .modal-body {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+
+    section h4 {
+      font-size: 0.85rem;
+      margin: 0 0 $space-2;
+      color: $ink-300;
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+    }
+  }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-3;
+    margin-top: $space-4;
+  }
+}
+
+@mixin states {
+  .loading,
+  .empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-3;
+    padding: $space-12 0;
+    color: $ink-500;
+
+    i { font-size: 1.5rem; }
+  }
+
+  .skeleton-list { display: flex; flex-direction: column; gap: $space-3; }
+
+  .skeleton-row {
+    height: 58px;
+    border-radius: 14px;
+    background: linear-gradient(90deg, rgba($ink-700, 0.7), rgba($ink-600, 0.7), rgba($ink-700, 0.7));
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}
+
+@mixin toolbar {
+  .toolbar {
+    display: flex;
+    align-items: end;
+    gap: $space-4;
+    flex-wrap: wrap;
+
+    @media (max-width: 640px) { align-items: stretch; }
+  }
+}

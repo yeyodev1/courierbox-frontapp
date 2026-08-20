@@ -1,0 +1,90 @@
+// Shared controls for the fee-configuration screen. Components `@use` these from
+// inside their own scoped <style>, so rules stay scoped per component.
+@use 'sass:color';
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin buttons {
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-3 $space-5;
+    background: $brand-orange;
+    border: none;
+    border-radius: 12px;
+    color: $ink-1000;
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) { background: color.adjust($brand-orange, $lightness: 6%); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2 $space-4;
+    background: transparent;
+    border: 1px solid rgba($ink-500, 0.3);
+    border-radius: 10px;
+    color: $ink-300;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    &:hover { background: rgba($ink-500, 0.15); color: $fg-dark; }
+
+    &.danger {
+      color: #ff8a8f;
+      border-color: rgba($signal-red, 0.3);
+
+      &:hover { background: rgba($signal-red, 0.1); }
+    }
+  }
+}
+
+@mixin fields {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    margin-bottom: $space-4;
+  }
+
+  .field-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $ink-300;
+  }
+
+  .field-input {
+    background: $ink-1000;
+    border: 1px solid rgba($ink-500, 0.2);
+    border-radius: 12px;
+    padding: $space-3 $space-4;
+    color: $fg-dark;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+
+    &:focus {
+      border-color: $brand-orange;
+      box-shadow: 0 0 0 3px rgba($brand-orange, 0.12);
+    }
+
+    &.small { padding: $space-2; font-size: 0.9rem; }
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-4;
+
+    @media (max-width: 640px) { grid-template-columns: 1fr; }
+  }
+}

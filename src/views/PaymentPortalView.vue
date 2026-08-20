@@ -1,106 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { courierBridgeApi } from '@/services/courierbridge.api'
-import { useToastStore } from '@/stores/toast.store'
-import AppFileUpload from '@/components/ui/AppFileUpload.vue'
+/** Public portal: look up your invoices by locker code and register a transfer. */
+import FacturaCard from './PaymentPortal/FacturaCard.vue'
+import RegistrarPagoForm from './PaymentPortal/RegistrarPagoForm.vue'
+import { formatMoney, usePaymentPortal } from './PaymentPortal/usePaymentPortal'
 
-const toastStore = useToastStore()
-const casillero = ref('')
-const loading = ref(false)
-const cliente = ref<any>(null)
-const facturas = ref<any[]>([])
-const totalDeuda = ref(0)
-const searched = ref(false)
-const errorMsg = ref('')
+const p = usePaymentPortal()
 
-const comprobante = ref<File | null>(null)
-const referenciaPago = ref('')
-const submitting = ref(false)
-
-/**
- * The proposal asks the client to pick which items they want to collect, so the
- * payment covers exactly those invoices. Only `pendiente` ones are selectable —
- * anything already `verificando` is locked until the cashier reviews it.
- */
-const seleccion = ref<Set<string>>(new Set())
-
-const seleccionables = computed(() => facturas.value.filter((f: any) => f.estado === 'pendiente'))
-const seleccionadas = computed(() => seleccionables.value.filter((f: any) => seleccion.value.has(f._id)))
-const totalSeleccionado = computed(() =>
-  seleccionadas.value.reduce((sum: number, f: any) => sum + (Number(f.totalGeneral) || 0), 0),
-)
-const todasSeleccionadas = computed(
-  () => seleccionables.value.length > 0 && seleccionadas.value.length === seleccionables.value.length,
-)
-
-function alternar(id: string) {
-  const next = new Set(seleccion.value)
-  next.has(id) ? next.delete(id) : next.add(id)
-  seleccion.value = next
-}
-
-function alternarTodas() {
-  seleccion.value = todasSeleccionadas.value
-    ? new Set()
-    : new Set(seleccionables.value.map((f: any) => f._id))
-}
-
-async function buscarDeudas() {
-  if (!casillero.value.trim()) return
-  loading.value = true
-  errorMsg.value = ''
-  searched.value = false
-  cliente.value = null
-  facturas.value = []
-  totalDeuda.value = 0
-  try {
-    const data = await courierBridgeApi.getFacturasPendientes(casillero.value.trim().toUpperCase())
-    if (!data.cliente) {
-      errorMsg.value = 'No encontramos un cliente con ese código de casillero'
-      return
-    }
-    cliente.value = data.cliente
-    facturas.value = data.facturas || []
-    totalDeuda.value = data.totalDeuda || 0
-    // Start with everything ticked: paying the full balance is the common case.
-    seleccion.value = new Set(
-      (data.facturas || []).filter((f: any) => f.estado === 'pendiente').map((f: any) => f._id),
-    )
-  } catch (err: any) {
-    if (err.status === 404) {
-      errorMsg.value = 'No encontramos un cliente con ese código de casillero'
-    } else {
-      errorMsg.value = err.message || 'Error al consultar tus facturas'
-    }
-  } finally {
-    loading.value = false
-    searched.value = true
-  }
-}
-
-async function enviarPago() {
-  if (!referenciaPago.value.trim() || !comprobante.value || !seleccionadas.value.length) return
-  submitting.value = true
-  try {
-    const form = new FormData()
-    if (comprobante.value) form.append('comprobante', comprobante.value)
-    form.append('facturaIds', JSON.stringify(seleccionadas.value.map((f: any) => f._id)))
-    form.append('referenciaPago', referenciaPago.value.trim())
-
-    await courierBridgeApi.registrarPago(form)
-    toastStore.showNotification('Pago registrado. Estamos verificando tu transferencia.', 'success')
-    comprobante.value = null
-    referenciaPago.value = ''
-    await buscarDeudas()
-  } catch (err: any) {
-    toastStore.showNotification(err.message || 'Error al registrar pago', 'error')
-  } finally {
-    submitting.value = false
-  }
-}
-
-function formatMoney(n: number) {
-  return `$${(n || 0).toFixed(2)}`
+async function onSubmit(referencia: string, comprobante: File | null) {
+  await p.enviarPago(referencia, comprobante)
 }
 </script>
 
@@ -114,176 +21,84 @@ function formatMoney(n: number) {
     </section>
 
     <section class="content-section container">
-      <!-- Login por casillero -->
-      <div v-if="!cliente" class="login-card glass-card">
+      <div v-if="!p.cliente.value" class="login-card glass-card">
         <div class="card-header">
-          <div class="icon-wrapper">
-            <i class="fa-solid fa-lock"></i>
-          </div>
+          <div class="icon-wrapper"><i class="fa-solid fa-lock" /></div>
           <h2>Ingresa con tu Código de Casillero</h2>
         </div>
-        <form @submit.prevent="buscarDeudas">
+        <form @submit.prevent="p.buscarDeudas">
           <div class="form-group">
             <label>Código de Casillero</label>
             <input
-              v-model="casillero"
+              v-model="p.casillero.value"
               type="text"
               placeholder="Ej. SH12345"
               required
               class="input-lg"
-              @keyup.enter="buscarDeudas"
             />
           </div>
-          <div v-if="errorMsg" class="error-message">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            {{ errorMsg }}
+          <div v-if="p.errorMsg.value" class="error-message">
+            <i class="fa-solid fa-circle-exclamation" />
+            {{ p.errorMsg.value }}
           </div>
-          <button type="submit" :disabled="loading || !casillero.trim()" class="submit-btn">
-            <span v-if="!loading">Consultar Deuda</span>
-            <span v-else class="loader"></span>
+          <button type="submit" class="submit-btn" :disabled="p.loading.value || !p.casillero.value.trim()">
+            <span v-if="!p.loading.value">Consultar Deuda</span>
+            <span v-else class="loader" />
           </button>
         </form>
       </div>
 
-      <!-- Deudas -->
       <div v-else class="deudas-section">
         <div class="cliente-info glass-card">
           <div class="card-header">
-            <div class="icon-wrapper">
-              <i class="fa-solid fa-user"></i>
-            </div>
+            <div class="icon-wrapper"><i class="fa-solid fa-user" /></div>
             <div>
-              <h2>{{ cliente.nombre }}</h2>
-              <p class="casillero-label">Casillero: {{ cliente.casillero }}</p>
+              <h2>{{ p.cliente.value.nombre }}</h2>
+              <p class="casillero-label">Casillero: {{ p.cliente.value.casillero }}</p>
             </div>
           </div>
 
           <div class="deuda-total">
             <span class="label">Total Adeudado</span>
-            <span class="amount">{{ formatMoney(totalDeuda) }}</span>
+            <span class="amount">{{ formatMoney(p.totalDeuda.value) }}</span>
           </div>
 
-          <button class="btn-secondary" @click="cliente = null; casillero = ''">
-            <i class="fa-solid fa-arrow-left"></i> Cambiar casillero
+          <button class="btn-secondary" @click="p.reset">
+            <i class="fa-solid fa-arrow-left" /> Cambiar casillero
           </button>
         </div>
 
-        <div v-if="facturas.length === 0" class="empty-state glass-card">
-          <i class="fa-solid fa-check-circle fa-3x" style="color: #22c55e;"></i>
+        <div v-if="!p.facturas.value.length" class="empty-state glass-card">
+          <i class="fa-solid fa-check-circle fa-3x" style="color: #22c55e" />
           <p>No tienes facturas pendientes. ¡Todo al día!</p>
         </div>
 
-        <div v-if="seleccionables.length > 1" class="seleccion-bar glass-card">
+        <div v-if="p.seleccionables.value.length > 1" class="seleccion-bar glass-card">
           <label class="select-all">
-            <input type="checkbox" :checked="todasSeleccionadas" @change="alternarTodas" />
+            <input type="checkbox" :checked="p.todasSeleccionadas.value" @change="p.alternarTodas" />
             <span>Seleccionar todas</span>
           </label>
           <span class="seleccion-count">
-            {{ seleccionadas.length }} de {{ seleccionables.length }} · {{ formatMoney(totalSeleccionado) }}
+            {{ p.seleccionadas.value.length }} de {{ p.seleccionables.value.length }} ·
+            {{ formatMoney(p.totalSeleccionado.value) }}
           </span>
         </div>
 
-        <div
-          v-for="factura in facturas"
+        <FacturaCard
+          v-for="factura in p.facturas.value"
           :key="factura._id"
-          class="factura-card glass-card"
-          :class="{ 'is-selected': seleccion.has(factura._id), 'is-locked': factura.estado !== 'pendiente' }"
-        >
-          <div class="factura-header">
-            <label v-if="factura.estado === 'pendiente'" class="factura-check">
-              <input
-                type="checkbox"
-                :checked="seleccion.has(factura._id)"
-                :aria-label="`Incluir factura ${factura.numeroFactura} en el pago`"
-                @change="alternar(factura._id)"
-              />
-            </label>
-            <div>
-              <h3>{{ factura.numeroFactura }}</h3>
-              <span :class="['status-badge', factura.estado]">
-                {{ factura.estado === 'pendiente' ? 'Pendiente' : 'En verificación' }}
-              </span>
-            </div>
-            <div class="factura-monto">{{ formatMoney(factura.totalGeneral) }}</div>
-          </div>
+          :factura="factura"
+          :seleccionada="p.seleccion.value.has(factura._id)"
+          @toggle="p.alternar(factura._id)"
+        />
 
-          <div class="factura-detalle">
-            <div class="detalle-row">
-              <span>Peso total</span>
-              <span>{{ factura.pesoTotalLb.toFixed(2) }} lb</span>
-            </div>
-            <div class="detalle-row">
-              <span>Flete</span>
-              <span>{{ formatMoney(factura.totalFlete) }}</span>
-            </div>
-            <div class="detalle-row">
-              <span>Arancel 4x4</span>
-              <span>{{ formatMoney(factura.totalArancel) }}</span>
-            </div>
-            <div class="detalle-row">
-              <span>IVA 15%</span>
-              <span>{{ formatMoney(factura.iva) }}</span>
-            </div>
-          </div>
-
-          <div v-if="factura.pdfUrl" class="factura-pdf">
-            <a :href="factura.pdfUrl" target="_blank" class="pdf-link">
-              <i class="fa-solid fa-file-pdf"></i> Ver factura PDF
-            </a>
-          </div>
-        </div>
-
-        <!-- Formulario de pago -->
-        <div v-if="facturas.length > 0" class="pago-form glass-card">
-          <div class="card-header">
-            <div class="icon-wrapper">
-              <i class="fa-solid fa-credit-card"></i>
-            </div>
-            <h2>Registrar Pago</h2>
-          </div>
-
-          <div class="resumen-pago">
-            <span>Vas a pagar</span>
-            <strong>{{ formatMoney(totalSeleccionado) }}</strong>
-            <small>{{ seleccionadas.length }} factura(s) seleccionada(s)</small>
-          </div>
-
-          <p v-if="!seleccionadas.length" class="seleccion-vacia">
-            <i class="fa-solid fa-circle-info"></i>
-            Selecciona al menos una factura para registrar tu pago.
-          </p>
-
-          <form @submit.prevent="enviarPago">
-            <div class="form-group">
-              <label>Referencia de Transferencia *</label>
-              <input
-                v-model="referenciaPago"
-                type="text"
-                placeholder="Número de referencia o comprobante"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <AppFileUpload
-                v-model="comprobante"
-                label="Comprobante de Pago *"
-                accept="image/*,.pdf"
-                hint="Sube una foto o PDF nítido. Lo almacenamos de forma segura con Cloudinary."
-              />
-            </div>
-
-            <button
-              type="submit"
-              :disabled="submitting || !referenciaPago.trim() || !comprobante || !seleccionadas.length"
-              class="submit-btn"
-            >
-              <span v-if="!submitting">Enviar Comprobante</span>
-              <span v-else class="loader"></span>
-            </button>
-            <p class="form-footnote">Tu pago será verificado por nuestro equipo y tus paquetes serán despachados.</p>
-          </form>
-        </div>
+        <RegistrarPagoForm
+          v-if="p.facturas.value.length"
+          :submitting="p.submitting.value"
+          :seleccionadas="p.seleccionadas.value.length"
+          :total="p.totalSeleccionado.value"
+          @submit="onSubmit"
+        />
       </div>
     </section>
   </div>
@@ -291,8 +106,11 @@ function formatMoney(n: number) {
 
 <style scoped lang="scss">
 @use 'sass:color';
-@use "@/styles/tokens/colors" as *;
-@use "@/styles/tokens/space" as *;
+@use '@/styles/tokens/colors' as *;
+@use './PaymentPortal/portal-ui' as ui;
+
+@include ui.card;
+@include ui.form;
 
 .payment-portal {
   min-height: 100vh;
@@ -314,10 +132,7 @@ function formatMoney(n: number) {
     background-clip: text;
   }
 
-  .subtitle {
-    color: $muted-dark;
-    font-size: 1.1rem;
-  }
+  .subtitle { color: $muted-dark; font-size: 1.1rem; }
 }
 
 .content-section {
@@ -326,89 +141,11 @@ function formatMoney(n: number) {
   margin: 0 auto;
 }
 
-.glass-card {
-  background: rgba($fg-dark, 0.04);
-  border: 1px solid rgba($fg-dark, 0.08);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 1.5rem;
-  backdrop-filter: blur(12px);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.icon-wrapper {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba($brand-orange, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  color: $brand-orange;
-  flex-shrink: 0;
-}
-
-.form-group {
-  margin-bottom: 1.25rem;
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    color: $muted-dark;
-  }
-
-  input {
-    width: 100%;
-    padding: 0.85rem 1rem;
-    border-radius: 10px;
-    border: 1px solid rgba($fg-dark, 0.12);
-    background: rgba($fg-dark, 0.06);
-    color: $fg-dark;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: $brand-orange;
-    }
-  }
-}
-
 .input-lg {
   font-size: 1.25rem !important;
   text-align: center;
   letter-spacing: 2px;
   text-transform: uppercase;
-}
-
-.submit-btn {
-  width: 100%;
-  padding: 1rem;
-  background: $brand-orange;
-  border: none;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &:not(:disabled):hover {
-    opacity: 0.9;
-  }
 }
 
 .btn-secondary {
@@ -421,9 +158,7 @@ function formatMoney(n: number) {
   font-size: 0.9rem;
   transition: background 0.2s;
 
-  &:hover {
-    background: rgba($fg-dark, 0.12);
-  }
+  &:hover { background: rgba($fg-dark, 0.12); }
 }
 
 .error-message {
@@ -448,16 +183,8 @@ function formatMoney(n: number) {
     border-bottom: 1px solid rgba($fg-dark, 0.08);
     margin-bottom: 1rem;
 
-    .label {
-      color: $muted-dark;
-      font-size: 1rem;
-    }
-
-    .amount {
-      font-size: 2rem;
-      font-weight: 700;
-      color: $brand-orange;
-    }
+    .label { color: $muted-dark; font-size: 1rem; }
+    .amount { font-size: 2rem; font-weight: 700; color: $brand-orange; }
   }
 
   .casillero-label {
@@ -471,112 +198,9 @@ function formatMoney(n: number) {
   text-align: center;
   padding: 3rem 2rem;
 
-  p {
-    color: $muted-dark;
-    margin-top: 1rem;
-  }
+  p { color: $muted-dark; margin-top: 1rem; }
 }
 
-.factura-card {
-  .factura-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-
-    h3 {
-      font-size: 1.1rem;
-      margin-bottom: 0.35rem;
-    }
-  }
-
-  .factura-monto {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: $brand-orange;
-  }
-
-  .factura-detalle {
-    .detalle-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.5rem 0;
-      font-size: 0.9rem;
-      color: $muted-dark;
-
-      &:not(:last-child) {
-        border-bottom: 1px solid rgba($fg-dark, 0.05);
-      }
-    }
-  }
-
-  .factura-pdf {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba($fg-dark, 0.08);
-  }
-
-  .pdf-link {
-    color: #60a5fa;
-    text-decoration: none;
-    font-size: 0.9rem;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-
-  &.pendiente {
-    background: rgba(#f59e0b, 0.15);
-    color: #f59e0b;
-  }
-
-  &.verificando {
-    background: rgba(#3b82f6, 0.15);
-    color: #60a5fa;
-  }
-}
-
-.pago-form {
-  .form-footnote {
-    text-align: center;
-    color: $muted-dark;
-    font-size: 0.8rem;
-    margin-top: 1rem;
-  }
-}
-
-.file-input {
-  padding: 0.5rem !important;
-}
-
-.file-hint {
-  color: $muted-dark;
-  font-size: 0.85rem;
-  margin-top: 0.35rem;
-}
-
-.loader {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba($fg-dark, 0.3);
-  border-top-color: $fg-dark;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Selección de facturas a pagar ── */
 .seleccion-bar {
   display: flex;
   align-items: center;
@@ -593,52 +217,12 @@ function formatMoney(n: number) {
   cursor: pointer;
   font-weight: 600;
 
-  input { width: 18px; height: 18px; accent-color: #f57c00; }
+  input { width: 18px; height: 18px; accent-color: $brand-orange; }
 }
 
 .seleccion-count {
   font-size: 0.88rem;
   opacity: 0.8;
   font-variant-numeric: tabular-nums;
-}
-
-.factura-card {
-  transition: border-color 0.18s ease, opacity 0.18s ease;
-
-  &.is-selected { border-color: rgba(245, 124, 0, 0.55); }
-  &.is-locked { opacity: 0.65; }
-}
-
-.factura-check {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 0.75rem;
-  cursor: pointer;
-
-  input { width: 20px; height: 20px; accent-color: #f57c00; }
-}
-
-.resumen-pago {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0.9rem 1.1rem;
-  margin-bottom: 1rem;
-  border-radius: 12px;
-  background: rgba(245, 124, 0, 0.1);
-  border: 1px solid rgba(245, 124, 0, 0.28);
-
-  span { font-size: 0.78rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; }
-  strong { font-size: 1.6rem; color: #f57c00; font-variant-numeric: tabular-nums; }
-  small { font-size: 0.78rem; opacity: 0.7; }
-}
-
-.seleccion-vacia {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 1rem;
-  font-size: 0.85rem;
-  opacity: 0.8;
 }
 </style>

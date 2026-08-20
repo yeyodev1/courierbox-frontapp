@@ -1,0 +1,77 @@
+// Frame shared by every authenticated shell. The shell is pinned to exactly one
+// viewport and never scrolls itself — that keeps the sidebar and top bar still
+// while only the content moves, so changing section no longer yanks the whole
+// window back to the top. Scrolling lives in .main-content.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin frame {
+  .mobile-overlay {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba($ink-1000, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 40;
+    }
+  }
+
+  .main-area {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0; // lets .main-content shrink and scroll instead of pushing the shell
+    min-width: 0;
+
+    .sidebar-collapsed & { margin-left: 72px; }
+
+    @media (max-width: 768px) { margin-left: 0 !important; }
+  }
+
+  .main-content {
+    flex: 1;
+    padding: $space-8;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0; // without this flex refuses to shrink and the scroll moves to the window
+    min-width: 0;
+    overscroll-behavior: contain; // hitting the end here does not scroll the page behind
+    -webkit-overflow-scrolling: touch;
+
+    @media (max-width: 768px) { padding: $space-4; }
+  }
+
+  .fade-enter-active,
+  .fade-leave-active { transition: opacity 0.25s ease; }
+  .fade-enter-from,
+  .fade-leave-to { opacity: 0; }
+
+  .fade-slide-enter-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .fade-slide-leave-active { transition: all 0.2s ease; }
+  .fade-slide-enter-from { opacity: 0; transform: translateY(12px); }
+  .fade-slide-leave-to { opacity: 0; transform: translateY(-8px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .main-area,
+    .fade-enter-active,
+    .fade-leave-active,
+    .fade-slide-enter-active,
+    .fade-slide-leave-active { transition: none; }
+  }
+}
+
+/** The one-viewport root every shell sits in. */
+@mixin root {
+  display: flex;
+  height: 100vh;
+  height: 100dvh; // mobile: follows the browser chrome instead of hiding under it
+  background: $ink-1000;
+  color: $fg-dark;
+  overflow: hidden;
+}

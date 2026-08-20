@@ -1,0 +1,99 @@
+// Shared surfaces for the counter screen. Components `@use` these mixins from
+// inside their own scoped <style>, keeping rules scoped per component.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+@use '@/styles/tokens/motion' as *;
+
+@mixin panel {
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    padding: $space-5;
+    background: $ink-900;
+    border: 1px solid rgba($ink-500, 0.15);
+    border-radius: $radius-lg;
+  }
+
+  .panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 { margin: 0; font-size: 1.05rem; }
+  }
+}
+
+@mixin link {
+  .link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: $brand-orange;
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+    &.danger { color: #ff8a8f; }
+  }
+}
+
+@mixin button {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    min-height: 44px;
+    padding: 0 $space-5;
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background $dur-fast ease, opacity $dur-fast ease;
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &.primary { background: $brand-orange; color: $ink-1000; }
+
+    &.ghost {
+      background: rgba($ink-700, 0.8);
+      border-color: rgba($ink-500, 0.25);
+      color: $ink-200;
+    }
+
+    &.wa {
+      background: rgba(37, 211, 102, 0.14);
+      border-color: rgba(37, 211, 102, 0.4);
+      color: #4ce08a;
+
+      &:hover { background: rgba(37, 211, 102, 0.22); }
+    }
+  }
+}
+
+@mixin empty {
+  .empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-3;
+    padding: $space-8;
+    margin: 0;
+    color: $ink-500;
+    font-size: 0.88rem;
+  }
+}
+
+@mixin plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}

@@ -1,0 +1,93 @@
+// Shared controls for the homologation screen. Components `@use` these from
+// inside their own scoped <style>, so rules stay scoped per component.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin buttons {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    min-height: 44px;
+    padding: 0 $space-5;
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    &.primary { background: $brand-orange; color: $ink-1000; }
+    &.ghost { background: rgba($ink-700, 0.8); border-color: rgba($ink-500, 0.25); color: $ink-200; }
+    &.sm { min-height: 36px; padding: 0 $space-4; font-size: 0.82rem; }
+  }
+
+  .link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: $brand-orange;
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+/** The score chip plus the client row used by both the list and the modal. */
+@mixin suggestion {
+  .sug__score { color: $signal-green; font-weight: 700; flex: 0 0 auto; }
+
+  .sug-row {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    width: 100%;
+    padding: $space-3;
+    border-radius: $radius-md;
+    border: 1px solid rgba($ink-500, 0.2);
+    background: $ink-850;
+    color: $ink-200;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover { border-color: rgba($brand-orange, 0.4); }
+    &.selected { border-color: $brand-orange; background: rgba($brand-orange, 0.1); }
+  }
+
+  .sug-row__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+
+    strong { color: $fg-dark; font-size: 0.88rem; }
+    small { color: $ink-400; font-size: 0.76rem; }
+  }
+}
+
+@mixin fields {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+
+    span { font-size: 0.8rem; color: $ink-400; }
+
+    input {
+      min-height: 42px;
+      padding: $space-2 $space-3;
+      border-radius: $radius-sm;
+      border: 1px solid rgba($ink-500, 0.25);
+      background: $ink-850;
+      color: $fg-dark;
+      font: inherit;
+      outline: none;
+
+      &:focus { border-color: rgba($brand-orange, 0.5); }
+    }
+  }
+}

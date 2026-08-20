@@ -135,12 +135,14 @@ class GestionesCompraAPI extends APIBase {
     asesorId?: string
     mes?: number
     año?: number
+    q?: string
   }): Promise<GestionesListResult> {
     const query = new URLSearchParams()
     if (params?.page) query.set('page', String(params.page))
     if (params?.limit) query.set('limit', String(params.limit))
     if (params?.estado) query.set('estado', params.estado)
     if (params?.asesorId) query.set('asesorId', params.asesorId)
+    if (params?.q) query.set('q', params.q)
     if (params?.mes) query.set('mes', String(params.mes))
     if (params?.año) query.set('año', String(params.año))
 
@@ -193,9 +195,10 @@ class GestionesCompraAPI extends APIBase {
     await this.post(`${this.base}/${id}/notificar`, {})
   }
 
-  async getStatsMensuales(params?: { año?: number; mes?: number; asesorId?: string }): Promise<GestionesStats> {
+  async getStatsMensuales(params?: { año?: number; mes?: number; asesorId?: string; q?: string }): Promise<GestionesStats> {
     const query = new URLSearchParams()
     if (params?.año) query.set('año', String(params.año))
+    if (params?.q) query.set('q', params.q)
     if (params?.mes) query.set('mes', String(params.mes))
     if (params?.asesorId) query.set('asesorId', params.asesorId)
 
@@ -234,12 +237,14 @@ class GestionesCompraAPI extends APIBase {
     asesorId?: string
     mes?: number
     año?: number
+    q?: string
   }): Promise<Blob> {
     const query = new URLSearchParams()
     if (params.estado) query.set('estado', params.estado)
     if (params.asesorId) query.set('asesorId', params.asesorId)
     if (params.mes) query.set('mes', String(params.mes))
     if (params.año) query.set('año', String(params.año))
+    if (params.q) query.set('q', params.q)
     const endpoint = `${this.base}/export/${params.format === 'pdf' ? 'pdf' : 'excel'}?${query.toString()}`
     const response = await this.get<Blob>(endpoint, undefined, { responseType: 'blob', timeout: 90000 })
     return response.data
