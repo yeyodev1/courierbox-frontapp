@@ -8,7 +8,8 @@ const toastStore = useToastStore()
 const loading = ref(false)
 const saving = ref(false)
 const items = ref<any[]>([])
-const summary = ref({ facturado: 0, ventaCourier: 0, ventaGestionCompra: 0, ventaVentas: 0, clientesNuevos: 0, dias: 0 })
+const summary = ref({ facturado: 0, ventaCourier: 0, ventaGestionCompra: 0, ventaVentas: 0, libras: 0, clientesNuevos: 0, dias: 0 })
+const comparativo = ref<any[]>([])
 
 function emptyForm() {
   return {
@@ -17,6 +18,7 @@ function emptyForm() {
     ventaCourier: 0,
     ventaGestionCompra: 0,
     ventaVentas: 0,
+    libras: 0,
     clientesNuevos: 0,
     notas: '',
   }
@@ -29,13 +31,22 @@ const totalDia = computed(
 )
 
 const money = (value: unknown) => `$${(Number(value) || 0).toFixed(2)}`
+const libras = (value: unknown) => `${(Number(value) || 0).toLocaleString('es-EC', { maximumFractionDigits: 1 })} lb`
+const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const mesLabel = (m: number, y: number) => `${MESES[m] || m} ${y}`
+const deltaPct = (v: number | null) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`)
 
 async function load() {
   loading.value = true
   try {
-    const [list, sum] = await Promise.all([adminApi.getData('v1/produccion?limit=60'), adminApi.getData('v1/produccion/resumen')])
+    const [list, sum, comp] = await Promise.all([
+      adminApi.getData('v1/produccion?limit=60'),
+      adminApi.getData('v1/produccion/resumen'),
+      adminApi.getData('v1/produccion/comparativo?meses=12'),
+    ])
     items.value = list.items || []
     if (sum.resumen) summary.value = { ...summary.value, ...sum.resumen }
+    comparativo.value = comp.items || []
   } catch (e: any) {
     toastStore.showNotification(e.message || 'Error al cargar', 'error')
   } finally {
@@ -80,6 +91,7 @@ onMounted(load)
       <article class="stat-card"><span>Courier</span><strong>{{ money(summary.ventaCourier) }}</strong></article>
       <article class="stat-card"><span>Gestión de compra</span><strong>{{ money(summary.ventaGestionCompra) }}</strong></article>
       <article class="stat-card"><span>Ventas</span><strong>{{ money(summary.ventaVentas) }}</strong></article>
+      <article class="stat-card libras-card"><span>Libras (30 días)</span><strong>{{ libras(summary.libras) }}</strong></article>
     </div>
 
     <section class="panel form-panel">
@@ -91,6 +103,7 @@ onMounted(load)
         <label><span>Gestión de compra $</span><input v-model.number="form.ventaGestionCompra" type="number" min="0" step="0.01" class="field-input" /></label>
         <label><span>Ventas $</span><input v-model.number="form.ventaVentas" type="number" min="0" step="0.01" class="field-input" /></label>
         <label><span>Clientes nuevos</span><input v-model.number="form.clientesNuevos" type="number" min="0" class="field-input" /></label>
+        <label><span>Libras del día</span><input v-model.number="form.libras" type="number" min="0" step="0.1" class="field-input" placeholder="0" /></label>
         <label class="full"><span>Notas</span><textarea v-model="form.notas" rows="2" class="field-input"></textarea></label>
       </div>
       <div class="form-footer">
@@ -98,6 +111,25 @@ onMounted(load)
         <button class="btn-primary" :disabled="saving || totalDia <= 0" @click="save">
           {{ saving ? 'Guardando...' : 'Guardar ventas del día' }}
         </button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Contraste mensual de libras</h3>
+      <p class="section-hint">Libras alimentadas cada mes y su variación respecto al mes anterior.</p>
+      <p v-if="!loading && !comparativo.length" class="empty">Aún no hay datos para comparar.</p>
+      <div v-else class="month-grid">
+        <article v-for="row in comparativo" :key="`${row.anio}-${row.mes}`" class="month-card">
+          <header>{{ mesLabel(row.mes, row.anio) }}</header>
+          <strong class="month-libras">{{ libras(row.libras) }}</strong>
+          <span
+            class="month-delta"
+            :class="{ up: (row.deltaLibras || 0) > 0, down: (row.deltaLibras || 0) < 0 }"
+          >
+            {{ deltaPct(row.deltaPct) }} vs. mes anterior
+          </span>
+          <footer>{{ money(row.facturado) }} · {{ row.dias }} días</footer>
+        </article>
       </div>
     </section>
 
@@ -145,6 +177,16 @@ onMounted(load)
 .breakdown { display: flex; gap: $space-3; flex-wrap: wrap; color: $ink-400; font-size: .82rem; }
 .row-total { text-align: right; }
 .list-row p, .empty { color: $ink-400; margin: 0; }
+.libras-card strong { color: $brand-orange; }
+.section-hint { color: $ink-400; margin: 0 0 $space-3; font-size: .85rem; }
+.month-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: $space-3; }
+.month-card { display: flex; flex-direction: column; gap: $space-1; background: rgba($ink-900, .55); border: 1px solid rgba($ink-500, .12); border-radius: 16px; padding: $space-4; }
+.month-card header { color: $ink-400; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+.month-libras { font-size: 1.5rem; }
+.month-delta { font-size: .82rem; color: $ink-400; }
+.month-delta.up { color: #34d399; }
+.month-delta.down { color: #f87171; }
+.month-card footer { color: $ink-400; font-size: .78rem; margin-top: $space-1; }
 @media (max-width: 900px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
 </style>
