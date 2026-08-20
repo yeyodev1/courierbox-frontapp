@@ -4,6 +4,7 @@
  * bodega). It renders whatever menu tree it is handed and reports clicks;
  * routing and role logic stay with the shell that owns them.
  */
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import BrandMark from '@/components/ui/BrandMark.vue'
 
 export interface ShellMenuItem {
@@ -31,6 +32,36 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{ toggle: []; navigate: [path: string]; logout: [] }>()
+
+/**
+ * The nav rail scrolls on its own (overflow-y: auto), and a browser refresh
+ * always resets an inner scroll container to the top — so a user who had
+ * scrolled down to a lower menu item lost their place on every reload. We
+ * remember the rail's scroll offset per session and restore it on mount.
+ */
+const navRef = ref<HTMLElement | null>(null)
+const SCROLL_KEY = 'cb.sidebar.navScroll'
+
+function persistScroll() {
+  if (!navRef.value) return
+  try {
+    sessionStorage.setItem(SCROLL_KEY, String(navRef.value.scrollTop))
+  } catch {
+    /* storage may be unavailable (private mode) — the rail just won't persist */
+  }
+}
+
+onMounted(() => {
+  if (!navRef.value) return
+  try {
+    const saved = Number(sessionStorage.getItem(SCROLL_KEY) || 0)
+    if (saved > 0) navRef.value.scrollTop = saved
+  } catch {
+    /* ignore */
+  }
+})
+
+onBeforeUnmount(persistScroll)
 </script>
 
 <template>
@@ -47,11 +78,13 @@ const emit = defineEmits<{ toggle: []; navigate: [path: string]; logout: [] }>()
     </div>
 
     <nav
+      ref="navRef"
       class="sidebar-nav"
       aria-label="Secciones de administración"
       data-lenis-prevent
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
+      @scroll.passive="persistScroll"
     >
       <template v-for="(group, gi) in groups" :key="group.label">
         <span v-show="expanded" class="nav-section-label">{{ group.label }}</span>
