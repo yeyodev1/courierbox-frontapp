@@ -232,10 +232,15 @@ function handleOverlayClick() {
 
 .modal-scroll {
   flex: 1 1 auto;
+  /* Sin min-height:0 el hijo flex crece al tamaño del contenido y la card
+     (overflow:hidden) lo recorta: nada desborda, así que ni la rueda ni el
+     dedo tienen qué scrollear. */
+  min-height: 0;
   overflow-y: auto;
   padding: $space-8;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-y;
 
   @media (max-width: 640px) {
     padding: $space-4;
