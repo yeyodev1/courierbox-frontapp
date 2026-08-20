@@ -88,6 +88,11 @@ class AdminAPI extends APIBase {
     return res.data;
   }
 
+  async patchData(endpoint: string, data: unknown) {
+    const res = await this.patch<any>(endpoint, data);
+    return res.data;
+  }
+
   async deleteData(endpoint: string) {
     const res = await this.delete<any>(endpoint);
     return res.data;
