@@ -2,16 +2,32 @@
 /**
  * Two pieces of PWA feedback the operation actually needs:
  *  - a connection banner, so a driver knows why a save is not going through;
- *  - an update prompt, because `registerType: 'prompt'` means a new build only
- *    takes over when the user says so (never mid-delivery).
+ *  - a mandatory update gate: `registerType: 'prompt'` hands us control of
+ *    when the new build takes over, and we use it to block the UI until the
+ *    user refreshes — a stale client must never keep talking to a newer API.
  */
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 
+/** Every minute the worker asks the server whether a new build exists, so a
+ *  deploy reaches open tabs without waiting for the user to navigate. */
+const UPDATE_CHECK_MS = 60_000
+
 const { needRefresh, updateServiceWorker } = useRegisterSW({
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+    window.setInterval(() => registration.update().catch(() => {}), UPDATE_CHECK_MS)
+  },
   onRegisterError(error: unknown) {
     console.warn('[pwa] service worker registration failed', error)
   },
+})
+
+// The update screen is deliberately not dismissable: a stale client talking
+// to a newer API is how we end up with silent data bugs. Lock the page scroll
+// underneath while it is showing.
+watch(needRefresh, (value) => {
+  document.documentElement.classList.toggle('pwa-update-lock', value)
 })
 
 const online = ref(true)
@@ -58,17 +74,35 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
 
-    <Transition name="pwa-slide">
-      <div v-if="needRefresh" class="pwa-pill is-update" role="status">
-        <i class="fa-solid fa-arrows-rotate" aria-hidden="true" />
-        <span>Hay una versión nueva</span>
-        <button type="button" :disabled="applying" @click="applyUpdate">
-          {{ applying ? 'Actualizando…' : 'Actualizar' }}
-        </button>
-        <button type="button" class="ghost" @click="needRefresh = false">Después</button>
+  </div>
+
+  <Teleport to="body">
+    <Transition name="pwa-fade">
+      <div
+        v-if="needRefresh"
+        class="pwa-update"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="pwa-update-title"
+        data-lenis-prevent
+      >
+        <div class="pwa-update__card">
+          <div class="pwa-update__icon">
+            <i class="fa-solid fa-arrows-rotate" aria-hidden="true" />
+          </div>
+          <h2 id="pwa-update-title">Nueva versión disponible</h2>
+          <p>
+            Courier Box se actualizó. Para seguir trabajando con los datos correctos
+            hay que refrescar la aplicación.
+          </p>
+          <button type="button" class="pwa-update__btn" :disabled="applying" @click="applyUpdate">
+            <i v-if="applying" class="fa-solid fa-spinner fa-spin" aria-hidden="true" />
+            {{ applying ? 'Actualizando…' : 'Actualizar ahora' }}
+          </button>
+        </div>
       </div>
     </Transition>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped lang="scss">
@@ -118,41 +152,99 @@ onBeforeUnmount(() => {
     color: $signal-green;
   }
 
-  &.is-update {
-    border-color: rgba($brand-orange, 0.45);
-  }
-
-  button {
-    flex: 0 0 auto;
-    min-height: 32px;
-    padding: 0 $space-3;
-    border-radius: $radius-pill;
-    border: none;
-    background: $brand-orange;
-    color: $ink-1000;
-    font: inherit;
-    font-weight: 600;
-    font-size: 0.8rem;
-    cursor: pointer;
-
-    &:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    &.ghost {
-      background: transparent;
-      color: $ink-300;
-      border: 1px solid rgba($ink-500, 0.35);
-    }
-
-    &:focus-visible {
-      outline: 2px solid $brand-orange;
-      outline-offset: 2px;
-    }
-  }
-
   @media (max-width: 480px) {
     flex-wrap: wrap;
     border-radius: $radius-lg;
   }
+}
+
+/* Full-screen, non-dismissable update gate. Sits above every modal (1000/1100)
+   and above the status pills (1200). */
+.pwa-update {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-4;
+  background: rgba($ink-1000, 0.88);
+  backdrop-filter: blur(8px);
+
+  &__card {
+    width: 100%;
+    max-width: 420px;
+    padding: $space-8;
+    border-radius: 20px;
+    border: 1px solid rgba($brand-orange, 0.35);
+    background: $ink-900;
+    text-align: center;
+    color: $ink-100;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+
+    h2 {
+      margin: 0 0 $space-3;
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin: 0 0 $space-6;
+      color: $ink-300;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+  }
+
+  &__icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto $space-4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($brand-orange, 0.14);
+    color: $brand-orange;
+    font-size: 1.4rem;
+  }
+
+  &__btn {
+    width: 100%;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    border: none;
+    border-radius: $radius-pill;
+    background: $brand-orange;
+    color: $ink-1000;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.7; cursor: wait; }
+
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: 3px;
+    }
+  }
+}
+
+:global(html.pwa-update-lock) {
+  overflow: hidden !important;
+}
+
+.pwa-fade-enter-active,
+.pwa-fade-leave-active {
+  transition: opacity $dur-base ease;
+}
+
+.pwa-fade-enter-from,
+.pwa-fade-leave-to {
+  opacity: 0;
 }
 
 .pwa-slide-enter-active,
