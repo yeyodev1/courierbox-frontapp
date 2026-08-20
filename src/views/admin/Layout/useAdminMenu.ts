@@ -28,6 +28,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin/envios': { title: 'Envíos a Domicilio', sub: 'Gestiona los envíos de última milla' },
   '/admin/caja': { title: 'Caja', sub: 'Movimientos de ingreso y egreso' },
   '/admin/produccion': { title: 'Ventas diarias', sub: 'Facturado por courier, gestión de compra y ventas' },
+  '/admin/ventas-productos': { title: 'Ventas de productos', sub: 'Inventario propio, ventas, crédito y recordatorios' },
   '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
   '/admin/homologacion': { title: 'Homologación de clientes', sub: 'Vincula los paquetes del manifiesto con su dueño' },
   '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
@@ -37,6 +38,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin/notificaciones': { title: 'Notificaciones', sub: 'Supervisa y reintenta la entrega de correos' },
   '/superadmin/reportes': { title: 'Estado de Resultados', sub: 'Visión ejecutiva privada' },
   '/superadmin/produccion': { title: 'Ventas diarias', sub: 'Control privado de ventas' },
+  '/superadmin/ventas-productos': { title: 'Ventas de productos', sub: 'Inventario propio, ventas y crédito' },
   '/superadmin/caja': { title: 'Caja', sub: 'Seguimiento financiero privado' },
 }
 
@@ -62,6 +64,7 @@ export function useAdminMenu() {
             { path: p(''), label: 'Dashboard Ejecutivo', icon: 'fa-solid fa-chart-line', match: under('/superadmin') },
             { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: under('/superadmin/reportes') },
             { path: p('/produccion'), label: 'Ventas', icon: 'fa-solid fa-cash-register', match: under('/superadmin/produccion') },
+            { path: p('/ventas-productos'), label: 'Ventas de Productos', icon: 'fa-solid fa-box-open', match: under('/superadmin/ventas-productos') },
             { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: under('/superadmin/caja') },
             { path: '/admin/notificaciones', label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: under('/admin/notificaciones') },
           ],
@@ -104,6 +107,7 @@ export function useAdminMenu() {
         label: 'Producción',
         items: [
           { path: p('/produccion'), label: 'Ventas', icon: 'fa-solid fa-cash-register', match: under(`${base}/produccion`) },
+          { path: p('/ventas-productos'), label: 'Ventas de Productos', icon: 'fa-solid fa-box-open', match: under(`${base}/ventas-productos`) },
           { path: p('/conciliacion'), label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: under(`${base}/conciliacion`) },
         ],
       },

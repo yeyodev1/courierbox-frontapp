@@ -68,6 +68,12 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: "Ventas diarias · Courier Box" },
       },
       {
+        path: "ventas-productos",
+        name: "AdminVentasProductos",
+        component: () => import("@/views/admin/VentasProductos/AdminVentasProductosView.vue"),
+        meta: { title: "Ventas de productos · Courier Box" },
+      },
+      {
         path: "reportes",
         name: "AdminReportes",
         component: () => import("@/views/admin/AdminReportesView.vue"),
@@ -152,6 +158,12 @@ export const adminRoutes: RouteRecordRaw[] = [
         name: "SuperadminProduccion",
         component: () => import("@/views/admin/AdminProduccionView.vue"),
         meta: { title: "Ventas diarias · Courier Box" },
+      },
+      {
+        path: "ventas-productos",
+        name: "SuperadminVentasProductos",
+        component: () => import("@/views/admin/VentasProductos/AdminVentasProductosView.vue"),
+        meta: { title: "Ventas de productos · Courier Box" },
       },
       {
         path: "caja",
