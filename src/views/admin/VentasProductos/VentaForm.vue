@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
+import ClienteQuickCreate from './ClienteQuickCreate.vue'
 import { useToastStore } from '@/stores/toast.store'
 import type { ClienteLite, useVentasProductos } from './useVentasProductos'
 
@@ -11,6 +12,13 @@ const money = (v: unknown) => `$${(Number(v) || 0).toFixed(2)}`
 const clienteQuery = ref('')
 const mostrarResultados = ref(false)
 const saving = ref(false)
+const mostrarNuevoCliente = ref(false)
+
+/** The search needs 2+ chars, so anything shorter is "not searched yet". */
+const busquedaActiva = computed(() => clienteQuery.value.trim().length >= 2)
+const sinResultados = computed(
+  () => busquedaActiva.value && !props.vp.buscandoCliente && props.vp.clientesResultados.length === 0,
+)
 
 const METODOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta', 'Depósito', 'Abono + crédito', 'Otro']
 
@@ -18,12 +26,27 @@ function onClienteInput() {
   mostrarResultados.value = true
   props.vp.buscarCliente(clienteQuery.value)
 }
+function onClienteBlur() {
+  mostrarResultados.value = false
+  // Typing a name that was never picked from the list used to leave the form
+  // looking valid while clienteId stayed empty; clear it so the operator sees
+  // the client is not linked yet.
+  if (props.vp.ventaForm.clienteNombre !== clienteQuery.value) {
+    props.vp.ventaForm.clienteId = ''
+    props.vp.ventaForm.clienteNombre = ''
+    props.vp.ventaForm.clienteEmail = ''
+  }
+}
 function elegirCliente(c: ClienteLite) {
   props.vp.ventaForm.clienteId = c._id
   props.vp.ventaForm.clienteNombre = c.nombreOficial
   props.vp.ventaForm.clienteEmail = c.email || ''
   clienteQuery.value = c.nombreOficial
   mostrarResultados.value = false
+}
+function onClienteCreado(c: ClienteLite) {
+  elegirCliente(c)
+  mostrarNuevoCliente.value = false
 }
 function onVendedorChange(e: Event) {
   const id = (e.target as HTMLSelectElement).value
@@ -82,13 +105,21 @@ async function guardar() {
           autocomplete="off"
           @input="onClienteInput"
           @focus="mostrarResultados = true"
+          @blur="onClienteBlur"
         />
-        <ul v-if="mostrarResultados && vp.clientesResultados.length" class="cliente-drop">
+        <ul v-if="mostrarResultados && (vp.clientesResultados.length || sinResultados)" class="cliente-drop">
           <li v-for="c in vp.clientesResultados" :key="c._id" @mousedown.prevent="elegirCliente(c)">
             <strong>{{ c.nombreOficial }}</strong>
             <em>{{ c.codigoCasillero }} · {{ c.email || 'sin email' }}</em>
           </li>
+          <li v-if="sinResultados" class="empty" @mousedown.prevent="mostrarNuevoCliente = true">
+            <strong>Sin resultados para «{{ clienteQuery.trim() }}»</strong>
+            <em>+ Crear este cliente</em>
+          </li>
         </ul>
+        <button type="button" class="link-btn nuevo-cliente" @click="mostrarNuevoCliente = true">
+          + Nuevo cliente
+        </button>
       </label>
 
       <label>
@@ -162,6 +193,14 @@ async function guardar() {
       </div>
       <button class="btn-primary" :disabled="saving" @click="guardar">{{ saving ? 'Guardando…' : 'Guardar venta' }}</button>
     </div>
+    <ClienteQuickCreate
+      :show="mostrarNuevoCliente"
+      :vp="vp"
+      :nombre-inicial="clienteQuery"
+      @close="mostrarNuevoCliente = false"
+      @creado="onClienteCreado"
+    />
+
     <p class="mail-note">Al guardar se envía un correo al admin (con costo y comisión) y un resumen al cliente (sin costo ni comisión).</p>
   </section>
 </template>
@@ -184,6 +223,8 @@ label > span { color: $ink-400; }
 .cliente-drop li { padding: $space-2 $space-3; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; }
 .cliente-drop li:hover { background: rgba($brand-orange, .12); }
 .cliente-drop em { color: $ink-400; font-style: normal; font-size: .75rem; }
+.cliente-drop li.empty em { color: $brand-orange; }
+.nuevo-cliente { align-self: flex-start; margin-top: 2px; padding: 0; }
 .segmented { display: flex; gap: 4px; background: rgba($ink-700, .4); border-radius: 10px; padding: 3px; }
 .segmented button { flex: 1; padding: $space-2; background: transparent; border: none; border-radius: 8px; color: $ink-300; cursor: pointer; font-size: .82rem; }
 .segmented button.on { background: $brand-orange; color: $ink-1000; font-weight: 600; }
