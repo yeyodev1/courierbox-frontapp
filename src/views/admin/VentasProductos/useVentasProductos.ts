@@ -20,6 +20,14 @@ export interface ClienteLite {
   telefono?: string
 }
 
+export interface NuevoClientePayload {
+  nombreOficial: string
+  cedulaRuc?: string
+  email?: string
+  telefono?: string
+  codigoCasillero?: string
+}
+
 export interface Vendedor {
   _id: string
   name?: string
@@ -108,10 +116,13 @@ export function useVentasProductos() {
     if (clienteTimer) clearTimeout(clienteTimer)
     if (!q || q.trim().length < 2) {
       clientesResultados.value = []
+      buscandoCliente.value = false
       return
     }
+    // Flagged before the debounce so the form does not flash "sin resultados"
+    // while the request is still pending.
+    buscandoCliente.value = true
     clienteTimer = setTimeout(async () => {
-      buscandoCliente.value = true
       try {
         const res = await adminApi.getData(`v1/ventas-productos/clientes?q=${encodeURIComponent(q.trim())}`)
         clientesResultados.value = res.clientes || []
@@ -119,6 +130,14 @@ export function useVentasProductos() {
         buscandoCliente.value = false
       }
     }, 300)
+  }
+
+  /** Register a master client from the sale form and return it ready to select. */
+  async function crearCliente(payload: NuevoClientePayload): Promise<ClienteLite> {
+    const res = await adminApi.postData('v1/ventas-productos/clientes', payload)
+    const cliente = res.cliente as ClienteLite
+    clientesResultados.value = [cliente]
+    return cliente
   }
 
   async function crearProducto() {
@@ -153,6 +172,6 @@ export function useVentasProductos() {
     inventario, ventas, recordatorios, vendedores, clientesResultados,
     loading, buscandoCliente, productoForm, ventaForm, productoSel,
     precioAplicado, subtotal, envioAplica, total, saldoCredito, cuotasSuman,
-    loadAll, buscarCliente, crearProducto, toggleProducto, crearVenta,
+    loadAll, buscarCliente, crearCliente, crearProducto, toggleProducto, crearVenta,
   })
 }
