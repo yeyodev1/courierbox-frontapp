@@ -1,0 +1,333 @@
+// Shared surfaces for the Ventas de productos screen, following the same
+// mixin-per-concern shape as caja-ui.scss: components `@use` this file inside
+// their own scoped <style>, so every rule stays scoped to the component that
+// asked for it and nothing leaks into the rest of the admin panel.
+@use '@/styles/tokens/colors' as *;
+@use '@/styles/tokens/space' as *;
+
+@mixin panel {
+  .panel {
+    background: linear-gradient(180deg, rgba($ink-850, 0.9), rgba($ink-900, 0.92));
+    border: 1px solid rgba($ink-500, 0.14);
+    border-radius: 18px;
+    padding: $space-5;
+
+    @media (max-width: 640px) { padding: $space-4; border-radius: 14px; }
+  }
+
+  // Title + subtitle pair that opens every panel.
+  .panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-4;
+    padding-bottom: $space-4;
+    margin-bottom: $space-5;
+    border-bottom: 1px solid rgba($ink-500, 0.12);
+
+    h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin: 2px 0 0;
+      color: $ink-400;
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 640px) { flex-direction: column; gap: $space-2; }
+  }
+}
+
+@mixin fields {
+  // A label wrapping its own control. The caption row is a fixed height so
+  // controls on the same grid row line up even when one caption wraps.
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+
+    > span {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: $ink-400;
+      line-height: 1.3;
+    }
+
+    .field-hint {
+      font-size: 0.72rem;
+      color: $ink-500;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+  }
+
+  .field-input {
+    width: 100%;
+    height: 42px;
+    background: rgba($ink-1000, 0.55);
+    border: 1px solid rgba($ink-500, 0.22);
+    border-radius: 10px;
+    padding: 0 $space-3;
+    color: $fg-dark;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+
+    &::placeholder { color: rgba($ink-500, 0.9); }
+
+    &:hover:not(:disabled) { border-color: rgba($ink-500, 0.4); }
+
+    &:focus {
+      border-color: $brand-orange;
+      box-shadow: 0 0 0 3px rgba($brand-orange, 0.16);
+      background: rgba($ink-1000, 0.75);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
+  textarea.field-input {
+    height: auto;
+    min-height: 84px;
+    padding: $space-3;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  // Native selects keep the OS arrow otherwise, which reads as an unstyled
+  // control next to the custom inputs.
+  select.field-input {
+    appearance: none;
+    padding-right: $space-8;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, #{$ink-300} 50%),
+      linear-gradient(135deg, #{$ink-300} 50%, transparent 50%);
+    background-position: calc(100% - 19px) 19px, calc(100% - 13px) 19px;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+
+    option { background: $ink-900; color: $fg-dark; }
+  }
+
+  .check-field {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: $space-2;
+    min-height: 42px;
+    padding: 0 $space-3;
+    border: 1px solid rgba($ink-500, 0.18);
+    border-radius: 10px;
+    background: rgba($ink-1000, 0.35);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: $ink-200;
+    transition: border-color 0.16s ease, background 0.16s ease;
+
+    &:hover { border-color: rgba($ink-500, 0.35); }
+
+    &.on {
+      border-color: rgba($brand-orange, 0.5);
+      background: rgba($brand-orange, 0.08);
+      color: $fg-dark;
+    }
+
+    input[type='checkbox'] {
+      width: 17px;
+      height: 17px;
+      accent-color: $brand-orange;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    &.plain {
+      border: none;
+      background: none;
+      padding: 0;
+      min-height: 0;
+    }
+  }
+
+  // Two-option toggle used for price mode and delivery method.
+  .segmented {
+    display: flex;
+    gap: 3px;
+    height: 42px;
+    padding: 3px;
+    background: rgba($ink-1000, 0.55);
+    border: 1px solid rgba($ink-500, 0.22);
+    border-radius: 10px;
+
+    button {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: $ink-300;
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.16s ease, color 0.16s ease;
+
+      &:hover:not(.on) { background: rgba($ink-500, 0.12); color: $fg-dark; }
+
+      &.on {
+        background: $brand-orange;
+        color: $ink-1000;
+        font-weight: 700;
+        box-shadow: 0 2px 10px rgba($brand-orange, 0.28);
+      }
+    }
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-4;
+    align-items: start;
+
+    @media (max-width: 1000px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 640px) { grid-template-columns: 1fr; }
+  }
+
+  .full { grid-column: 1 / -1; }
+}
+
+@mixin buttons {
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    height: 44px;
+    padding: 0 $space-6;
+    background: $brand-orange;
+    color: $ink-1000;
+    border: none;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+    box-shadow: 0 6px 18px rgba($brand-orange, 0.22);
+
+    &:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); }
+    &:active:not(:disabled) { transform: translateY(0); }
+    &:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 $space-5;
+    background: transparent;
+    border: 1px solid rgba($ink-500, 0.3);
+    border-radius: 11px;
+    color: $ink-300;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+
+    &:hover { background: rgba($ink-500, 0.14); color: $fg-dark; }
+  }
+
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: $brand-orange;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+    &.danger { color: #ff8a8f; }
+  }
+}
+
+@mixin lists {
+  .data-list {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+  }
+
+  .data-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-4;
+    padding: $space-3 $space-4;
+    background: rgba($ink-1000, 0.35);
+    border: 1px solid rgba($ink-500, 0.1);
+    border-radius: 12px;
+    transition: border-color 0.16s ease, background 0.16s ease;
+
+    &:hover { border-color: rgba($ink-500, 0.24); background: rgba($ink-1000, 0.5); }
+
+    strong { font-size: 0.92rem; }
+    p { margin: 2px 0 0; color: $ink-400; font-size: 0.78rem; }
+
+    @media (max-width: 720px) { flex-wrap: wrap; }
+  }
+
+  .money {
+    color: $brand-orange;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: rgba($ink-500, 0.16);
+    color: $ink-300;
+
+    &.credito { background: rgba($brand-orange, 0.14); color: $brand-orange; }
+    &.vencida { background: rgba($signal-red, 0.16); color: #ff8a8f; }
+    &.ok { background: rgba($signal-green, 0.14); color: $signal-green; }
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: $space-8 $space-4;
+    text-align: center;
+    border: 1px dashed rgba($ink-500, 0.22);
+    border-radius: 14px;
+    color: $ink-400;
+
+    i { font-size: 1.4rem; color: rgba($brand-orange, 0.75); }
+    strong { color: $ink-200; font-size: 0.92rem; }
+    p { margin: 0; font-size: 0.8rem; }
+  }
+}

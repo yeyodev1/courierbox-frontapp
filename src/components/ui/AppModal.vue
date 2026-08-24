@@ -31,6 +31,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Short forms look stranded inside the full-height card the long ones need,
+  // so let a modal opt into hugging its own content instead.
+  fitContent: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -61,6 +67,7 @@ function handleOverlayClick() {
         <div
           ref="cardRef"
           class="modal-card"
+          :class="{ 'is-fit': fitContent }"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="title ? titleId : undefined"
@@ -187,6 +194,11 @@ function handleOverlayClick() {
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
+
+  &.is-fit {
+    height: auto !important;
+    max-height: calc(100svh - 4rem) !important;
+  }
   padding: 0 !important;
 
   &:focus {
