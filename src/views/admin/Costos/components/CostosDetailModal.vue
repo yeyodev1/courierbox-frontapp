@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Gasto, GastoAuditUser } from '@/services/costos.api'
 
+import { formatDate, formatDateTime } from '@/utils/format'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppFilePreview from '@/components/ui/AppFilePreview.vue'
 
@@ -22,10 +23,6 @@ const tipoLabel: Record<string, string> = {
 
 function formatCurrency(n: number) {
   return '$' + n.toFixed(2)
-}
-
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function isAuditUser(value: unknown): value is GastoAuditUser {
@@ -91,8 +88,8 @@ function formatPerson(value: Gasto['creadoPor'] | Gasto['updatedBy']) {
         <dl>
           <div><dt>Creado por</dt><dd>{{ formatPerson(gasto.creadoPor) }}</dd></div>
           <div><dt>Actualizado por</dt><dd>{{ formatPerson(gasto.updatedBy) }}</dd></div>
-          <div><dt>Creado</dt><dd>{{ new Date(gasto.createdAt).toLocaleString('es-EC') }}</dd></div>
-          <div><dt>Actualizado</dt><dd>{{ new Date(gasto.updatedAt).toLocaleString('es-EC') }}</dd></div>
+          <div><dt>Creado</dt><dd>{{ formatDateTime(gasto.createdAt) }}</dd></div>
+          <div><dt>Actualizado</dt><dd>{{ formatDateTime(gasto.updatedAt) }}</dd></div>
         </dl>
       </section>
     </div>

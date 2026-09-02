@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { Gasto } from '@/services/costos.api'
 import { useToastStore } from '@/stores/toast.store'
+import { formatDate as formatCalendarDate } from '@/utils/format'
 
 const props = defineProps({
   gastos: { type: Array as () => Gasto[], required: true },
@@ -45,9 +46,7 @@ function formatCurrency(n: number) {
   return '$' + n.toFixed(2)
 }
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+const formatDate = (d: string) => formatCalendarDate(d)
 
 const tipoLabel: Record<string, string> = {
   operacional: 'Operacional',

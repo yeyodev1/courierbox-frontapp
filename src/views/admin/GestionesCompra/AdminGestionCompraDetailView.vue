@@ -165,6 +165,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import { useToastStore } from '@/stores/toast.store'
 import type { GestionCompra } from '@/services/gestiones_compra.api'
+import { formatDate as formatCalendarDate, formatDateTime as formatInstant } from '@/utils/format'
 
 const route = useRoute()
 const toast = useToastStore()
@@ -205,12 +206,10 @@ const viewUrl = computed(() => `${window.location.origin}/compra/${gestion.value
 function estadoLabel(e: string) {
   return { borrador: 'Borrador', activa: 'Activa', completado: 'Completado', cancelado: 'Cancelado' }[e] ?? e
 }
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })
-}
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })
-}
+/** `fechaEntregaTentativa` is a calendar day; the audit trail is a real instant. */
+const formatDate = (iso: string) =>
+  formatCalendarDate(iso, { day: '2-digit', month: 'long', year: 'numeric' })
+const formatDateTime = (iso: string) => formatInstant(iso, { dateStyle: 'short', timeStyle: 'short' })
 
 async function loadGestion() {
   loading.value = true

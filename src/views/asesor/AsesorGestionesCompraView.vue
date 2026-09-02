@@ -81,6 +81,7 @@ import { ref, onMounted } from 'vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import type { GestionCompra, GestionesStats } from '@/services/gestiones_compra.api'
+import { formatDate as formatCalendarDate } from '@/utils/format'
 
 const gestiones = ref<GestionCompra[]>([])
 const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, sumaValorPagado: 0, ventasConfirmadas: 0, comisionGanada: 0, porEstado: {}, porEstadoPago: {} })
@@ -106,7 +107,7 @@ function clienteNombre(g: GestionCompra) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
+  return formatCalendarDate(iso)
 }
 
 async function load() {

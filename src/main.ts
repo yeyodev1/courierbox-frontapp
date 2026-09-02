@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 import router from "./router";
 import { useAuthStore } from "@/stores/auth.store";
+import { installNumberInputWheelGuard } from "@/utils/numberInputWheelGuard";
 
 import "@fontsource/fraunces/400.css";
 import "@fontsource/fraunces/500.css";
@@ -19,6 +20,8 @@ const app = createApp(App);
 const pinia = createPinia();
 app.use(pinia);
 app.use(router);
+
+installNumberInputWheelGuard();
 
 const authStore = useAuthStore(pinia);
 
