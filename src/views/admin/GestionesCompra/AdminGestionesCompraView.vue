@@ -51,6 +51,11 @@ onMounted(g.load)
         <span class="kpi-label">Costo de ventas</span>
         <span class="kpi-value">${{ g.stats.value.sumaCostoVenta.toFixed(2) }}</span>
       </div>
+      <div class="kpi-card kpi-debt">
+        <span class="kpi-label">Por cobrar</span>
+        <span class="kpi-value">${{ g.stats.value.sumaSaldoPendiente?.toFixed(2) ?? '0.00' }}</span>
+        <small class="kpi-hint">Saldo pendiente de las gestiones del mes</small>
+      </div>
       <div class="kpi-card kpi-success">
         <span class="kpi-label">Margen neto</span>
         <span class="kpi-value">${{ g.stats.value.sumaMargenNeto?.toFixed(2) ?? '0.00' }}</span>
@@ -58,7 +63,7 @@ onMounted(g.load)
       </div>
     </div>
     <div v-else class="kpi-row">
-      <div v-for="i in 5" :key="i" class="kpi-skeleton" />
+      <div v-for="i in 6" :key="i" class="kpi-skeleton" />
     </div>
 
     <div class="filters-bar">
@@ -158,6 +163,8 @@ onMounted(g.load)
 
   &.kpi-highlight { border-color: rgba($brand-orange, 0.3); }
   &.kpi-highlight .kpi-value { color: $brand-orange; }
+  &.kpi-debt { border-color: rgba($signal-amber, 0.3); }
+  &.kpi-debt .kpi-value { color: $signal-amber; }
   &.kpi-success { border-color: rgba($signal-green, 0.28); }
   &.kpi-success .kpi-value { color: $signal-green; }
 }

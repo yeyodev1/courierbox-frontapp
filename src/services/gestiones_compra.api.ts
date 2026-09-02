@@ -22,6 +22,22 @@ export interface CuentaBancaria {
 export type GestionCompraEstado = 'borrador' | 'activa' | 'completado' | 'cancelado'
 export type GestionCompraStage = 'solicitada' | 'revisando' | 'comprada' | 'en_transito' | 'entregada'
 
+/**
+ * A payment against the balance. Payment used to be one irreversible step, so a
+ * client who left a deposit and came back to settle had nowhere to put the second
+ * figure. Each entry is kept whole so the balance can be read off the data.
+ */
+export interface GestionAbono {
+  _id: string
+  monto: number
+  fecha: string
+  metodo: 'efectivo' | 'transferencia' | 'tarjeta' | 'deposito' | 'otro'
+  referencia?: string
+  notas?: string
+  registradoPorNombre: string
+  createdAt: string
+}
+
 export interface GestionCompraFoto {
   url: string
   title?: string
@@ -39,7 +55,8 @@ export interface GestionCompra {
   costoVenta: number
   valorComision: number
   valorPagado?: number
-  estadoPago?: 'pendiente' | 'verificando' | 'confirmado' | 'rechazado' | 'reembolsado'
+  abonos?: GestionAbono[]
+  estadoPago?: 'pendiente' | 'verificando' | 'parcial' | 'confirmado' | 'rechazado' | 'reembolsado'
   estadoCompra?: 'pendiente' | 'asignada' | 'comprando' | 'comprada' | 'cancelada'
   estadoBodega?: 'pendiente' | 'recibida' | 'preparando_despacho' | 'despachada'
   estadoEntrega?: 'sin_envio' | 'pendiente' | 'asignada' | 'en_ruta' | 'entregada' | 'fallida' | 'reprogramada'
@@ -111,6 +128,7 @@ export interface GestionesStats {
   sumaCostoVenta: number
   sumaMargenNeto: number
   sumaValorPagado: number
+  sumaSaldoPendiente: number
   ventasConfirmadas: number
   comisionGanada: number
   porEstado: Record<string, number>
@@ -178,6 +196,15 @@ class GestionesCompraAPI extends APIBase {
 
   async confirmarPago(id: string, monto: number): Promise<GestionCompra> {
     const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/confirmar-pago`, { monto })
+    return res.data.gestion
+  }
+
+  /** Registers one payment against the balance; the server keeps the running total. */
+  async registrarAbono(
+    id: string,
+    data: { monto: number; fecha?: string; metodo?: GestionAbono['metodo']; referencia?: string; notas?: string },
+  ): Promise<GestionCompra> {
+    const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/abonos`, data)
     return res.data.gestion
   }
 
