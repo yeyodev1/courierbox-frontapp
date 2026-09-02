@@ -8,7 +8,7 @@ export interface GastoAuditUser {
 
 export interface Gasto {
   _id: string
-  tipo: 'operacional' | 'logistico' | 'envio'
+  tipo: GastoTipo
   categoria: string
   monto: number
   descripcion: string
@@ -22,6 +22,7 @@ export interface Gasto {
   fechaFactura?: string
   libras: number
   valorPorLibra: number
+  numeroPaquetes: number
   valorTotal: number
   valorPagado: number
   paqueteId?: string
@@ -31,8 +32,18 @@ export interface Gasto {
   updatedAt: string
 }
 
+/**
+ * Cost Centre reads the ledger in three sections. The split is by weight rather
+ * than by `tipo`, so an expense filed before the sections existed still lands in
+ * the one it belongs to — see the server's `sectionFilter`.
+ */
+export type CostoSeccion = 'generales' | 'envios' | 'recepciones'
+
+/** `logistico` predates Cost Centre; it has no tab, and is read as a general expense. */
+export type GastoTipo = 'operacional' | 'logistico' | 'envio' | 'recepcion'
+
 export interface CostosResumen {
-  total: { total: number; facturas: number; libras: number }
+  total: { total: number; facturas: number; libras: number; paquetes: number; costoPorLibra: number }
   porTipo: Array<{ _id: string; total: number; facturas: number; libras: number }>
   porMes: Array<{ _id: string; total: number; facturas: number; libras: number }>
   porCategoria: Array<{ _id: string; total: number; facturas: number }>
@@ -40,6 +51,12 @@ export interface CostosResumen {
 }
 
 export const CATEGORIAS_POR_TIPO: Record<string, string[]> = {
+  recepcion: [
+    'IMPORTACIONES',
+    'EXPORTACIONES',
+    'CARGA AEREA',
+    'CARGA MARITIMA',
+  ],
   operacional: [
     'IMPORTACIONES',
     'EXPORTACIONES',
@@ -78,8 +95,9 @@ export const CATEGORIAS_POR_TIPO: Record<string, string[]> = {
 }
 
 class CostosAPI extends APIBase {
-  async list(params?: { tipo?: string; categoria?: string; proveedor?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
+  async list(params?: { seccion?: CostoSeccion; tipo?: string; categoria?: string; proveedor?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
     const searchParams = new URLSearchParams()
+    if (params?.seccion) searchParams.set('seccion', params.seccion)
     if (params?.tipo) searchParams.set('tipo', params.tipo)
     if (params?.categoria) searchParams.set('categoria', params.categoria)
     if (params?.proveedor) searchParams.set('proveedor', params.proveedor)
@@ -104,6 +122,7 @@ class CostosAPI extends APIBase {
     fechaFactura?: string
     libras?: number
     valorPorLibra?: number
+    numeroPaquetes?: number
     valorTotal?: number
     valorPagado?: number
     idempotencyKey?: string
@@ -119,8 +138,9 @@ class CostosAPI extends APIBase {
     return res.data
   }
 
-  async resumen(params?: { tipo?: string; categoria?: string; proveedor?: string; desde?: string; hasta?: string }): Promise<{ resumen: CostosResumen }> {
+  async resumen(params?: { seccion?: CostoSeccion; tipo?: string; categoria?: string; proveedor?: string; desde?: string; hasta?: string }): Promise<{ resumen: CostosResumen }> {
     const searchParams = new URLSearchParams()
+    if (params?.seccion) searchParams.set('seccion', params.seccion)
     if (params?.tipo) searchParams.set('tipo', params.tipo)
     if (params?.categoria) searchParams.set('categoria', params.categoria)
     if (params?.proveedor) searchParams.set('proveedor', params.proveedor)

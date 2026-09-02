@@ -12,7 +12,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const apiStub: any = new Proxy(function () {} as any, {
   get: (_t, prop) => (prop === 'then' ? undefined : apiStub),
-  apply: () => Promise.resolve({ data: [], items: [], total: 0, results: [], gestiones: [], orders: [], notificaciones: [], retiros: [], paquetes: [], contactos: [], proveedores: [], envios: [], stats: {} }),
+  apply: () => Promise.resolve({ data: [], items: [], total: 0, results: [], gestiones: [], orders: [], notificaciones: [], retiros: [], paquetes: [], contactos: [], proveedores: [], envios: [], gastos: [], stats: {} }),
 })
 
 vi.mock('@/services/admin.api', () => ({ adminApi: apiStub, default: apiStub }))
@@ -20,7 +20,13 @@ vi.mock('@/services/asesoria.api', () => ({ asesoriaApi: apiStub, default: apiSt
 vi.mock('@/services/auth.api', () => ({ authAPI: apiStub, default: apiStub }))
 vi.mock('@/services/contactos.api', () => ({ contactosApi: apiStub, default: apiStub }))
 vi.mock('@/services/contactos_cb.api', () => ({ contactosCbAPI: apiStub, default: apiStub }))
-vi.mock('@/services/costos.api', () => ({ CATEGORIAS_POR_TIPO: apiStub, costosApi: apiStub, default: apiStub }))
+// `CATEGORIAS_POR_TIPO` is a plain lookup, not a client: stubbing it with the
+// catch-all proxy handed the toolbar a function where it declares an array.
+vi.mock('@/services/costos.api', () => ({
+  CATEGORIAS_POR_TIPO: { operacional: [], logistico: [], envio: [], recepcion: [] },
+  costosApi: apiStub,
+  default: apiStub,
+}))
 vi.mock('@/services/courierbridge.api', () => ({ courierBridgeApi: apiStub, default: apiStub }))
 vi.mock('@/services/cuentas_bancarias.api', () => ({ cuentasBancariasAPI: apiStub, default: apiStub }))
 vi.mock('@/services/envios.api', () => ({ enviosApi: apiStub, default: apiStub }))
@@ -82,7 +88,10 @@ const VIEWS: Array<[string, () => Promise<any>]> = [
   ['admin/AdminTrackingView.vue', () => import('@/views/admin/AdminTrackingView.vue')],
   ['admin/AdminUsersView.vue', () => import('@/views/admin/AdminUsersView.vue')],
   ['admin/ConciliacionView.vue', () => import('@/views/admin/ConciliacionView.vue')],
-  ['admin/Costos/CostosIndex.vue', () => import('@/views/admin/Costos/CostosIndex.vue')],
+  ['admin/CentroCostos/CentroCostosLayout.vue', () => import('@/views/admin/CentroCostos/CentroCostosLayout.vue')],
+  ['admin/CentroCostos/GastosGeneralesView.vue', () => import('@/views/admin/CentroCostos/GastosGeneralesView.vue')],
+  ['admin/CentroCostos/GastosEnviosView.vue', () => import('@/views/admin/CentroCostos/GastosEnviosView.vue')],
+  ['admin/CentroCostos/RecepcionesView.vue', () => import('@/views/admin/CentroCostos/RecepcionesView.vue')],
   ['admin/DashboardView.vue', () => import('@/views/admin/DashboardView.vue')],
   ['admin/GestionesCompra/AdminGestionCompraDetailView.vue', () => import('@/views/admin/GestionesCompra/AdminGestionCompraDetailView.vue')],
   ['admin/GestionesCompra/AdminGestionesCompraView.vue', () => import('@/views/admin/GestionesCompra/AdminGestionesCompraView.vue')],

@@ -1,10 +1,22 @@
 import { computed, ref, watch } from 'vue'
-import { CATEGORIAS_POR_TIPO, type Gasto } from '@/services/costos.api'
+import { CATEGORIAS_POR_TIPO, type Gasto, type GastoTipo } from '@/services/costos.api'
+import { toDateInputValue } from '@/utils/format'
 
 export const OTRA_CATEGORIA = 'Otro (especificar)'
 
+/**
+ * Cost Centre files two shapes of record and this form serves both.
+ *
+ * A `gasto` is money out: an amount, and nothing to say about weight. A
+ * `recepcion` is cargo: the pounds that came in and what each one cost, with the
+ * total derived from them so the operator cannot type a figure that contradicts
+ * the rate. Before the split one form did both, with a checkbox deciding which —
+ * which is how pounds ended up on expenses and expenses ended up in the pounds.
+ */
+export type CostoModo = 'gasto' | 'recepcion'
+
 export interface CostoForm {
-  tipo: string
+  tipo: GastoTipo
   categoria: string
   monto: number
   descripcion: string
@@ -17,14 +29,15 @@ export interface CostoForm {
   valorPorLibra: number
   valorTotal: number
   valorPagado: number
+  numeroPaquetes: number
   categoriaPersonalizada: string
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export function emptyCostoForm(): CostoForm {
+export function emptyCostoForm(tipo: GastoTipo = 'operacional'): CostoForm {
   return {
-    tipo: 'operacional',
+    tipo,
     categoria: '',
     monto: 0,
     descripcion: '',
@@ -37,24 +50,15 @@ export function emptyCostoForm(): CostoForm {
     valorPorLibra: 0,
     valorTotal: 0,
     valorPagado: 0,
+    numeroPaquetes: 0,
     categoriaPersonalizada: '',
   }
 }
 
-const toDateInput = (value?: string | Date | null) =>
-  value ? new Date(value).toISOString().slice(0, 10) : today()
-
-/** An expense is weight-based when it carries pounds, a rate, or a total apart from the amount. */
-export function isWeightExpense(gasto: Gasto) {
-  return (
-    Number(gasto.libras || 0) > 0 ||
-    Number(gasto.valorPorLibra || 0) > 0 ||
-    Number(gasto.valorTotal || 0) !== Number(gasto.monto || 0)
-  )
-}
+const toDateInput = (value?: string | Date | null) => toDateInputValue(value) || today()
 
 export function gastoToForm(gasto: Gasto): CostoForm {
-  const conocidas = CATEGORIAS_POR_TIPO[gasto.tipo as keyof typeof CATEGORIAS_POR_TIPO] || []
+  const conocidas = CATEGORIAS_POR_TIPO[gasto.tipo] || []
   const esConocida = conocidas.includes(gasto.categoria)
   return {
     tipo: gasto.tipo,
@@ -70,17 +74,15 @@ export function gastoToForm(gasto: Gasto): CostoForm {
     valorPorLibra: Number(gasto.valorPorLibra || 0),
     valorTotal: Number(gasto.valorTotal || gasto.monto || 0),
     valorPagado: Number(gasto.valorPagado || 0),
+    numeroPaquetes: Number(gasto.numeroPaquetes || 0),
     categoriaPersonalizada: esConocida ? '' : gasto.categoria,
   }
 }
 
-/**
- * Expense form state. In weight mode the total is derived from pounds × rate and
- * drives the amount, so the operator cannot type a figure that contradicts it.
- */
-export function useCostoForm() {
-  const form = ref<CostoForm>(emptyCostoForm())
-  const porLibras = ref(false)
+export function useCostoForm(modo: CostoModo = 'gasto', tipoPorDefecto: GastoTipo = 'operacional') {
+  const esRecepcion = modo === 'recepcion'
+
+  const form = ref<CostoForm>(emptyCostoForm(tipoPorDefecto))
   const facturaFile = ref<File | null>(null)
 
   const initialSnapshot = ref('')
@@ -90,8 +92,7 @@ export function useCostoForm() {
   )
 
   const categoriasDisponibles = computed(() => {
-    if (!form.value.tipo) return []
-    const cats = CATEGORIAS_POR_TIPO[form.value.tipo as keyof typeof CATEGORIAS_POR_TIPO] || []
+    const cats = CATEGORIAS_POR_TIPO[form.value.tipo] || []
     return [...cats, OTRA_CATEGORIA]
   })
 
@@ -103,58 +104,52 @@ export function useCostoForm() {
     initialSnapshot.value = currentSnapshot.value
   }
 
+  /** On a reception the total follows the rate, never the other way round. */
   function syncCalculatedWeightTotal() {
-    if (!porLibras.value) return
-    const total = Number((Number(form.value.libras || 0) * Number(form.value.valorPorLibra || 0)).toFixed(2))
+    if (!esRecepcion) return
+    const total = Number(
+      (Number(form.value.libras || 0) * Number(form.value.valorPorLibra || 0)).toFixed(2),
+    )
     form.value.valorTotal = total
-    if (total > 0) form.value.monto = total
+    form.value.monto = total
   }
 
-  /** Turning weight mode off returns the total to whatever amount was typed. */
-  function syncWeightFields(enabled: boolean) {
-    if (!enabled) {
-      form.value.libras = 0
-      form.value.valorPorLibra = 0
-      form.value.valorTotal = form.value.monto
-      return
-    }
-    syncCalculatedWeightTotal()
+  if (esRecepcion) {
+    watch([() => form.value.libras, () => form.value.valorPorLibra], syncCalculatedWeightTotal)
   }
-
-  watch([porLibras, () => form.value.libras, () => form.value.valorPorLibra], syncCalculatedWeightTotal)
 
   function load(gasto: Gasto | null) {
-    if (gasto) {
-      form.value = gastoToForm(gasto)
-      porLibras.value = isWeightExpense(gasto)
-      if (porLibras.value) syncCalculatedWeightTotal()
-    } else {
-      form.value = emptyCostoForm()
-      porLibras.value = false
-    }
+    form.value = gasto ? gastoToForm(gasto) : emptyCostoForm(tipoPorDefecto)
+    if (!gasto) form.value.tipo = tipoPorDefecto
+    if (esRecepcion) syncCalculatedWeightTotal()
     facturaFile.value = null
     syncSnapshot()
   }
 
   /** Returns the error to show, or null when the form is ready to submit. */
   function validate(): string | null {
-    if (!categoriaFinal.value || !form.value.descripcion || form.value.monto <= 0) {
+    if (!categoriaFinal.value || !form.value.descripcion) {
       return 'Completa todos los campos requeridos'
     }
-    if (porLibras.value && (Number(form.value.libras || 0) <= 0 || Number(form.value.valorPorLibra || 0) <= 0)) {
-      return 'Ingresa libras y valor por libra para calcular el total'
+    if (esRecepcion) {
+      if (Number(form.value.libras || 0) <= 0 || Number(form.value.valorPorLibra || 0) <= 0) {
+        return 'Ingresa las libras y el valor por libra para calcular el total'
+      }
+      return null
     }
+    if (form.value.monto <= 0) return 'El monto debe ser mayor a cero'
     return null
   }
 
   function buildPayload() {
-    const peso = porLibras.value
+    const peso = esRecepcion
       ? {
           libras: form.value.libras,
           valorPorLibra: form.value.valorPorLibra,
-          valorTotal: form.value.valorTotal || form.value.monto,
+          valorTotal: form.value.valorTotal,
+          numeroPaquetes: form.value.numeroPaquetes,
         }
-      : { libras: 0, valorPorLibra: 0, valorTotal: form.value.monto }
+      : { libras: 0, valorPorLibra: 0, valorTotal: form.value.monto, numeroPaquetes: 0 }
 
     return {
       tipo: form.value.tipo,
@@ -173,13 +168,12 @@ export function useCostoForm() {
 
   return {
     form,
-    porLibras,
     facturaFile,
     hasUnsavedChanges,
     categoriasDisponibles,
-    syncWeightFields,
     load,
     validate,
     buildPayload,
+    syncSnapshot,
   }
 }
