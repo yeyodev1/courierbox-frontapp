@@ -84,7 +84,7 @@ import type { GestionCompra, GestionesStats } from '@/services/gestiones_compra.
 import { formatDate as formatCalendarDate } from '@/utils/format'
 
 const gestiones = ref<GestionCompra[]>([])
-const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, sumaValorPagado: 0, ventasConfirmadas: 0, comisionGanada: 0, porEstado: {}, porEstadoPago: {} })
+const stats = ref<GestionesStats>({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0, sumaCostoVenta: 0, sumaMargenNeto: 0, sumaValorPagado: 0, sumaSaldoPendiente: 0, ventasConfirmadas: 0, comisionGanada: 0, porEstado: {}, porEstadoPago: {} })
 const loading = ref(true)
 const page = ref(1)
 const pages = ref(1)
