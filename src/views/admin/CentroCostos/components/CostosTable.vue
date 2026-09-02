@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { Gasto } from '@/services/costos.api'
 import { useToastStore } from '@/stores/toast.store'
@@ -10,7 +10,17 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   deleting: { type: Boolean, default: false },
+  /**
+   * Cost Centre reads the same records two ways. An expense is money out and has
+   * nothing to say about weight; a reception is cargo, and its whole reason to
+   * exist is the pounds and the rate. Showing an empty Lbs column on the expense
+   * tabs is what let the two get confused for each other in the first place.
+   */
+  variant: { type: String as () => 'gastos' | 'recepciones', default: 'gastos' },
+  emptyLabel: { type: String, default: 'No hay registros' },
 })
+
+const esRecepcion = computed(() => props.variant === 'recepciones')
 
 const emit = defineEmits<{
   (e: 'detail', gasto: Gasto): void
@@ -48,10 +58,15 @@ function formatCurrency(n: number) {
 
 const formatDate = (d: string) => formatCalendarDate(d)
 
+function formatRate(n: number) {
+  return '$' + Number(n || 0).toFixed(2)
+}
+
 const tipoLabel: Record<string, string> = {
   operacional: 'Operacional',
   logistico: 'Logístico',
   envio: 'Envío',
+  recepcion: 'Recepción',
 }
 
 watch(() => props.error, (value) => {
@@ -74,8 +89,8 @@ watch(
       <div v-for="n in 4" :key="n" class="skeleton-row"></div>
     </div>
     <div v-else-if="gastos.length === 0" class="empty">
-      <i class="fa-solid fa-coins" />
-      <p>No hay gastos registrados</p>
+      <i :class="esRecepcion ? 'fa-solid fa-weight-hanging' : 'fa-solid fa-coins'" />
+      <p>{{ emptyLabel }}</p>
     </div>
 
     <div v-else class="results-block">
@@ -84,11 +99,12 @@ watch(
           <thead>
             <tr>
               <th>Fecha</th>
-              <th>Tipo</th>
               <th>Categoría</th>
-              <th>Descripción</th>
+              <th>{{ esRecepcion ? 'Carga' : 'Descripción' }}</th>
               <th>Factura</th>
-              <th>Lbs</th>
+              <th v-if="esRecepcion">Paquetes</th>
+              <th v-if="esRecepcion">Lbs</th>
+              <th v-if="esRecepcion">$/lb</th>
               <th>Total</th>
               <th>Pagado</th>
               <th>Monto</th>
@@ -101,11 +117,12 @@ watch(
           <tbody>
             <tr v-for="g in gastos" :key="g._id" class="clickable-row" tabindex="0" @click="$emit('detail', g)" @keydown.enter.prevent="$emit('detail', g)" @keydown.space.prevent="$emit('detail', g)">
               <td class="mono">{{ formatDate(g.fecha) }}</td>
-              <td><span class="badge" :class="g.tipo">{{ tipoLabel[g.tipo] || g.tipo }}</span></td>
               <td>{{ g.categoria }}</td>
               <td>{{ g.descripcion }}</td>
               <td class="mono">{{ g.numeroFactura || '—' }}</td>
-              <td class="mono">{{ Number(g.libras || 0).toFixed(2) }}</td>
+              <td v-if="esRecepcion" class="mono">{{ Number(g.numeroPaquetes || 0) || '—' }}</td>
+              <td v-if="esRecepcion" class="mono">{{ Number(g.libras || 0).toFixed(2) }}</td>
+              <td v-if="esRecepcion" class="mono rate">{{ formatRate(g.valorPorLibra) }}</td>
               <td class="mono total">{{ formatCurrency(g.valorTotal || g.monto) }}</td>
               <td class="mono total">{{ formatCurrency(g.valorPagado || 0) }}</td>
               <td class="mono total">{{ formatCurrency(g.monto) }}</td>
@@ -140,10 +157,18 @@ watch(
           </div>
 
           <dl class="gasto-card-dl">
-            <div><dt>Pagado</dt><dd>{{ formatCurrency(g.valorPagado || 0) }}</dd></div>
-            <div><dt>Monto</dt><dd>{{ formatCurrency(g.monto) }}</dd></div>
-            <div><dt>Proveedor</dt><dd>{{ g.proveedor || '—' }}</dd></div>
-            <div><dt>Factura</dt><dd>{{ g.numeroFactura || '—' }}</dd></div>
+            <template v-if="esRecepcion">
+              <div><dt>Libras</dt><dd>{{ Number(g.libras || 0).toFixed(2) }}</dd></div>
+              <div><dt>Valor por libra</dt><dd>{{ formatRate(g.valorPorLibra) }}</dd></div>
+              <div><dt>Paquetes</dt><dd>{{ Number(g.numeroPaquetes || 0) || '—' }}</dd></div>
+              <div><dt>Proveedor</dt><dd>{{ g.proveedor || '—' }}</dd></div>
+            </template>
+            <template v-else>
+              <div><dt>Pagado</dt><dd>{{ formatCurrency(g.valorPagado || 0) }}</dd></div>
+              <div><dt>Monto</dt><dd>{{ formatCurrency(g.monto) }}</dd></div>
+              <div><dt>Proveedor</dt><dd>{{ g.proveedor || '—' }}</dd></div>
+              <div><dt>Factura</dt><dd>{{ g.numeroFactura || '—' }}</dd></div>
+            </template>
           </dl>
 
           <div class="gasto-card-footer">
@@ -160,8 +185,10 @@ watch(
 
     <AppConfirmModal
       :open="showDeleteConfirm"
-      title="Eliminar gasto"
-      message="¿Eliminar este gasto? Esta acción no se puede deshacer."
+      :title="esRecepcion ? 'Eliminar recepción' : 'Eliminar gasto'"
+      :message="esRecepcion
+        ? '¿Eliminar esta recepción? Se descontarán sus libras de los totales y no se puede deshacer.'
+        : '¿Eliminar este gasto? Esta acción no se puede deshacer.'"
       confirm-label="Eliminar"
       :confirm-loading="deleteInFlight || deleting"
       variant="danger"
@@ -224,6 +251,11 @@ watch(
   gap: $space-3;
 }
 
+.mono.rate {
+  color: $brand-orange;
+  font-weight: 600;
+}
+
 .gastos-table {
   width: 100%;
   border-collapse: collapse;
@@ -261,6 +293,8 @@ watch(
   font-weight: 600;
   &.operacional { background: rgba($brand-orange, 0.12); color: $brand-orange; }
   &.logistico { background: rgba(#4fc3f7, 0.12); color: #4fc3f7; }
+
+  &.recepcion { background: rgba(#7ee0a0, 0.12); color: #7ee0a0; }
   &.envio { background: rgba(#81c784, 0.12); color: #81c784; }
 }
 
