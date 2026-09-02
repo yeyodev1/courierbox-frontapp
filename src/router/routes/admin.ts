@@ -44,11 +44,34 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: "Histórico de Órdenes · Courier Box" },
       },
       {
-        path: "costos",
-        name: "AdminCostos",
-        component: () => import("@/views/admin/Costos/CostosIndex.vue"),
-        meta: { title: "Costos y Gastos · Courier Box" },
+        path: "centro-costos",
+        component: () => import("@/views/admin/CentroCostos/CentroCostosLayout.vue"),
+        meta: { title: "Centro de Costos · Courier Box" },
+        children: [
+          { path: "", redirect: { name: "AdminGastosGenerales" } },
+          {
+            path: "gastos-generales",
+            name: "AdminGastosGenerales",
+            component: () => import("@/views/admin/CentroCostos/GastosGeneralesView.vue"),
+            meta: { title: "Gastos Generales · Courier Box" },
+          },
+          {
+            path: "gastos-envios",
+            name: "AdminGastosEnvios",
+            component: () => import("@/views/admin/CentroCostos/GastosEnviosView.vue"),
+            meta: { title: "Gastos por Envíos · Courier Box" },
+          },
+          {
+            path: "recepciones",
+            name: "AdminRecepciones",
+            component: () => import("@/views/admin/CentroCostos/RecepcionesView.vue"),
+            meta: { title: "Ingreso de Recepciones · Courier Box" },
+          },
+        ],
       },
+      // Cost Centre replaced the single costs screen; the old link is bookmarked
+      // and linked from the providers page, so it keeps working.
+      { path: "costos", name: "AdminCostos", redirect: { name: "AdminGastosGenerales" } },
       {
         path: "proveedores",
         name: "AdminProveedores",

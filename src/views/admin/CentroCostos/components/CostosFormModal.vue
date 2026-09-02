@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** Create or edit an expense, optionally priced by weight. */
 import { ref, watch } from 'vue'
-import type { Gasto } from '@/services/costos.api'
+import type { Gasto, GastoTipo } from '@/services/costos.api'
 import AppSelect from '@/components/ui/AppSelect.vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
@@ -11,9 +11,14 @@ import ProveedorPicker from './ProveedorPicker.vue'
 import ComprobantePreview from './ComprobantePreview.vue'
 import { OTRA_CATEGORIA, useCostoForm } from './useCostoForm'
 
+/**
+ * The expense form for a Cost Centre tab. `tipo` comes from the tab rather than a
+ * dropdown, and the weight fields are gone: pounds belong to a reception, and
+ * offering them here is how expenses and receptions ended up in one list.
+ */
 const props = withDefaults(
-  defineProps<{ show: boolean; initialData?: Gasto | null; saving?: boolean }>(),
-  { initialData: null, saving: false },
+  defineProps<{ show: boolean; initialData?: Gasto | null; saving?: boolean; tipo: GastoTipo; titulo?: string }>(),
+  { initialData: null, saving: false, titulo: 'gasto' },
 )
 
 const emit = defineEmits<{
@@ -22,20 +27,15 @@ const emit = defineEmits<{
 }>()
 
 const toastStore = useToastStore()
-const c = useCostoForm()
+const c = useCostoForm('gasto', props.tipo)
 
 const showCloseConfirm = ref(false)
-
-const TIPO_OPTIONS = [
-  { value: 'operacional', label: 'Operacional' },
-  { value: 'logistico', label: 'Logístico' },
-  { value: 'envio', label: 'Envío' },
-]
 
 watch(
   () => props.show,
   (visible) => {
-    if (visible) c.load(props.initialData)
+    if (!visible) return
+    c.load(props.initialData)
   },
 )
 
@@ -62,7 +62,7 @@ function handleSave() {
 <template>
   <AppModal
     :show="show"
-    :title="initialData ? 'Editar gasto' : 'Nuevo gasto'"
+    :title="`${initialData ? 'Editar' : 'Nuevo'} ${titulo}`"
     icon="fa-solid fa-coins"
     icon-variant="info"
     max-width="600px"
@@ -72,11 +72,6 @@ function handleSave() {
   >
     <form id="costos-form" @submit.prevent="handleSave">
       <div class="form-grid">
-        <div class="form-field">
-          <span>Tipo *</span>
-          <AppSelect v-model="c.form.value.tipo" :options="TIPO_OPTIONS" placeholder="Seleccionar tipo" />
-        </div>
-
         <div class="form-field">
           <span>Categoría *</span>
           <AppSelect
@@ -98,15 +93,7 @@ function handleSave() {
 
         <div class="form-field">
           <span>Monto USD *</span>
-          <input
-            v-model.number="c.form.value.monto"
-            type="number"
-            step="0.01"
-            min="0"
-            class="field-input"
-            :disabled="c.porLibras.value"
-          />
-          <small v-if="c.porLibras.value" class="field-note">Se sincroniza con el total calculado por libras.</small>
+          <input v-model.number="c.form.value.monto" type="number" step="0.01" min="0" class="field-input" />
         </div>
 
         <div class="form-field">
@@ -114,27 +101,6 @@ function handleSave() {
         </div>
 
         <ProveedorPicker v-model="c.form.value.proveedor" :tipo="c.form.value.tipo" />
-
-        <label class="toggle-row full-width weight-toggle">
-          <input v-model="c.porLibras.value" type="checkbox" @change="c.syncWeightFields(c.porLibras.value)" />
-          <span>Incluye costo por libras</span>
-        </label>
-
-        <div v-if="c.porLibras.value" class="weight-fields full-width">
-          <div class="form-field">
-            <span>Libras</span>
-            <input v-model.number="c.form.value.libras" type="number" min="0" step="0.01" class="field-input" />
-          </div>
-          <div class="form-field">
-            <span>Valor por libra</span>
-            <input v-model.number="c.form.value.valorPorLibra" type="number" min="0" step="0.01" class="field-input" />
-          </div>
-          <div class="form-field">
-            <span>Valor total</span>
-            <input v-model.number="c.form.value.valorTotal" type="number" min="0" step="0.01" class="field-input" disabled />
-            <small class="field-note">Calculado automáticamente.</small>
-          </div>
-        </div>
 
         <div class="form-field">
           <span>Referencia</span>
