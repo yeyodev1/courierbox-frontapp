@@ -4,6 +4,7 @@ import {
   CATEGORIAS_POR_TIPO,
   type CostoSeccion,
   type CostosResumen,
+  type CostosSaldos,
   type Gasto,
   type GastoTipo,
 } from '@/services/costos.api'
@@ -35,6 +36,9 @@ export function useSeccionCostos(config: SeccionConfig) {
 
   const gastos = ref<Gasto[]>([])
   const resumen = ref<CostosResumen | null>(null)
+  const saldos = ref<CostosSaldos>({ monto: 0, pagado: 0, pendiente: 0, conSaldo: 0 })
+  /** "Solo pendientes" is the collections view: what this section still owes. */
+  const soloPendientes = ref(false)
   const loading = ref(false)
   const saving = ref(false)
   const deleting = ref(false)
@@ -58,7 +62,16 @@ export function useSeccionCostos(config: SeccionConfig) {
   const resumenSeguro = computed(() => {
     if (!resumen.value) return null
     return {
-      total: resumen.value.total || { total: 0, facturas: 0, libras: 0, paquetes: 0, costoPorLibra: 0 },
+      total: resumen.value.total || {
+        total: 0,
+        pagado: 0,
+        pendiente: 0,
+        conSaldo: 0,
+        facturas: 0,
+        libras: 0,
+        paquetes: 0,
+        costoPorLibra: 0,
+      },
       porMes: resumen.value.porMes || [],
       porCategoria: resumen.value.porCategoria || [],
       porProveedor: resumen.value.porProveedor || [],
@@ -80,12 +93,13 @@ export function useSeccionCostos(config: SeccionConfig) {
     error.value = ''
     try {
       const [lista, totales] = await Promise.all([
-        costosApi.list({ ...filtros(), limit: 200 }),
+        costosApi.list({ ...filtros(), limit: 200, soloPendientes: soloPendientes.value }),
         costosApi.resumen(filtros()),
       ])
       // A list screen with a malformed payload should show an empty state, not
       // take the table down with it.
       gastos.value = Array.isArray(lista?.gastos) ? lista.gastos : []
+      saldos.value = lista?.saldos ?? { monto: 0, pagado: 0, pendiente: 0, conSaldo: 0 }
       resumen.value = totales?.resumen ?? null
     } catch (e: any) {
       error.value = e.message || 'No pudimos cargar los registros'
@@ -157,10 +171,18 @@ export function useSeccionCostos(config: SeccionConfig) {
   onMounted(load)
   watch([filtroCategoria, filtroProveedor, filtroDesde, filtroHasta], load)
 
+  async function togglePendientes() {
+    soloPendientes.value = !soloPendientes.value
+    await load()
+  }
+
   return {
     gastos,
     resumen,
     resumenSeguro,
+    saldos,
+    soloPendientes,
+    togglePendientes,
     loading,
     saving,
     deleting,

@@ -43,11 +43,38 @@ export type CostoSeccion = 'generales' | 'envios' | 'recepciones'
 export type GastoTipo = 'operacional' | 'logistico' | 'envio' | 'recepcion'
 
 export interface CostosResumen {
-  total: { total: number; facturas: number; libras: number; paquetes: number; costoPorLibra: number }
+  total: {
+    total: number
+    pagado: number
+    pendiente: number
+    conSaldo: number
+    facturas: number
+    libras: number
+    paquetes: number
+    costoPorLibra: number
+  }
   porTipo: Array<{ _id: string; total: number; facturas: number; libras: number }>
   porMes: Array<{ _id: string; total: number; facturas: number; libras: number }>
   porCategoria: Array<{ _id: string; total: number; facturas: number }>
-  porProveedor: Array<{ _id: string; total: number; facturas: number }>
+  porProveedor: Array<{ _id: string; total: number; pendiente: number; facturas: number }>
+}
+
+/** Totals for the whole filtered set, so the debt does not shrink with the page. */
+export interface CostosSaldos {
+  monto: number
+  pagado: number
+  pendiente: number
+  conSaldo: number
+}
+
+/**
+ * What a record still owes. `valorPagado` was captured from day one and never
+ * read back, so the detail card printed "Valor pagado $0.00" and left the
+ * subtraction to the operator.
+ */
+export function saldoPendienteDe(gasto: Pick<Gasto, 'monto' | 'valorTotal' | 'valorPagado'>): number {
+  const total = Number(gasto.valorTotal) > 0 ? Number(gasto.valorTotal) : Number(gasto.monto) || 0
+  return Math.max(Math.round((total - (Number(gasto.valorPagado) || 0)) * 100) / 100, 0)
 }
 
 export const CATEGORIAS_POR_TIPO: Record<string, string[]> = {
@@ -95,7 +122,7 @@ export const CATEGORIAS_POR_TIPO: Record<string, string[]> = {
 }
 
 class CostosAPI extends APIBase {
-  async list(params?: { seccion?: CostoSeccion; tipo?: string; categoria?: string; proveedor?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
+  async list(params?: { seccion?: CostoSeccion; tipo?: string; categoria?: string; proveedor?: string; desde?: string; hasta?: string; limit?: number; offset?: number; soloPendientes?: boolean }) {
     const searchParams = new URLSearchParams()
     if (params?.seccion) searchParams.set('seccion', params.seccion)
     if (params?.tipo) searchParams.set('tipo', params.tipo)
@@ -105,7 +132,10 @@ class CostosAPI extends APIBase {
     if (params?.hasta) searchParams.set('hasta', params.hasta)
     if (params?.limit) searchParams.set('limit', String(params.limit))
     if (params?.offset) searchParams.set('offset', String(params.offset))
-    const res = await this.get<{ gastos: Gasto[]; total: number }>(`v1/costos?${searchParams.toString()}`)
+    if (params?.soloPendientes) searchParams.set('soloPendientes', 'true')
+    const res = await this.get<{ gastos: Gasto[]; total: number; saldos: CostosSaldos }>(
+      `v1/costos?${searchParams.toString()}`,
+    )
     return res.data
   }
 

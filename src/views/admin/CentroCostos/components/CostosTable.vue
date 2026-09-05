@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
-import type { Gasto } from '@/services/costos.api'
+import { saldoPendienteDe, type Gasto } from '@/services/costos.api'
 import { useToastStore } from '@/stores/toast.store'
 import { formatDate as formatCalendarDate } from '@/utils/format'
 
@@ -107,6 +107,7 @@ watch(
               <th v-if="esRecepcion">$/lb</th>
               <th>Total</th>
               <th>Pagado</th>
+              <th>Pendiente</th>
               <th>Monto</th>
               <th>Proveedor</th>
               <th>Ref.</th>
@@ -125,6 +126,10 @@ watch(
               <td v-if="esRecepcion" class="mono rate">{{ formatRate(g.valorPorLibra) }}</td>
               <td class="mono total">{{ formatCurrency(g.valorTotal || g.monto) }}</td>
               <td class="mono total">{{ formatCurrency(g.valorPagado || 0) }}</td>
+              <!-- The subtraction the operator was left to do in their head. -->
+              <td class="mono total" :class="{ debe: saldoPendienteDe(g) > 0 }">
+                {{ formatCurrency(saldoPendienteDe(g)) }}
+              </td>
               <td class="mono total">{{ formatCurrency(g.monto) }}</td>
               <td>{{ g.proveedor || '—' }}</td>
               <td class="mono">{{ g.referencia || '—' }}</td>
@@ -161,11 +166,15 @@ watch(
               <div><dt>Libras</dt><dd>{{ Number(g.libras || 0).toFixed(2) }}</dd></div>
               <div><dt>Valor por libra</dt><dd>{{ formatRate(g.valorPorLibra) }}</dd></div>
               <div><dt>Paquetes</dt><dd>{{ Number(g.numeroPaquetes || 0) || '—' }}</dd></div>
-              <div><dt>Proveedor</dt><dd>{{ g.proveedor || '—' }}</dd></div>
+              <div :class="{ debe: saldoPendienteDe(g) > 0 }">
+                <dt>Pendiente</dt><dd>{{ formatCurrency(saldoPendienteDe(g)) }}</dd>
+              </div>
             </template>
             <template v-else>
               <div><dt>Pagado</dt><dd>{{ formatCurrency(g.valorPagado || 0) }}</dd></div>
-              <div><dt>Monto</dt><dd>{{ formatCurrency(g.monto) }}</dd></div>
+              <div :class="{ debe: saldoPendienteDe(g) > 0 }">
+                <dt>Pendiente</dt><dd>{{ formatCurrency(saldoPendienteDe(g)) }}</dd>
+              </div>
               <div><dt>Proveedor</dt><dd>{{ g.proveedor || '—' }}</dd></div>
               <div><dt>Factura</dt><dd>{{ g.numeroFactura || '—' }}</dd></div>
             </template>
@@ -251,6 +260,8 @@ watch(
   gap: $space-3;
 }
 
+.gasto-card-dl .debe dd { color: #ff8a8f; font-weight: 700; }
+
 .mono.rate {
   color: $brand-orange;
   font-weight: 600;
@@ -283,6 +294,8 @@ watch(
   }
   .mono { font-variant-numeric: tabular-nums; }
   .total { color: $brand-orange; font-weight: 700; }
+  /* An outstanding balance reads as a debt, not as another orange total. */
+  .total.debe { color: #ff8a8f; }
 }
 
 .badge {

@@ -9,6 +9,7 @@ import { useSeccionCostos } from './useSeccionCostos'
 import { formatCount, formatCurrency } from '@/utils/format'
 
 import CostosToolbar from './components/CostosToolbar.vue'
+import CostosSaldosBar from './components/CostosSaldosBar.vue'
 import CostosTable from './components/CostosTable.vue'
 import CostosDetailModal from './components/CostosDetailModal.vue'
 import RecepcionFormModal from './components/RecepcionFormModal.vue'
@@ -56,6 +57,13 @@ function formatRate(value: number | null | undefined) {
         <small>{{ formatCount(s.resumenSeguro.value.total.facturas) }} recepciones</small>
       </article>
     </section>
+
+    <CostosSaldosBar
+      :saldos="s.saldos.value"
+      :solo-pendientes="s.soloPendientes.value"
+      :loading="s.loading.value"
+      @toggle="s.togglePendientes()"
+    />
 
     <CostosTable
       variant="recepciones"

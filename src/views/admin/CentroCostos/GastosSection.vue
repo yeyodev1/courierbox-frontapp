@@ -9,6 +9,7 @@ import { useSeccionCostos } from './useSeccionCostos'
 
 import CostosToolbar from './components/CostosToolbar.vue'
 import CostosSummary from './components/CostosSummary.vue'
+import CostosSaldosBar from './components/CostosSaldosBar.vue'
 import CostosTable from './components/CostosTable.vue'
 import CostosDetailModal from './components/CostosDetailModal.vue'
 import CostosFormModal from './components/CostosFormModal.vue'
@@ -42,6 +43,13 @@ const s = useSeccionCostos({ seccion: props.seccion, tipoPorDefecto: props.tipo 
     />
 
     <CostosSummary v-if="s.resumenSeguro.value" :resumen-seguro="s.resumenSeguro.value" />
+
+    <CostosSaldosBar
+      :saldos="s.saldos.value"
+      :solo-pendientes="s.soloPendientes.value"
+      :loading="s.loading.value"
+      @toggle="s.togglePendientes()"
+    />
 
     <CostosTable
       :gastos="s.gastos.value"
