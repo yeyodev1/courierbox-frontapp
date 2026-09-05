@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { gestionesCompraAPI, type GestionCompra, type GestionesStats } from '@/services/gestiones_compra.api'
 import { adminApi } from '@/services/admin.api'
 import { useToastStore } from '@/stores/toast.store'
+import { formatDate as formatCalendarDate } from '@/utils/format'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -45,9 +46,8 @@ export function asesorNombre(g: GestionCompra) {
 /** Net margin left after the advisor's commission and the cost of the sale. */
 export const margenNeto = (g: GestionCompra) => g.valorTotal - g.valorComision - g.costoVenta
 
-export function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+/** `fechaEntregaTentativa` is a calendar day — see `formatDate` in utils/format. */
+export const formatDate = formatCalendarDate
 
 const emptyStats = (): GestionesStats => ({
   totalGestiones: 0,
@@ -56,6 +56,7 @@ const emptyStats = (): GestionesStats => ({
   sumaCostoVenta: 0,
   sumaMargenNeto: 0,
   sumaValorPagado: 0,
+  sumaSaldoPendiente: 0,
   ventasConfirmadas: 0,
   comisionGanada: 0,
   porEstado: {},

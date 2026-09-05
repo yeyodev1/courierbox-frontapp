@@ -33,6 +33,7 @@ const gasto: Gasto = {
   numeroFactura: '',
   libras: 0,
   valorPorLibra: 0,
+  numeroPaquetes: 0,
   valorTotal: 25,
   valorPagado: 0,
   creadoPor: 'u1',

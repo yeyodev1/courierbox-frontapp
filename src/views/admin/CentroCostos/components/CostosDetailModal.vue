@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { Gasto, GastoAuditUser } from '@/services/costos.api'
+import { saldoPendienteDe, type Gasto, type GastoAuditUser } from '@/services/costos.api'
 
+import { formatDate, formatDateTime } from '@/utils/format'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppFilePreview from '@/components/ui/AppFilePreview.vue'
 
@@ -22,10 +23,6 @@ const tipoLabel: Record<string, string> = {
 
 function formatCurrency(n: number) {
   return '$' + n.toFixed(2)
-}
-
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function isAuditUser(value: unknown): value is GastoAuditUser {
@@ -70,6 +67,10 @@ function formatPerson(value: Gasto['creadoPor'] | Gasto['updatedBy']) {
           <div><dt>Monto</dt><dd>{{ formatCurrency(gasto.monto) }}</dd></div>
           <div><dt>Valor total</dt><dd>{{ formatCurrency(gasto.valorTotal || gasto.monto) }}</dd></div>
           <div><dt>Valor pagado</dt><dd>{{ formatCurrency(gasto.valorPagado || 0) }}</dd></div>
+          <!-- The card used to stop at "pagado" and leave the debt unsaid. -->
+          <div :class="{ debe: saldoPendienteDe(gasto) > 0 }">
+            <dt>Saldo pendiente</dt><dd>{{ formatCurrency(saldoPendienteDe(gasto)) }}</dd>
+          </div>
           <div><dt>Libras</dt><dd>{{ Number(gasto.libras || 0).toFixed(2) }}</dd></div>
           <div><dt>Valor por libra</dt><dd>{{ formatCurrency(gasto.valorPorLibra || 0) }}</dd></div>
           <div><dt>Paquete</dt><dd class="mono">{{ gasto.paqueteId || '—' }}</dd></div>
@@ -91,8 +92,8 @@ function formatPerson(value: Gasto['creadoPor'] | Gasto['updatedBy']) {
         <dl>
           <div><dt>Creado por</dt><dd>{{ formatPerson(gasto.creadoPor) }}</dd></div>
           <div><dt>Actualizado por</dt><dd>{{ formatPerson(gasto.updatedBy) }}</dd></div>
-          <div><dt>Creado</dt><dd>{{ new Date(gasto.createdAt).toLocaleString('es-EC') }}</dd></div>
-          <div><dt>Actualizado</dt><dd>{{ new Date(gasto.updatedAt).toLocaleString('es-EC') }}</dd></div>
+          <div><dt>Creado</dt><dd>{{ formatDateTime(gasto.createdAt) }}</dd></div>
+          <div><dt>Actualizado</dt><dd>{{ formatDateTime(gasto.updatedAt) }}</dd></div>
         </dl>
       </section>
     </div>
@@ -162,6 +163,12 @@ function formatPerson(value: Gasto['creadoPor'] | Gasto['updatedBy']) {
     margin: 0;
     color: $fg-dark;
     word-break: break-word;
+  }
+
+  /* A balance still owed is the one figure on this card that needs to shout. */
+  .debe dd {
+    color: #ff8a8f;
+    font-weight: 700;
   }
 
   @media (max-width: 640px) {

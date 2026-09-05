@@ -18,6 +18,7 @@ const emptyStats = (): GestionesStats => ({
   sumaCostoVenta: 0,
   sumaMargenNeto: 0,
   sumaValorPagado: 0,
+  sumaSaldoPendiente: 0,
   ventasConfirmadas: 0,
   comisionGanada: 0,
   porEstado: {},

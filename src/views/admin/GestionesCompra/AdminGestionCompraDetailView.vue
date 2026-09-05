@@ -57,15 +57,42 @@
           <p class="info-row"><span>Costo de venta</span><strong>${{ gestion.costoVenta.toFixed(2) }}</strong></p>
           <p class="info-row"><span>Comisión</span><strong>${{ gestion.valorComision.toFixed(2) }}</strong></p>
           <p class="info-row"><span>Margen</span><strong :class="margin >= 0 ? 'green' : 'red'">${{ margin.toFixed(2) }}</strong></p>
+          <p class="info-row"><span>Pagado</span><strong class="green">{{ formatCurrency(pagado) }}</strong></p>
+          <p class="info-row">
+            <span>Saldo pendiente</span>
+            <strong :class="saldoPendiente > 0 ? 'red' : 'green'">{{ formatCurrency(saldoPendiente) }}</strong>
+          </p>
           <p class="info-row">
             <span>Estado de pago</span>
             <span class="reserva-group">
               <strong>{{ paymentLabel(gestion.estadoPago) }}</strong>
-              <AppButton v-if="!['confirmado', 'reembolsado'].includes(gestion.estadoPago || '')" variant="primary" size="sm" @click="confirmarPago" :disabled="confirmingPayment">
-                {{ confirmingPayment ? 'Confirmando...' : 'Confirmar pago total' }}
+              <AppButton v-if="puedeAbonar" variant="outline" size="sm" @click="showAbonoModal = true">
+                Registrar abono
+              </AppButton>
+              <AppButton v-if="puedeAbonar" variant="primary" size="sm" @click="confirmarPago" :disabled="confirmingPayment">
+                {{ confirmingPayment ? 'Confirmando...' : 'Saldar todo' }}
               </AppButton>
             </span>
           </p>
+        </div>
+
+        <!-- Abonos -->
+        <div class="detail-card">
+          <h3 class="card-title">Abonos</h3>
+          <p v-if="!abonos.length" class="muted">Todavía no se registra ningún abono.</p>
+          <ul v-else class="abonos-list">
+            <li v-for="abono in abonos" :key="abono._id" class="abono-row">
+              <div class="abono-main">
+                <strong class="green">{{ formatCurrency(abono.monto) }}</strong>
+                <span class="abono-meta">{{ formatDate(abono.fecha) }} · {{ metodoLabel(abono.metodo) }}</span>
+              </div>
+              <div class="abono-sub">
+                <span v-if="abono.referencia" class="mono">{{ abono.referencia }}</span>
+                <span class="muted">{{ abono.registradoPorNombre }}</span>
+              </div>
+              <p v-if="abono.notas" class="abono-notas muted">{{ abono.notas }}</p>
+            </li>
+          </ul>
         </div>
 
         <!-- Detalles compra -->
@@ -156,6 +183,14 @@
     </div>
   </div>
   <div v-else class="loading-state">Cargando gestión...</div>
+
+  <AbonoModal
+    :show="showAbonoModal"
+    :saldo-pendiente="saldoPendiente"
+    :saving="savingAbono"
+    @close="showAbonoModal = false"
+    @save="registrarAbono"
+  />
 </template>
 
 <script setup lang="ts">
@@ -165,6 +200,8 @@ import AppButton from '@/components/ui/AppButton.vue'
 import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import { useToastStore } from '@/stores/toast.store'
 import type { GestionCompra } from '@/services/gestiones_compra.api'
+import { formatCurrency, formatDate as formatCalendarDate, formatDateTime as formatInstant } from '@/utils/format'
+import AbonoModal, { type AbonoPayload } from './AbonoModal.vue'
 
 const route = useRoute()
 const toast = useToastStore()
@@ -175,15 +212,27 @@ const confirming = ref(false)
 const notifying = ref(false)
 const confirmingPayment = ref(false)
 const markingPurchased = ref(false)
+const showAbonoModal = ref(false)
+const savingAbono = ref(false)
 
 const paymentLabels: Record<string, string> = {
   pendiente: 'Pendiente',
   verificando: 'Verificando',
+  parcial: 'Pago parcial',
   confirmado: 'Confirmado',
   rechazado: 'Rechazado',
   reembolsado: 'Reembolsado',
 }
 function paymentLabel(value?: string) { return paymentLabels[value || 'pendiente'] || value || 'Pendiente' }
+
+const metodoLabels: Record<string, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  tarjeta: 'Tarjeta',
+  deposito: 'Depósito',
+  otro: 'Otro',
+}
+function metodoLabel(value?: string) { return metodoLabels[value || 'otro'] || 'Otro' }
 
 const id = computed(() => route.params.id as string)
 
@@ -192,6 +241,16 @@ const asesor = computed(() => typeof gestion.value?.asesorId === 'object' ? gest
 const cuenta = computed(() => typeof gestion.value?.cuentaBancariaId === 'object' ? gestion.value.cuentaBancariaId as any : null)
 const cuentaText = computed(() => cuenta.value ? `${cuenta.value.banco} · ${cuenta.value.numeroCuenta}` : '—')
 const margin = computed(() => (gestion.value?.valorTotal ?? 0) - (gestion.value?.valorComision ?? 0) - (gestion.value?.costoVenta ?? 0))
+
+const pagado = computed(() => Number(gestion.value?.valorPagado ?? 0))
+/** What the client still owes. Rounded because it is a difference of two decimals. */
+const saldoPendiente = computed(() =>
+  Math.max(0, Math.round(((gestion.value?.valorTotal ?? 0) - pagado.value) * 100) / 100),
+)
+const abonos = computed(() => gestion.value?.abonos ?? [])
+const puedeAbonar = computed(
+  () => saldoPendiente.value > 0 && !['rechazado', 'reembolsado'].includes(gestion.value?.estadoPago ?? ''),
+)
 
 const estados = [
   { value: 'borrador', label: 'Borrador' },
@@ -205,12 +264,10 @@ const viewUrl = computed(() => `${window.location.origin}/compra/${gestion.value
 function estadoLabel(e: string) {
   return { borrador: 'Borrador', activa: 'Activa', completado: 'Completado', cancelado: 'Cancelado' }[e] ?? e
 }
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })
-}
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })
-}
+/** `fechaEntregaTentativa` is a calendar day; the audit trail is a real instant. */
+const formatDate = (iso: string) =>
+  formatCalendarDate(iso, { day: '2-digit', month: 'long', year: 'numeric' })
+const formatDateTime = (iso: string) => formatInstant(iso, { dateStyle: 'short', timeStyle: 'short' })
 
 async function loadGestion() {
   loading.value = true
@@ -228,15 +285,27 @@ async function confirmarReserva() {
   finally { confirming.value = false }
 }
 
+/** Settles whatever is left, rather than the full price — part of it may be paid. */
 async function confirmarPago() {
   if (!gestion.value) return
   confirmingPayment.value = true
   try {
-    await gestionesCompraAPI.confirmarPago(id.value, gestion.value.valorTotal)
+    await gestionesCompraAPI.confirmarPago(id.value, saldoPendiente.value)
     await loadGestion()
     toast.showNotification('Pago confirmado y registrado en reportes', 'success')
   } catch (e: any) { toast.showNotification(e?.message ?? 'No se pudo confirmar el pago', 'error') }
   finally { confirmingPayment.value = false }
+}
+
+async function registrarAbono(payload: AbonoPayload) {
+  savingAbono.value = true
+  try {
+    await gestionesCompraAPI.registrarAbono(id.value, payload)
+    await loadGestion()
+    showAbonoModal.value = false
+    toast.showNotification('Abono registrado', 'success')
+  } catch (e: any) { toast.showNotification(e?.message ?? 'No se pudo registrar el abono', 'error') }
+  finally { savingAbono.value = false }
 }
 
 async function marcarComprada() {
@@ -276,8 +345,57 @@ onMounted(loadGestion)
 </script>
 
 <style scoped lang="scss">
+
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
+
+.abonos-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.abono-row {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.abono-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  strong {
+    font-size: 1.05rem;
+  }
+}
+
+.abono-meta {
+  font-size: 0.82rem;
+  opacity: 0.75;
+}
+
+.abono-sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+}
+
+.abono-notas {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+}
+
 .page { display: flex; flex-direction: column; gap: $space-5; padding: $space-6; }
 .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: $space-3; }
 .btn-back { background: none; border: none; color: $brand-orange; cursor: pointer; font-size: 0.9rem; }

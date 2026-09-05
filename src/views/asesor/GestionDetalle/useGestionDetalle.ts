@@ -7,6 +7,7 @@ import {
 } from '@/services/gestiones_compra.api'
 import { useToastStore } from '@/stores/toast.store'
 import { useUploadQueue } from '@/composables/useUploadQueue'
+import { formatDate as formatCalendarDate, formatDateTime as formatInstant } from '@/utils/format'
 
 export interface StageStep {
   value: GestionCompraStage
@@ -33,13 +34,11 @@ const ESTADO_LABELS: Record<string, string> = {
 export const estadoLabel = (estado: string) => ESTADO_LABELS[estado] ?? estado
 export const stageIndex = (stage: GestionCompraStage) => STAGE_STEPS.findIndex((s) => s.value === stage)
 
-export function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })
-}
+export const formatDate = (iso: string) =>
+  formatCalendarDate(iso, { day: '2-digit', month: 'long', year: 'numeric' })
 
-export function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })
-}
+export const formatDateTime = (iso: string) =>
+  formatInstant(iso, { dateStyle: 'short', timeStyle: 'short' })
 
 /** One gestión as the asesor sees it: photos, stage and the public link. */
 export function useGestionDetalle(id: () => string) {

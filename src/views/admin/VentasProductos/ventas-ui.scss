@@ -313,6 +313,8 @@
     &.credito { background: rgba($brand-orange, 0.14); color: $brand-orange; }
     &.vencida { background: rgba($signal-red, 0.16); color: #ff8a8f; }
     &.ok { background: rgba($signal-green, 0.14); color: $signal-green; }
+    &.debe { background: rgba($signal-red, 0.16); color: #ff8a8f; }
+    &.pagada { background: rgba($signal-green, 0.14); color: $signal-green; }
   }
 
   .empty-state {

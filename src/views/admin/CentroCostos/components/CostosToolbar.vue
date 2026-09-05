@@ -3,8 +3,12 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 
+/**
+ * The type filter is gone: in Cost Centre the tab *is* the type, so a dropdown
+ * that could contradict the tab was one more way for an expense and a reception
+ * to end up looking at each other's rows.
+ */
 const props = defineProps({
-  tipo: { type: String, required: true },
   categoria: { type: String, required: true },
   proveedor: { type: String, required: true },
   desde: { type: String, required: true },
@@ -13,7 +17,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'update:tipo',
   'update:categoria',
   'update:proveedor',
   'update:desde',
@@ -21,11 +24,6 @@ const emit = defineEmits([
 ])
 
 const router = useRouter()
-
-const localTipo = computed({
-  get: () => props.tipo,
-  set: (val) => emit('update:tipo', val)
-})
 
 const localCategoria = computed({
   get: () => props.categoria,
@@ -50,15 +48,6 @@ const localHasta = computed({
 
 <template>
   <div class="toolbar">
-    <div class="filter">
-      <span>Tipo</span>
-      <select v-model="localTipo" class="field-input">
-        <option value="">Todos</option>
-        <option value="operacional">Operacional</option>
-        <option value="logistico">Logístico</option>
-        <option value="envio">Envío</option>
-      </select>
-    </div>
     <div class="filter">
       <span>Categoría</span>
       <select v-model="localCategoria" class="field-input">
