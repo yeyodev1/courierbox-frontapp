@@ -12,10 +12,23 @@ export type CajaMovimiento = {
   createdAt: string
 }
 
+export type CajaTotales = { total: number; count: number }
+
 export type CajaResumen = {
-  ingresos: { total: number; count: number }
-  egresos: { total: number; count: number }
+  /** Ingresos, egresos y neto del rango filtrado. */
+  ingresos: CajaTotales
+  egresos: CajaTotales
   saldo: number
+  /**
+   * El dinero que realmente queda en caja: todo el histórico hasta la fecha
+   * "Hasta", sin importar el "Desde" ni los filtros de tipo y categoría.
+   */
+  acumulado: {
+    ingresos: CajaTotales
+    egresos: CajaTotales
+    saldo: number
+    hasta: string | null
+  }
   porTipo: Array<{ _id: string; total: number; count: number }>
   porCategoria: Array<{ _id: string; total: number; count: number }>
 }
@@ -31,13 +44,22 @@ export function buildQuery(params: Record<string, string | number | undefined>) 
   return searchParams.toString()
 }
 
+/**
+ * El signo va antes del símbolo: un neto negativo se leía como "$-32.00", que
+ * en una pantalla de plata se confunde con un monto raro en vez de una resta.
+ */
 export function formatMoney(value: number) {
-  return `$${Number(value || 0).toFixed(2)}`
+  const amount = Number(value) || 0
+  return `${amount < 0 ? '-' : ''}$${Math.abs(amount).toFixed(2)}`
 }
 
-export function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+/**
+ * `fecha` es un día de calendario, no un instante: viaja como medianoche UTC y
+ * leerlo con el calendario local (UTC-5) restaba un día — el gasto del 28 se
+ * mostraba como 27. La utilidad compartida ya lo lee en UTC; Caja seguía con su
+ * propia copia porque el arreglo original sólo tocó Costos y Gestiones.
+ */
+export { formatDate } from '@/utils/format'
 
 export function canDeleteCajaMovimiento(movement: Pick<CajaMovimiento, 'fecha' | 'createdAt'>) {
   const referenceDate = new Date(movement.fecha || movement.createdAt)

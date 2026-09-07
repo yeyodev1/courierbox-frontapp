@@ -62,10 +62,17 @@ export function useCaja() {
 
   const resumen = computed(() => {
     const base = summary.value as Partial<CajaResumen> | null
+    const acumulado = base?.acumulado
     return {
       ingresos: base?.ingresos ?? { total: 0, count: 0 },
       egresos: base?.egresos ?? { total: 0, count: 0 },
       saldo: typeof base?.saldo === 'number' ? base.saldo : 0,
+      acumulado: {
+        ingresos: acumulado?.ingresos ?? { total: 0, count: 0 },
+        egresos: acumulado?.egresos ?? { total: 0, count: 0 },
+        saldo: typeof acumulado?.saldo === 'number' ? acumulado.saldo : 0,
+        hasta: acumulado?.hasta ?? null,
+      },
       porTipo: (Array.isArray(base?.porTipo) ? base.porTipo : []) as CajaResumen['porTipo'],
       porCategoria: (Array.isArray(base?.porCategoria) ? base.porCategoria : []) as CajaResumen['porCategoria'],
     }
