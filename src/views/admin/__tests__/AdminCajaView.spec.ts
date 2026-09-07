@@ -98,6 +98,12 @@ beforeEach(() => {
         ingresos: { total: 250, count: 2 },
         egresos: { total: 100, count: 1 },
         saldo: 150,
+        acumulado: {
+          ingresos: { total: 500, count: 4 },
+          egresos: { total: 32, count: 1 },
+          saldo: 468,
+          hasta: '2026-08-28',
+        },
         porTipo: [
           { _id: 'ingreso', total: 250, count: 2 },
           { _id: 'egreso', total: 100, count: 1 },
@@ -143,6 +149,15 @@ describe('caja utils', () => {
     expect(formatDate('2026-07-01T12:00:00.000Z')).toContain('2026')
   })
 
+  it('formatMoney pone el signo antes del símbolo', () => {
+    expect(formatMoney(-32)).toBe('-$32.00')
+  })
+
+  it('formatDate no retrocede un día en un día de calendario', () => {
+    // El gasto del 28 se mostraba como 27 al leer la medianoche UTC en UTC-5.
+    expect(formatDate('2026-08-28')).toContain('28')
+  })
+
   it('canDeleteCajaMovimiento respeta la regla de 7 días', () => {
     expect(canDeleteCajaMovimiento({ fecha: new Date(Date.now() - 3 * 86400000).toISOString(), createdAt: new Date().toISOString() })).toBe(true)
     expect(canDeleteCajaMovimiento({ fecha: new Date(Date.now() - 8 * 86400000).toISOString(), createdAt: new Date().toISOString() })).toBe(false)
@@ -171,10 +186,45 @@ describe('AdminCajaView', () => {
     const wrapper = mountView()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Ingresos')
-    expect(wrapper.text()).toContain('Egresos')
-    expect(wrapper.text()).toContain('Saldo')
+    expect(wrapper.text()).toContain('Ingresos del periodo')
+    expect(wrapper.text()).toContain('Egresos del periodo')
+    expect(wrapper.text()).toContain('Saldo en caja')
     expect(wrapper.text()).toContain('Juan Perez')
+  })
+
+  it('muestra el saldo acumulado, no el neto del rango filtrado', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    // El filtro arranca el día 1 del mes; el saldo debe seguir siendo el de la
+    // caja completa ($468), no el neto del periodo ($150).
+    const saldo = wrapper.get('.stat-card.balance')
+    expect(saldo.text()).toContain('$468.00')
+    expect(saldo.text()).toContain('Todo el histórico hasta')
+  })
+
+  it('marca en rojo un neto negativo sin confundirlo con el saldo', async () => {
+    mocks.getData.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('v1/caja/resumen')) {
+        return makeResponse({
+          ingresos: { total: 0, count: 0 },
+          egresos: { total: 32, count: 1 },
+          saldo: -32,
+          acumulado: { ingresos: { total: 500, count: 3 }, egresos: { total: 32, count: 1 }, saldo: 468, hasta: '2026-08-28' },
+          porTipo: [],
+          porCategoria: [],
+        })
+      }
+      return makeResponse({ movimientos: [], total: 0 })
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('.stat-card.balance').text()).toContain('$468.00')
+    const neto = wrapper.get('.stat-card.neto')
+    expect(neto.text()).toContain('-$32.00')
+    expect(neto.get('strong').classes()).toContain('is-negative')
   })
 
   it('abre el modal de nuevo movimiento', async () => {
@@ -259,7 +309,7 @@ describe('AdminCajaView', () => {
 
   it('bloquea borrar si el movimiento supera los 7 días', async () => {
     mocks.getData.mockImplementationOnce((endpoint: string) => {
-      if (endpoint.startsWith('v1/caja/resumen')) return makeResponse({ ingresos: { total: 0, count: 0 }, egresos: { total: 0, count: 0 }, saldo: 0, porTipo: [], porCategoria: [] })
+      if (endpoint.startsWith('v1/caja/resumen')) return makeResponse({ ingresos: { total: 0, count: 0 }, egresos: { total: 0, count: 0 }, saldo: 0, acumulado: { ingresos: { total: 0, count: 0 }, egresos: { total: 0, count: 0 }, saldo: 0, hasta: null }, porTipo: [], porCategoria: [] })
       return makeResponse({
         movimientos: [
           {

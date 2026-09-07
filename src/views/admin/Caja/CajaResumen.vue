@@ -1,8 +1,15 @@
 <script setup lang="ts">
-/** Income / expense / balance headline plus the per-category breakdown. */
+/**
+ * El saldo en caja y el movimiento del periodo, más el desglose por categoría.
+ *
+ * Son dos números distintos y la pantalla los separa a propósito: el saldo es
+ * todo el histórico y el neto es sólo el rango filtrado. Mostrar el neto como
+ * "Saldo" hacía que un mes con más egresos que ingresos apareciera en negativo
+ * aunque la caja tuviera plata.
+ */
 import { computed } from 'vue'
 import type { CajaResumen } from '../caja.utils'
-import { formatMoney } from '../caja.utils'
+import { formatDate, formatMoney } from '../caja.utils'
 import { isIngresoCategoria } from './useCaja'
 
 const props = defineProps<{
@@ -10,9 +17,19 @@ const props = defineProps<{
     ingresos: { total: number; count: number }
     egresos: { total: number; count: number }
     saldo: number
+    acumulado: CajaResumen['acumulado']
     porCategoria: CajaResumen['porCategoria']
   }
 }>()
+
+const saldoAcumulado = computed(() => props.resumen.acumulado.saldo)
+
+const cortePeriodo = computed(() => {
+  const hasta = props.resumen.acumulado.hasta
+  return hasta ? `Todo el histórico hasta ${formatDate(hasta)}` : 'Todo el histórico'
+})
+
+const netoLabel = computed(() => (props.resumen.saldo < 0 ? 'Salió más de lo que entró' : 'Ingresos - egresos del rango'))
 
 const maxCategoria = computed(() =>
   Math.max(...props.resumen.porCategoria.map((item) => Number(item.total || 0)), 0),
@@ -26,20 +43,25 @@ function barWidth(total: unknown) {
 
 <template>
   <div class="stats-grid">
+    <article class="stat-card balance">
+      <span>Saldo en caja</span>
+      <strong :class="{ 'is-negative': saldoAcumulado < 0 }">{{ formatMoney(saldoAcumulado) }}</strong>
+      <small>{{ cortePeriodo }}</small>
+    </article>
     <article class="stat-card accent">
-      <span>Ingresos</span>
+      <span>Ingresos del periodo</span>
       <strong>{{ formatMoney(resumen.ingresos.total) }}</strong>
       <small>{{ resumen.ingresos.count }} movimientos</small>
     </article>
     <article class="stat-card danger">
-      <span>Egresos</span>
+      <span>Egresos del periodo</span>
       <strong>{{ formatMoney(resumen.egresos.total) }}</strong>
       <small>{{ resumen.egresos.count }} movimientos</small>
     </article>
-    <article class="stat-card balance">
-      <span>Saldo</span>
-      <strong>{{ formatMoney(resumen.saldo) }}</strong>
-      <small>Ingresos - egresos</small>
+    <article class="stat-card neto">
+      <span>Neto del periodo</span>
+      <strong :class="{ 'is-negative': resumen.saldo < 0 }">{{ formatMoney(resumen.saldo) }}</strong>
+      <small>{{ netoLabel }}</small>
     </article>
   </div>
 
@@ -100,9 +122,20 @@ function barWidth(total: unknown) {
   span { color: $ink-400; }
   strong { display: block; font-size: 1.8rem; margin: $space-2 0; }
 
+  small { color: $ink-400; font-size: 0.78rem; }
+
   &.accent strong { color: $brand-orange; }
   &.danger strong { color: #ff8a8f; }
   &.balance strong { color: #9ae6b4; }
+  &.neto strong { color: $ink-100; }
+
+  // El saldo puede ser negativo de verdad; se marca en rojo en vez de esconderlo.
+  strong.is-negative { color: #ff8a8f; }
+}
+
+.stat-card.balance {
+  border-color: rgba(#9ae6b4, 0.28);
+  background: linear-gradient(180deg, rgba(#9ae6b4, 0.08), rgba($ink-900, 0.72));
 }
 
 .breakdown-list { display: grid; gap: $space-4; }

@@ -9,26 +9,23 @@
     <div v-if="loading" class="rule-info loading-msg">
       <i class="fa-solid fa-spinner fa-spin" aria-hidden="true" /> Calculando comisión sugerida...
     </div>
-    <div v-else-if="feeConfigNombre" class="rule-info">
+    <div v-else-if="feeConfigNombre && !avisoCalculo" class="rule-info">
       Regla aplicada: <strong>{{ feeConfigNombre }}</strong>
     </div>
 
     <div class="rule-config" :class="{ warn: sinRegla }">
       <i class="fa-solid" :class="sinRegla ? 'fa-triangle-exclamation' : 'fa-circle-info'" aria-hidden="true" />
       <div class="rule-config__body">
-        <template v-if="isAdmin">
-          <p v-if="sinRegla">No hay una regla de comisión configurada. Defínela en <strong>Configuración de tarifas</strong>.</p>
-          <p v-else>La regla se administra en <strong>Configuración de tarifas</strong>.</p>
-          <a class="rule-config__link" href="/admin/fee-config" target="_blank" rel="noopener">
-            <i class="fa-solid fa-gear" aria-hidden="true" /> Abrir configuración de tarifas
-          </a>
-        </template>
-        <template v-else>
-          <p>
-            La regla de comisión la configura el <strong>administrador</strong> en “Configuración de tarifas”.
-            {{ sinRegla ? 'Aún no hay una regla activa; puedes ingresar el valor manualmente o pedir al admin que la cree.' : 'Puedes ajustar el valor manualmente si lo necesitas.' }}
-          </p>
-        </template>
+        <p v-if="avisoCalculo">{{ avisoCalculo }} Escribe la comisión a mano para continuar.</p>
+        <p v-else-if="isAdmin && sinRegla">No hay una regla de comisión configurada. Defínela en <strong>Configuración de tarifas</strong>.</p>
+        <p v-else-if="isAdmin">La regla se administra en <strong>Configuración de tarifas</strong>.</p>
+        <p v-else>
+          La regla de comisión la configura el <strong>administrador</strong> en “Configuración de tarifas”.
+          Se guarda el valor de la regla, así que este campo es sólo referencia.
+        </p>
+        <a v-if="isAdmin" class="rule-config__link" href="/admin/fee-config" target="_blank" rel="noopener">
+          <i class="fa-solid fa-gear" aria-hidden="true" /> Abrir configuración de tarifas
+        </a>
       </div>
     </div>
 
@@ -78,6 +75,7 @@ const store = useGestionCompraFormStore()
 const auth = useAuthStore()
 const loading = ref(true)
 const error = ref('')
+const avisoCalculo = ref('')
 const feeConfigNombre = ref(store.formData.feeConfigNombre ?? '')
 
 const isAdmin = computed(() => ['admin', 'gerencia', 'superadmin'].includes(auth.userRole ?? ''))
@@ -91,14 +89,23 @@ const valorTotalNum = computed(() => Number(store.formData.valorTotal) || 0)
 const comisionNum = computed(() => Number(store.formData.valorComision) || 0)
 const restante = computed(() => Math.max(0, valorTotalNum.value - comisionNum.value))
 
-// Two-way binding that always stores a number (never '').
+// Un campo vacío es "todavía no lo escribo", no "cero". Guardarlo como 0 era la
+// vía por la que se guardaban gestiones con comisión en cero sin que nadie la
+// hubiera escrito; `null` deja que `isValid()` la pida.
 const comision = computed<number | string>({
   get: () => (store.formData.valorComision ?? '') as number | string,
   set: (v) => {
-    store.formData.valorComision = v === '' || v === null || v === undefined ? 0 : Number(v)
+    if (v === '' || v === null || v === undefined) {
+      store.formData.valorComision = null
+      return
+    }
+    const parsed = Number(v)
+    store.formData.valorComision = Number.isFinite(parsed) ? parsed : null
   },
 })
+const reglaCalculada = ref<boolean | null>(null)
 const sinRegla = computed(() => {
+  if (reglaCalculada.value !== null) return !reglaCalculada.value
   const n = (feeConfigNombre.value || '').toLowerCase()
   return !n || n.includes('sin') || n.includes('por defecto') || n.includes('default')
 })
@@ -113,10 +120,18 @@ onMounted(async () => {
       store.formData.valorTotal ?? 0,
       store.formData.feeConfigId || undefined
     )
-    store.setComision(result.valorComision, store.formData.feeConfigId, result.feeConfigNombre)
     feeConfigNombre.value = result.feeConfigNombre
+    reglaCalculada.value = result.calculada
+    if (result.calculada) {
+      store.setComision(result.valorComision, store.formData.feeConfigId, result.feeConfigNombre)
+    } else {
+      // Sin regla no hay sugerencia: el campo queda vacío y se pide a mano, en
+      // lugar de prellenar un 0 que se guardaba tal cual.
+      avisoCalculo.value = result.motivo || 'No se pudo calcular la comisión sugerida.'
+    }
   } catch {
-    store.formData.valorComision = 0
+    reglaCalculada.value = false
+    avisoCalculo.value = 'No se pudo calcular la comisión sugerida.'
   } finally {
     loading.value = false
   }

@@ -234,10 +234,14 @@ class GestionesCompraAPI extends APIBase {
     return res.data
   }
 
-  async getComisionPreview(valorTotal: number, feeConfigId?: string): Promise<{ valorComision: number; feeConfigNombre: string }> {
+  /** `calculada: false` significa "no hay regla", no "la comisión es cero". */
+  async getComisionPreview(
+    valorTotal: number,
+    feeConfigId?: string
+  ): Promise<{ valorComision: number; feeConfigNombre: string; calculada: boolean; motivo?: string }> {
     const query = new URLSearchParams({ valorTotal: String(valorTotal) })
     if (feeConfigId) query.set('feeConfigId', feeConfigId)
-    const res = await this.get<{ valorComision: number; feeConfigNombre: string }>(
+    const res = await this.get<{ valorComision: number; feeConfigNombre: string; calculada: boolean; motivo?: string }>(
       `${this.base}/comision-preview?${query.toString()}`
     )
     return res.data
