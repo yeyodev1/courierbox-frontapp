@@ -72,6 +72,19 @@ export function useAdminMenu() {
             { path: '/admin/notificaciones', label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: under('/admin/notificaciones') },
           ],
         },
+        // El superadmin puede abrir estas pantallas (el guard lo permite) pero
+        // no tenía cómo llegar: sin estos enlaces la carga masiva y la
+        // facturación sólo existían para el rol admin.
+        {
+          label: 'Operaciones',
+          items: [
+            { path: '/admin/ingreso-carga', label: 'Ingreso de carga', icon: 'fa-solid fa-file-arrow-up', match: under('/admin/ingreso-carga') },
+            { path: '/admin/homologacion', label: 'Homologación', icon: 'fa-solid fa-people-arrows', match: under('/admin/homologacion') },
+            { path: '/bodega/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: under('/bodega/facturacion') },
+            { path: '/admin/envios', label: 'Envíos', icon: 'fa-solid fa-truck', match: under('/admin/envios') },
+            { path: '/admin/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: under('/admin/contactos') },
+          ],
+        },
       ]
     }
 
