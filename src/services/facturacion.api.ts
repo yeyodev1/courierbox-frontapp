@@ -16,8 +16,49 @@ export interface PaqueteFacturable {
     cedulaRuc?: string
     email?: string
     telefono?: string
+    direccion?: string
     codigoCasillero?: string
   } | null
+}
+
+export type EstadoSri = 'sin_enviar' | 'firmado' | 'enviado' | 'autorizado' | 'rechazado' | 'error' | 'simulado'
+
+export interface DatoFaltante {
+  campo: 'cedulaRuc' | 'nombreOficial' | 'email' | 'telefono' | 'direccion'
+  mensaje: string
+  /** Sin esto el SRI rechaza; lo demás sólo mejora la factura. */
+  requerido: boolean
+}
+
+export interface ClienteFacturable {
+  id: string
+  nombreOficial: string
+  cedulaRuc: string
+  email: string
+  telefono: string
+  direccion: string
+  codigoCasillero: string
+}
+
+export interface ValidacionFactura {
+  cliente: ClienteFacturable
+  totales: TotalesFactura
+  faltantes: DatoFaltante[]
+  consumidorFinalPosible: boolean
+  listo: boolean
+  yaFacturados: string[]
+}
+
+export interface FacturaEmitida {
+  facturaId: string
+  numeroFactura: string
+  estadoSri: EstadoSri
+  autorizacionSri: string
+  pdfUrl: string
+  xmlUrl: string
+  mensajeSri: string
+  totalGeneral: number
+  clienteNombre: string
 }
 
 export interface Tarifas {
@@ -64,15 +105,32 @@ class FacturacionAPI extends APIBase {
     return res.data.totales
   }
 
-  async generar(paqueteIds: string[]) {
-    // Contifico is a third-party call; give it room beyond the default timeout.
-    const res = await this.post<{ message: string; facturaId: string }>(
+  /** Cliente, totales y qué falta, calculado en el servidor con los mismos criterios que la emisión. */
+  async validar(paqueteIds: string[]) {
+    const res = await this.post<ValidacionFactura>('v1/facturacion/validar', { paqueteIds })
+    return res.data
+  }
+
+  async completarCliente(id: string, datos: Partial<Omit<ClienteFacturable, 'id' | 'codigoCasillero'>>) {
+    const res = await this.patch<{ cliente: ClienteFacturable }>(`v1/facturacion/cliente/${id}`, datos)
+    return res.data.cliente
+  }
+
+  async generar(paqueteIds: string[], opciones: { consumidorFinal?: boolean } = {}) {
+    // Contifico firma y manda al SRI en la misma llamada; necesita más que el timeout por defecto.
+    const res = await this.post<{ message: string; facturaId: string; factura: FacturaEmitida }>(
       'v1/facturacion/generar',
-      { paqueteIds },
+      { paqueteIds, ...opciones },
       undefined,
-      { timeout: 60000 },
+      { timeout: 90000 },
     )
     return res.data
+  }
+
+  /** Vuelve a preguntar al SRI (y reenvía si quedó sin enviar). */
+  async sincronizarSri(facturaId: string) {
+    const res = await this.post<{ factura: FacturaEmitida }>(`v1/facturacion/${facturaId}/sri`, {}, undefined, { timeout: 60000 })
+    return res.data.factura
   }
 
   async historial() {
