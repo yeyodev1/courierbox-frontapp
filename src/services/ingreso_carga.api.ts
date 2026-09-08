@@ -6,7 +6,21 @@ import APIBase from './httpBase'
  * es que aplicar escribe clientes y paquetes.
  */
 
-export type AccionFila = 'existente' | 'alias' | 'aproximado' | 'creado' | 'sin_cliente' | 'omitido' | 'error'
+export type AccionFila = 'existente' | 'alias' | 'aproximado' | 'creado' | 'vinculado' | 'sin_cliente' | 'omitido' | 'error'
+
+export interface SugerenciaCliente {
+  masterId: string
+  nombreOficial: string
+  casillero: string
+  score: number
+}
+
+/** Lo que el operador decide a mano para una caja desde la previsualización. */
+export interface Decision {
+  masterClienteId?: string
+  crearNuevo?: boolean
+}
+export type Decisiones = Record<string, Decision>
 
 export interface FilaIngreso {
   fila: number
@@ -27,6 +41,8 @@ export interface FilaIngreso {
   coincideCon?: string
   paquete?: 'nuevo' | 'actualizado'
   detalle?: string
+  /** Parecidos para vincular a mano cuando el nombre no cuadró solo. */
+  sugerencias?: SugerenciaCliente[]
 }
 
 export interface ResultadoIngreso {
@@ -35,6 +51,7 @@ export interface ResultadoIngreso {
   clientesExistentes: number
   clientesCreados: number
   aproximados: number
+  vinculados: number
   sinCliente: number
   paquetesNuevos: number
   paquetesActualizados: number
@@ -44,9 +61,10 @@ export interface ResultadoIngreso {
 }
 
 class IngresoCargaAPI extends APIBase {
-  private async enviar(file: File, aplicar: boolean): Promise<ResultadoIngreso> {
+  private async enviar(file: File, aplicar: boolean, decisiones: Decisiones = {}): Promise<ResultadoIngreso> {
     const form = new FormData()
     form.append('file', file)
+    if (Object.keys(decisiones).length) form.append('decisiones', JSON.stringify(decisiones))
     // Un manifiesto grande resuelve cientos de nombres contra toda la base.
     const res = await this.post<ResultadoIngreso>(
       `v1/etl/ingreso-carga${aplicar ? '?aplicar=1' : ''}`,
@@ -61,8 +79,8 @@ class IngresoCargaAPI extends APIBase {
     return this.enviar(file, false)
   }
 
-  aplicar(file: File) {
-    return this.enviar(file, true)
+  aplicar(file: File, decisiones: Decisiones = {}) {
+    return this.enviar(file, true, decisiones)
   }
 }
 

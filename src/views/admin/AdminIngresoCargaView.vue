@@ -5,20 +5,28 @@
  * El manifiesto por vuelo llega en Excel, una fila por caja, con el cliente
  * escrito a mano. Aquí se sube ese archivo y cada caja queda colgada de su
  * cliente: si el nombre ya existe se reutiliza, si no, se crea. Elegir el
- * archivo muestra primero qué va a pasar; nada se escribe hasta confirmar.
+ * archivo muestra primero qué va a pasar; donde el nombre no cuadró solo, el
+ * operador lo vincula a mano; nada se escribe hasta confirmar.
  */
-import { computed } from 'vue'
+import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import IngresoCargaTabla from './IngresoCarga/IngresoCargaTabla.vue'
+import VincularClienteModal from './IngresoCarga/VincularClienteModal.vue'
 import { useIngresoCarga } from './IngresoCarga/useIngresoCarga'
 
 const ic = useIngresoCarga()
 
-const cajas = computed(() => {
-  const v = ic.vista.value
-  return v ? v.paquetesNuevos + v.paquetesActualizados : 0
-})
+function mensajeConfirmacion() {
+  const r = ic.resumen.value
+  const partes = [
+    `Se registran ${r.cajas} cajas`,
+    r.clientesCreados ? `se crean ${r.clientesCreados} clientes nuevos` : '',
+    r.vinculados ? `${r.vinculados} quedan vinculadas a mano` : '',
+    r.sinCliente ? `${r.sinCliente} van a Homologación` : '',
+  ].filter(Boolean)
+  return `${partes.join(', ')}. Esta acción escribe en la base de clientes y paquetes.`
+}
 </script>
 
 <template>
@@ -28,110 +36,156 @@ const cajas = computed(() => {
         <h1>Ingreso de carga</h1>
         <p>
           Sube el manifiesto del vuelo (.xlsx). Cada caja queda con su cliente: el que ya existe se
-          reutiliza y el que no, se crea con casillero. Primero ves qué va a pasar; nada se guarda hasta
-          que confirmes.
+          reutiliza y el que no, se crea con casillero. Primero ves qué va a pasar y puedes vincular a
+          mano lo que no cuadre; nada se guarda hasta que confirmes.
         </p>
       </div>
-      <button v-if="ic.archivo.value" type="button" class="btn ghost" :disabled="ic.aplicando.value" @click="ic.reiniciar">
-        <i class="fa-solid fa-rotate-left" aria-hidden="true" /> Otro archivo
-      </button>
+      <Transition name="fade-up">
+        <button v-if="ic.archivo.value" type="button" class="btn ghost" :disabled="ic.aplicando.value" @click="ic.reiniciar">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true" /> Otro archivo
+        </button>
+      </Transition>
     </header>
 
-    <section v-if="!ic.aplicado.value" class="panel">
-      <AppFileUpload
-        v-model="ic.archivo.value"
-        label="Manifiesto de ingreso de carga"
-        hint="Excel con las columnas BOX ID, CLIENTE, Peso, Descripción… como el archivo INGRESO DE CARGA.xlsx"
-        accept=".xlsx,.xls"
-        :disabled="ic.cargando.value || ic.aplicando.value"
-        :error="ic.errorArchivo.value"
-      />
-    </section>
+    <Transition name="fade-up" mode="out-in">
+      <section v-if="!ic.aplicado.value" class="panel" key="upload">
+        <AppFileUpload
+          v-model="ic.archivo.value"
+          label="Manifiesto de ingreso de carga"
+          hint="Excel con las columnas BOX ID, CLIENTE, Peso, Descripción… como el archivo INGRESO DE CARGA.xlsx"
+          accept=".xlsx,.xls"
+          :disabled="ic.cargando.value || ic.aplicando.value"
+          :error="ic.errorArchivo.value"
+        />
+      </section>
+    </Transition>
 
     <div v-if="ic.cargando.value" aria-busy="true">
       <AppSkeleton variant="card" height="88px" :count="4" gap="0.75rem" />
     </div>
 
-    <template v-else-if="ic.vista.value">
-      <section
-        v-if="ic.aplicado.value"
-        class="banner"
-        :class="{ 'con-pendientes': ic.vista.value.sinCliente > 0 }"
-        data-test="banner-aplicado"
-      >
-        <i class="fa-solid" :class="ic.vista.value.sinCliente > 0 ? 'fa-triangle-exclamation' : 'fa-circle-check'" aria-hidden="true" />
-        <div>
-          <strong>Carga ingresada.</strong>
-          {{ cajas }} cajas registradas y {{ ic.vista.value.clientesCreados }} clientes nuevos.
-          <template v-if="ic.vista.value.sinCliente > 0">
-            {{ ic.vista.value.sinCliente }} cajas venían sin nombre de cliente y esperan en
-            <RouterLink to="/admin/homologacion">Homologación</RouterLink>.
-          </template>
-        </div>
-      </section>
+    <Transition name="fade-up" appear>
+      <div v-if="!ic.cargando.value && ic.vista.value" class="resultado">
+        <Transition name="fade-up">
+          <section
+            v-if="ic.aplicado.value"
+            class="banner"
+            :class="{ 'con-pendientes': ic.resumen.value.sinCliente > 0 }"
+            data-test="banner-aplicado"
+          >
+            <i class="fa-solid" :class="ic.resumen.value.sinCliente > 0 ? 'fa-triangle-exclamation' : 'fa-circle-check'" aria-hidden="true" />
+            <div>
+              <strong>Carga ingresada.</strong>
+              {{ ic.resumen.value.cajas }} cajas registradas y {{ ic.resumen.value.clientesCreados }} clientes nuevos<template v-if="ic.resumen.value.vinculados">, {{ ic.resumen.value.vinculados }} vinculadas a mano</template>.
+              <template v-if="ic.resumen.value.sinCliente > 0">
+                {{ ic.resumen.value.sinCliente }} cajas venían sin nombre de cliente y esperan en
+                <RouterLink to="/admin/homologacion">Homologación</RouterLink>.
+              </template>
+            </div>
+          </section>
+        </Transition>
 
-      <section class="stats">
-        <article class="stat">
-          <span>Cajas en el archivo</span>
-          <strong>{{ ic.vista.value.totalFilas }}</strong>
-          <small>{{ ic.vista.value.paquetesNuevos }} nuevas · {{ ic.vista.value.paquetesActualizados }} ya registradas</small>
-        </article>
-        <article class="stat ok">
-          <span>Clientes existentes</span>
-          <strong>{{ ic.vista.value.clientesExistentes }}</strong>
-          <small>Reconocidos por nombre o alias</small>
-        </article>
-        <article class="stat nuevo" :class="{ 'is-zero': ic.vista.value.clientesCreados === 0 }">
-          <span>{{ ic.aplicado.value ? 'Clientes creados' : 'Clientes a crear' }}</span>
-          <strong>{{ ic.vista.value.clientesCreados }}</strong>
-          <small>Con casillero asignado</small>
-        </article>
-        <article class="stat aviso" :class="{ 'is-zero': ic.vista.value.aproximados === 0 }">
-          <span>Parecidos</span>
-          <strong>{{ ic.vista.value.aproximados }}</strong>
-          <small>Nombre casi igual a un cliente; revísalos</small>
-        </article>
-        <article class="stat" :class="{ 'is-zero': ic.vista.value.sinCliente === 0 }">
-          <span>Sin cliente</span>
-          <strong>{{ ic.vista.value.sinCliente }}</strong>
-          <small>Van a Homologación</small>
-        </article>
-      </section>
+        <section class="stats">
+          <article class="stat">
+            <span>Cajas en el archivo</span>
+            <strong>{{ ic.resumen.value.totalFilas }}</strong>
+            <small>{{ ic.resumen.value.paquetesNuevos }} nuevas · {{ ic.resumen.value.paquetesActualizados }} ya registradas</small>
+          </article>
+          <article class="stat ok">
+            <span>Clientes existentes</span>
+            <Transition name="num" mode="out-in"><strong :key="ic.resumen.value.clientesExistentes">{{ ic.resumen.value.clientesExistentes }}</strong></Transition>
+            <small>Reconocidos por nombre o alias</small>
+          </article>
+          <article class="stat nuevo" :class="{ 'is-zero': ic.resumen.value.clientesCreados === 0 }">
+            <span>{{ ic.aplicado.value ? 'Clientes creados' : 'Clientes a crear' }}</span>
+            <Transition name="num" mode="out-in"><strong :key="ic.resumen.value.clientesCreados" data-test="stat-crear">{{ ic.resumen.value.clientesCreados }}</strong></Transition>
+            <small>Con casillero asignado</small>
+          </article>
+          <article class="stat aviso" :class="{ 'is-zero': ic.resumen.value.aproximados === 0 }">
+            <span>Parecidos</span>
+            <Transition name="num" mode="out-in"><strong :key="ic.resumen.value.aproximados">{{ ic.resumen.value.aproximados }}</strong></Transition>
+            <small>Nombre casi igual a un cliente; revísalos</small>
+          </article>
+          <article class="stat ok" :class="{ 'is-zero': ic.resumen.value.vinculados === 0 }">
+            <span>Vinculados a mano</span>
+            <Transition name="num" mode="out-in"><strong :key="ic.resumen.value.vinculados" data-test="stat-vinculados">{{ ic.resumen.value.vinculados }}</strong></Transition>
+            <small>Decididos en esta pantalla</small>
+          </article>
+          <article class="stat" :class="{ 'is-zero': ic.resumen.value.sinCliente === 0 }">
+            <span>Sin cliente</span>
+            <Transition name="num" mode="out-in"><strong :key="ic.resumen.value.sinCliente">{{ ic.resumen.value.sinCliente }}</strong></Transition>
+            <small>Van a Homologación</small>
+          </article>
+        </section>
 
-      <ul v-if="ic.vista.value.errores.length" class="errores" data-test="errores">
-        <li v-for="(e, i) in ic.vista.value.errores" :key="i"><i class="fa-solid fa-circle-exclamation" aria-hidden="true" /> {{ e }}</li>
-      </ul>
+        <ul v-if="ic.resumen.value.errores.length" class="errores" data-test="errores">
+          <li v-for="(e, i) in ic.resumen.value.errores" :key="i"><i class="fa-solid fa-circle-exclamation" aria-hidden="true" /> {{ e }}</li>
+        </ul>
 
-      <IngresoCargaTabla :filas="ic.vista.value.filas" :aplicado="ic.aplicado.value" />
+        <IngresoCargaTabla
+          :filas="ic.vista.value.filas"
+          :aplicado="ic.aplicado.value"
+          :resaltada="ic.recienCambiada.value"
+          @vincular="ic.abrirVincular"
+        />
 
-      <footer v-if="!ic.aplicado.value" class="acciones">
-        <p>
-          Al confirmar se crean <strong>{{ ic.vista.value.clientesCreados }}</strong> clientes y se registran
-          <strong>{{ cajas }}</strong> cajas.
-        </p>
-        <button
-          type="button"
-          class="btn primary"
-          :disabled="!ic.puedeAplicar.value"
-          data-test="confirmar"
-          @click="ic.aplicar"
-        >
-          <i class="fa-solid" :class="ic.aplicando.value ? 'fa-spinner fa-spin' : 'fa-file-import'" aria-hidden="true" />
-          {{ ic.aplicando.value ? 'Ingresando…' : 'Confirmar ingreso' }}
-        </button>
-      </footer>
-    </template>
+        <Transition name="fade-up">
+          <footer v-if="!ic.aplicado.value" class="acciones">
+            <p>
+              Al confirmar se crean <strong>{{ ic.resumen.value.clientesCreados }}</strong> clientes y se registran
+              <strong>{{ ic.resumen.value.cajas }}</strong> cajas<template v-if="ic.resumen.value.vinculados">, {{ ic.resumen.value.vinculados }} vinculadas a mano</template>.
+            </p>
+            <button
+              type="button"
+              class="btn primary"
+              :disabled="!ic.puedeAplicar.value"
+              data-test="confirmar"
+              @click="ic.confirmando.value = true"
+            >
+              <i class="fa-solid fa-file-import" aria-hidden="true" />
+              Confirmar ingreso
+            </button>
+          </footer>
+        </Transition>
+      </div>
+    </Transition>
+
+    <VincularClienteModal
+      :fila="ic.filaEnEdicion.value"
+      @close="ic.cerrarVincular"
+      @vincular="(c) => ic.filaEnEdicion.value && ic.vincular(ic.filaEnEdicion.value, c)"
+      @crear="() => ic.filaEnEdicion.value && ic.marcarComoNuevo(ic.filaEnEdicion.value)"
+    />
+
+    <AppConfirmModal
+      :open="ic.confirmando.value"
+      title="¿Ingresar esta carga?"
+      :message="mensajeConfirmacion()"
+      confirm-label="Sí, ingresar"
+      loading-label="Ingresando…"
+      variant="info"
+      :confirm-loading="ic.aplicando.value"
+      @cancel="ic.confirmando.value = false"
+      @confirm="ic.aplicar"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
+@use '@/styles/tokens/motion' as *;
 @use './Homologacion/homologacion-ui' as ui;
 
 @include ui.buttons;
 
 .ingreso {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.resultado {
   display: flex;
   flex-direction: column;
   gap: $space-5;
@@ -179,7 +233,7 @@ const cajas = computed(() => {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: $space-3;
 }
 
@@ -191,9 +245,10 @@ const cajas = computed(() => {
   border-radius: $radius-lg;
   border: 1px solid rgba($ink-500, 0.15);
   background: $ink-900;
+  transition: border-color $dur-base ease;
 
   span { color: $ink-400; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
-  strong { font-size: 1.7rem; color: $fg-dark; font-variant-numeric: tabular-nums; }
+  strong { font-size: 1.7rem; color: $fg-dark; font-variant-numeric: tabular-nums; display: block; }
   small { color: $ink-500; font-size: 0.76rem; }
 
   &.ok strong { color: $signal-green; }
@@ -231,5 +286,20 @@ const cajas = computed(() => {
 
   p { margin: 0; color: $ink-300; font-size: 0.9rem; }
   strong { color: $fg-dark; }
+}
+
+// Las secciones suben al aparecer; los números se cruzan al cambiar.
+.fade-up-enter-active { transition: opacity $dur-base ease, transform $dur-base $ease-spring; }
+.fade-up-leave-active { transition: opacity $dur-fast ease, transform $dur-fast ease; }
+.fade-up-enter-from { opacity: 0; transform: translateY(10px); }
+.fade-up-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.num-enter-active { transition: opacity $dur-base ease, transform $dur-base $ease-spring; }
+.num-leave-active { transition: opacity $dur-fast ease, transform $dur-fast ease; }
+.num-enter-from { opacity: 0; transform: translateY(8px); }
+.num-leave-to { opacity: 0; transform: translateY(-8px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up-enter-active, .fade-up-leave-active, .num-enter-active, .num-leave-active, .stat { transition: none; }
 }
 </style>
