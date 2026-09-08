@@ -113,13 +113,11 @@ export function useFacturacion() {
 
   let timer: number | undefined
 
+  // Con la caja de búsqueda vacía se lista lo pendiente de facturar; con dos
+  // letras o más, se filtra. Así el counter ve las cajas sin saber qué escribir.
   watch(query, (value) => {
     window.clearTimeout(timer)
-    if (value.trim().length < 2) {
-      paquetes.value = []
-      searched.value = false
-      return
-    }
+    if (value.trim().length === 1) return
     timer = window.setTimeout(buscar, 350)
   })
 
@@ -257,8 +255,14 @@ export function useFacturacion() {
     }
   }
 
+  /** Primera carga: lo pendiente de facturar, sin filtro. */
+  function cargarPendientes() {
+    return buscar()
+  }
+
   return {
     query,
+    cargarPendientes,
     searching,
     searched,
     paquetes,

@@ -258,10 +258,10 @@ describe('AdminIngresoCargaView', () => {
     await confirmar(wrapper)
     await wrapper.get('[data-test="facturar-WR874096"]').trigger('click')
 
-    expect(mocks.push).toHaveBeenCalledWith({ path: '/bodega/facturacion', query: { q: 'CBX111111', sel: 'WR874096' } })
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/admin/facturacion', query: { q: 'CBX111111', sel: 'WR874096' } })
 
     await wrapper.get('[data-test="ir-facturacion"]').trigger('click')
-    expect(mocks.push).toHaveBeenLastCalledWith({ path: '/bodega/facturacion', query: { q: 'WR' } })
+    expect(mocks.push).toHaveBeenLastCalledWith({ path: '/admin/facturacion' })
   })
 
   it('lista los errores por fila que el backend reporta', async () => {

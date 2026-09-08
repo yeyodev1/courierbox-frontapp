@@ -101,6 +101,15 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     expect(wrapper.find('[data-test="datos-faltantes"]').exists()).toBe(true)
   })
 
+  it('al entrar lista lo pendiente de facturar sin escribir nada', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(mocks.facturables).toHaveBeenCalledWith('')
+    expect(wrapper.text()).toContain('1 paquete(s) por facturar · los más recientes')
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
+  })
+
   it('al elegir paquetes revisa al cliente y bloquea emitir hasta completar la cédula', async () => {
     const wrapper = mountView()
     await buscarYSeleccionar(wrapper)
