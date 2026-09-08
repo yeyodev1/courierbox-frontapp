@@ -17,7 +17,7 @@ defineProps<{
   ivaPorcentaje: number
 }>()
 
-const emit = defineEmits<{ emitir: [] }>()
+const emit = defineEmits<{ emitir: []; datos: [] }>()
 </script>
 
 <template>
@@ -31,6 +31,9 @@ const emit = defineEmits<{ emitir: [] }>()
         {{ cliente.casillero }}<template v-if="cliente.identificacion && !consumidorFinal"> · {{ cliente.identificacion }}</template>
         <template v-if="consumidorFinal"> · 9999999999999</template>
       </span>
+      <button type="button" class="link" data-test="datos-facturacion" @click="emit('datos')">
+        <i class="fa-solid fa-id-card" aria-hidden="true" /> Datos de facturación
+      </button>
     </div>
 
     <dl class="totales__grid">
@@ -101,6 +104,22 @@ const emit = defineEmits<{ emitir: [] }>()
 
     .is-total dd { color: $brand-orange; font-size: 1.25rem; font-weight: 700; }
   }
+}
+
+.link {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: $brand-orange;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  &:hover { text-decoration: underline; }
 }
 
 .muted {

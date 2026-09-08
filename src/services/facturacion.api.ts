@@ -40,8 +40,41 @@ export interface ClienteFacturable {
   codigoCasillero: string
 }
 
+/** A quién se factura: los datos del cliente o un alterno (empresa, familiar…). */
+export interface PerfilFacturacion {
+  id: string
+  etiqueta: string
+  identificacion: string
+  razonSocial: string
+  email: string
+  telefono: string
+  direccion: string
+  principal: boolean
+}
+
+export type DatosPerfil = Omit<PerfilFacturacion, 'id' | 'principal'>
+
+export interface FacturaHistorial {
+  _id: string
+  numeroFactura: string
+  estadoSri: EstadoSri
+  autorizacionSri: string
+  mensajeSri: string
+  pdfUrl: string
+  xmlUrl: string
+  totalGeneral: number
+  pesoTotalLb: number
+  estado: 'pendiente' | 'verificando' | 'pagada' | 'cancelada'
+  facturadoA?: { perfilId: string; identificacion: string; razonSocial: string; email: string }
+  masterClienteId?: { _id: string; nombreOficial: string; codigoCasillero: string } | null
+  paquetes: Array<{ _id: string; wr: string; sh: string; contenido: string; pesoLb: number }>
+  createdAt: string
+}
+
 export interface ValidacionFactura {
   cliente: ClienteFacturable
+  perfilId: string
+  perfiles: PerfilFacturacion[]
   totales: TotalesFactura
   faltantes: DatoFaltante[]
   consumidorFinalPosible: boolean
@@ -115,9 +148,27 @@ class FacturacionAPI extends APIBase {
   }
 
   /** Cliente, totales y qué falta, calculado en el servidor con los mismos criterios que la emisión. */
-  async validar(paqueteIds: string[]) {
-    const res = await this.post<ValidacionFactura>('v1/facturacion/validar', { paqueteIds })
+  async validar(paqueteIds: string[], perfilId?: string) {
+    const res = await this.post<ValidacionFactura>('v1/facturacion/validar', { paqueteIds, perfilId })
     return res.data
+  }
+
+  async perfiles(clienteId: string) {
+    const res = await this.get<{ perfiles: PerfilFacturacion[] }>(`v1/facturacion/cliente/${clienteId}/perfiles`)
+    return res.data.perfiles
+  }
+
+  /** `perfilId` vacío crea uno nuevo; 'principal' edita los datos del cliente. */
+  async guardarPerfil(clienteId: string, perfilId: string | null, datos: Partial<DatosPerfil>) {
+    const res = perfilId
+      ? await this.put<{ perfil: PerfilFacturacion; perfiles: PerfilFacturacion[] }>(`v1/facturacion/cliente/${clienteId}/perfiles/${perfilId}`, datos)
+      : await this.post<{ perfil: PerfilFacturacion; perfiles: PerfilFacturacion[] }>(`v1/facturacion/cliente/${clienteId}/perfiles`, datos)
+    return res.data
+  }
+
+  async eliminarPerfil(clienteId: string, perfilId: string) {
+    const res = await this.delete<{ perfiles: PerfilFacturacion[] }>(`v1/facturacion/cliente/${clienteId}/perfiles/${perfilId}`)
+    return res.data.perfiles
   }
 
   async completarCliente(id: string, datos: Partial<Omit<ClienteFacturable, 'id' | 'codigoCasillero'>>) {
@@ -125,7 +176,7 @@ class FacturacionAPI extends APIBase {
     return res.data.cliente
   }
 
-  async generar(paqueteIds: string[], opciones: { consumidorFinal?: boolean } = {}) {
+  async generar(paqueteIds: string[], opciones: { consumidorFinal?: boolean; perfilId?: string } = {}) {
     // Contifico firma y manda al SRI en la misma llamada; necesita más que el timeout por defecto.
     const res = await this.post<{ message: string; facturaId: string; factura: FacturaEmitida }>(
       'v1/facturacion/generar',
@@ -153,8 +204,8 @@ class FacturacionAPI extends APIBase {
     return res.data.factura
   }
 
-  async historial() {
-    const res = await this.get<{ facturas: any[] }>('v1/facturacion/historial')
+  async historial(q = '', limit = 50) {
+    const res = await this.get<{ facturas: FacturaHistorial[] }>(`v1/facturacion/historial?q=${encodeURIComponent(q)}&limit=${limit}`)
     return res.data.facturas
   }
 }
