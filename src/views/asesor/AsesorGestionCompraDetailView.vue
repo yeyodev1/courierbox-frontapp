@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 /** One gestión as the asesor sees it: photos, stage and the public link. */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -122,9 +123,7 @@ onMounted(async () => {
           <div class="edit-form">
             <label class="field-group">
               <span>Stage</span>
-              <select v-model="stageDraft" class="select-input">
-                <option v-for="step in STAGE_STEPS" :key="step.value" :value="step.value">{{ step.label }}</option>
-              </select>
+              <AppSelect v-model="stageDraft" :options="STAGE_STEPS.map((s) => ({ value: s.value, label: s.label }))" :allow-empty="false" />
             </label>
             <AppInput v-model="g.editForm.value.paginaCompra" label="Página de compra" />
             <label class="field-group">

@@ -58,10 +58,13 @@
           <div class="card-assign">
             <template v-if="e.modo === 'local'">
               <label>Motorizado</label>
-              <select :value="asignadoId(e)" @change="onAssign(e, ($event.target as HTMLSelectElement).value)" :disabled="e.estado === 'entregado'">
-                <option value="">— Sin asignar —</option>
-                <option v-for="m in motorizados" :key="m._id" :value="m._id">{{ m.name }}</option>
-              </select>
+              <AppSelect
+                size="sm"
+                :model-value="asignadoId(e)"
+                :options="[{ value: '', label: '— Sin asignar —' }, ...motorizados.map((m) => ({ value: m._id, label: m.name }))]"
+                :disabled="e.estado === 'entregado'"
+                @update:model-value="(v) => onAssign(e, v)"
+              />
             </template>
             <template v-else>
               <span class="prov"><i class="fa-solid fa-truck" /> {{ e.proveedorUtilizado || e.trayectoLocal?.proveedorNombre || 'Proveedor externo' }}</span>
@@ -107,10 +110,7 @@
             <!-- Local -->
             <div v-if="form.modo === 'local'" class="fg">
               <label>Asignar motorizado</label>
-              <select v-model="form.asignadoA">
-                <option value="">— Asignar después —</option>
-                <option v-for="m in motorizados" :key="m._id" :value="m._id">{{ m.name }}</option>
-              </select>
+              <AppSelect v-model="form.asignadoA" :options="[{ value: '', label: '— Asignar después —' }, ...motorizados.map((m) => ({ value: m._id, label: m.name }))]" />
             </div>
 
             <!-- Interprovincial -->
@@ -118,10 +118,7 @@
               <div class="row">
                 <div class="fg">
                   <label>Proveedor / transportadora</label>
-                  <select v-model="form.proveedorNombre">
-                    <option value="">— Selecciona —</option>
-                    <option v-for="p in proveedores" :key="p._id" :value="p.nombre">{{ p.nombre }}</option>
-                  </select>
+                  <AppSelect v-model="form.proveedorNombre" placeholder="— Selecciona —" :options="proveedores.map((p) => ({ value: p.nombre, label: p.nombre }))" clearable />
                 </div>
                 <div class="fg"><label>Costo del proveedor</label><input v-model="form.costoProveedor" type="number" min="0" step="0.01" placeholder="0.00" /></div>
               </div>
@@ -149,6 +146,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 import { computed, onMounted, ref } from 'vue'
 import AppOverlay from '@/components/ui/AppOverlay.vue'
 import AppMargenLive from '@/components/ui/AppMargenLive.vue'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 /** Quotes the management fee so the asesor can start a sale from the result. */
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -35,12 +36,7 @@ onMounted(c.loadConfigs)
 
         <label class="field">
           <span class="field-label">Tarifa aplicable</span>
-          <select v-model="c.configId.value" class="field-input">
-            <option value="" disabled>Selecciona una tarifa</option>
-            <option v-for="config in c.configs.value" :key="config._id" :value="config._id">
-              {{ config.name }} {{ config.isDefault ? '(por defecto)' : '' }}
-            </option>
-          </select>
+          <AppSelect v-model="c.configId.value" placeholder="Selecciona una tarifa" :options="c.configs.value.map((config) => ({ value: config._id, label: config.name, hint: config.isDefault ? 'por defecto' : '' }))" />
         </label>
 
         <label class="field">

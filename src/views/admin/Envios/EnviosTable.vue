@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 /** Read-only listing of deliveries plus the inline row actions the admin needs. */
 import type { EnvioDomicilio, Motorizado } from '@/services/envios.api'
 import { ESTADO_LABEL, asignadoId, formatDate, formatMoney } from './useEnvios'
@@ -12,7 +13,6 @@ const emit = defineEmits<{
   openGuide: [envio: EnvioDomicilio]
 }>()
 
-const value = (event: Event) => (event.target as HTMLSelectElement).value
 
 /** Older records carry their cost on the legs; new ones on the provider payment. */
 function costoEnvio(e: EnvioDomicilio) {
@@ -63,15 +63,14 @@ function costoEnvio(e: EnvioDomicilio) {
             <span v-else class="cell-sub">—</span>
           </td>
           <td>
-            <select
+            <AppSelect
+              size="sm"
               class="assign-select"
-              :value="asignadoId(e)"
+              :model-value="asignadoId(e)"
+              :options="[{ value: '', label: 'Sin asignar' }, ...motorizados.map((m) => ({ value: m._id, label: m.name || m.email }))]"
               :disabled="e.estado === 'entregado'"
-              @change="emit('reasignar', e, value($event))"
-            >
-              <option value="">Sin asignar</option>
-              <option v-for="m in motorizados" :key="m._id" :value="m._id">{{ m.name || m.email }}</option>
-            </select>
+              @update:model-value="(v) => emit('reasignar', e, v)"
+            />
           </td>
           <td>
             <div v-if="e.guiaUrl" class="file-actions">
@@ -94,9 +93,14 @@ function costoEnvio(e: EnvioDomicilio) {
           <td class="mono costo">{{ formatMoney(costoEnvio(e)) }}</td>
           <td class="mono costo">{{ formatMoney(e.valorCobrado || 0) }}</td>
           <td>
-            <select class="badge-select" :value="e.estado" @change="emit('updateStatus', e, value($event))">
-              <option v-for="(label, key) in ESTADO_LABEL" :key="key" :value="key">{{ label }}</option>
-            </select>
+            <AppSelect
+              size="sm"
+              class="badge-select"
+              :model-value="e.estado"
+              :options="Object.entries(ESTADO_LABEL).map(([value, label]) => ({ value, label }))"
+              :allow-empty="false"
+              @update:model-value="(v) => emit('updateStatus', e, v)"
+            />
           </td>
           <td class="mono">{{ formatDate(e.createdAt) }}</td>
         </tr>

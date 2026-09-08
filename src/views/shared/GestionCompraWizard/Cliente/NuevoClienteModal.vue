@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 /** Quick client creation, with the phone stored against its country code. */
 import { computed, ref, watch } from 'vue'
 import AppOverlay from '@/components/ui/AppOverlay.vue'
@@ -61,11 +62,15 @@ function onPhoneInput(event: Event) {
         <div class="phone-field">
           <span class="field-label">Teléfono</span>
           <div class="phone-group">
-            <select v-model="form.phoneCountry" class="phone-country">
-              <option v-for="c in PHONE_COUNTRIES" :key="c.code" :value="c.code">
-                {{ c.label }} (+{{ c.code }})
-              </option>
-            </select>
+            <AppSelect
+              v-model="form.phoneCountry"
+              class="phone-country"
+              size="sm"
+              searchable
+              search-placeholder="País…"
+              :options="PHONE_COUNTRIES.map((c) => ({ value: c.code, label: `${c.label} (+${c.code})` }))"
+              :allow-empty="false"
+            />
             <div class="phone-input">
               <span class="phone-prefix">+{{ country?.code }}</span>
               <input
