@@ -8,6 +8,8 @@ defineProps<{
   totales: TotalesFactura
   clientesDistintos: boolean
   puedeFacturar: boolean
+  /** Hay selección válida pero al cliente le falta algo: el botón abre el formulario. */
+  faltanDatos: boolean
   validando: boolean
   /** Lo que bloquea: sin esto el botón explica por qué no. */
   motivoBloqueo: string
@@ -50,9 +52,9 @@ const emit = defineEmits<{ emitir: [] }>()
       {{ motivoBloqueo }}
     </p>
 
-    <button type="button" class="btn primary" :disabled="!puedeFacturar" :title="motivoBloqueo || undefined" data-test="emitir" @click="emit('emitir')">
-      <i class="fa-solid" :class="validando ? 'fa-circle-notch fa-spin' : 'fa-file-invoice-dollar'" aria-hidden="true" />
-      {{ validando ? 'Revisando datos…' : 'Emitir factura' }}
+    <button type="button" class="btn primary" :disabled="!puedeFacturar && !faltanDatos" :title="motivoBloqueo || undefined" data-test="emitir" @click="emit('emitir')">
+      <i class="fa-solid" :class="validando ? 'fa-circle-notch fa-spin' : faltanDatos ? 'fa-id-card' : 'fa-file-invoice-dollar'" aria-hidden="true" />
+      {{ validando ? 'Revisando datos…' : faltanDatos ? 'Completar datos y emitir' : 'Emitir factura' }}
     </button>
   </section>
 </template>

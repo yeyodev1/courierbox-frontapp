@@ -8,6 +8,7 @@ import { useRoute } from 'vue-router'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
+import CompletarClienteModal from './Facturacion/CompletarClienteModal.vue'
 import DatosFaltantes from './Facturacion/DatosFaltantes.vue'
 import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
 import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
@@ -15,6 +16,33 @@ import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
 const f = useFacturacion()
 const route = useRoute()
 const confirming = ref(false)
+const completando = ref(false)
+
+/** Hay una selección válida de un solo cliente, pero le falta algo obligatorio. */
+const faltanDatos = computed(
+  () => f.seleccionados.value.length > 0 && !f.clientesDistintos.value && !!f.validacion.value && f.faltantesRequeridos.value.length > 0,
+)
+
+/** «Emitir»: si falta algo, primero el formulario; si no, directo a confirmar. */
+function onEmitirClick() {
+  if (faltanDatos.value) completando.value = true
+  else confirming.value = true
+}
+
+/** Guardar desde el modal: si con eso ya se puede emitir, pasa solo a la confirmación. */
+async function onGuardarDesdeModal(datos: Parameters<typeof f.completarCliente>[0]) {
+  const ok = await f.completarCliente(datos)
+  if (ok && f.puedeFacturar.value) {
+    completando.value = false
+    confirming.value = true
+  }
+}
+
+function continuarDesdeModal() {
+  if (!f.puedeFacturar.value) return
+  completando.value = false
+  confirming.value = true
+}
 
 // Desde Ingreso de carga se llega con ?q=<casillero>&sel=<WR>: el cliente ya
 // buscado y la caja marcada, para facturar sin volver a escribir nada.
@@ -130,10 +158,11 @@ async function onEmitir() {
         :totales="f.totales.value"
         :clientes-distintos="f.clientesDistintos.value"
         :puede-facturar="f.puedeFacturar.value"
+        :faltan-datos="faltanDatos"
         :validando="f.validando.value"
         :motivo-bloqueo="motivoBloqueo"
         :consumidor-final="f.consumidorFinal.value && f.sinIdentificacion.value"
-        @emitir="confirming = true"
+        @emitir="onEmitirClick"
       />
     </Transition>
 
@@ -174,6 +203,21 @@ async function onEmitir() {
         </div>
       </section>
     </Transition>
+
+    <CompletarClienteModal
+      :open="completando"
+      v-model:consumidor-final="f.consumidorFinal.value"
+      :cliente="f.cliente.value"
+      :faltantes="f.faltantes.value"
+      :consumidor-final-posible="f.consumidorFinalPosible.value"
+      :guardando="f.guardandoCliente.value"
+      :validando="f.validando.value"
+      :listo="f.puedeFacturar.value"
+      :total="money(f.totales.value.totalGeneral)"
+      @close="completando = false"
+      @guardar="onGuardarDesdeModal"
+      @continuar="continuarDesdeModal"
+    />
 
     <AppConfirmModal
       :open="confirming"

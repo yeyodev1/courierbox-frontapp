@@ -110,34 +110,49 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
   })
 
-  it('al elegir paquetes revisa al cliente y bloquea emitir hasta completar la cédula', async () => {
+  it('al elegir paquetes revisa al cliente; con datos faltantes el botón dice qué falta y abre el formulario', async () => {
     const wrapper = mountView()
     await buscarYSeleccionar(wrapper)
 
     expect(mocks.validar).toHaveBeenCalledWith(['p1'])
-    const bloque = wrapper.get('[data-test="datos-faltantes"]')
-    expect(bloque.text()).toContain('Faltan datos para que el SRI autorice')
-    expect(bloque.get('[data-test="faltante-cedulaRuc"]').text()).toContain('Sin cédula o RUC')
-    expect((wrapper.get('[data-test="emitir"]').element as HTMLButtonElement).disabled).toBe(true)
+    const boton = wrapper.get('[data-test="emitir"]')
+    expect(boton.text()).toContain('Completar datos y emitir')
+    expect((boton.element as HTMLButtonElement).disabled).toBe(false)
     expect(wrapper.get('[data-test="motivo-bloqueo"]').text()).toContain('Sin cédula o RUC')
+    expect(wrapper.find('[data-test="completar-modal"]').exists()).toBe(false)
+
+    await boton.trigger('click')
+
+    const modal = wrapper.get('[data-test="completar-modal"]')
+    expect(modal.text()).toContain('Datos de Diego Reyes')
+    expect(modal.get('[data-test="faltante-cedulaRuc"]').text()).toContain('Sin cédula o RUC')
+    expect((modal.get('[data-test="continuar-emitir"]').element as HTMLButtonElement).disabled).toBe(true)
     // Por más de $50 no se ofrece consumidor final.
-    expect(wrapper.find('[data-test="consumidor-final"]').exists()).toBe(false)
+    expect(modal.find('[data-test="consumidor-final"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="confirm"]').exists()).toBe(false)
   })
 
-  it('completar la cédula la guarda en el cliente, vuelve a validar y habilita emitir', async () => {
+  /** El pedido del cliente: completar y guardar desde ahí mismo, y seguir a emitir. */
+  it('guardar la cédula desde el formulario la deja en el cliente y pasa solo a la confirmación', async () => {
     mocks.completarCliente.mockResolvedValue({ ...validacion().cliente, cedulaRuc: '0954227641' })
     const wrapper = mountView()
     await buscarYSeleccionar(wrapper)
+    await wrapper.get('[data-test="emitir"]').trigger('click')
 
     mocks.validar.mockResolvedValue(validacion({ cliente: { ...validacion().cliente, cedulaRuc: '0954227641' }, faltantes: [{ campo: 'email', requerido: false, mensaje: 'Sin correo: la factura no le llegará por email.' }], listo: true }))
-    await wrapper.get('[data-test="input-cedulaRuc"]').setValue('0954227641')
-    await wrapper.get('[data-test="guardar-cliente"]').trigger('submit')
+    const modal = wrapper.get('[data-test="completar-modal"]')
+    await modal.get('[data-test="input-cedulaRuc"]').setValue('0954227641')
+    await modal.get('[data-test="guardar-cliente"]').trigger('submit')
     await flushPromises()
 
     expect(mocks.completarCliente).toHaveBeenCalledWith('c1', { cedulaRuc: '0954227641' })
     expect(mocks.validar).toHaveBeenCalledTimes(2)
-    expect((wrapper.get('[data-test="emitir"]').element as HTMLButtonElement).disabled).toBe(false)
-    expect(wrapper.get('[data-test="datos-faltantes"]').text()).toContain('Datos recomendados')
+    expect(wrapper.find('[data-test="completar-modal"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="confirm-msg"]').text()).toContain('a nombre de Diego Reyes')
+
+    await wrapper.get('[data-test="confirm-si"]').trigger('click')
+    await flushPromises()
+    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: false })
   })
 
   it('hasta $50 sin cédula ofrece consumidor final y con eso deja emitir', async () => {
@@ -146,11 +161,13 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     const wrapper = mountView()
     await buscarYSeleccionar(wrapper)
 
-    expect((wrapper.get('[data-test="emitir"]').element as HTMLButtonElement).disabled).toBe(true)
-    await wrapper.get('[data-test="consumidor-final"] input').setValue(true)
-
-    expect((wrapper.get('[data-test="emitir"]').element as HTMLButtonElement).disabled).toBe(false)
     await wrapper.get('[data-test="emitir"]').trigger('click')
+    const modal = wrapper.get('[data-test="completar-modal"]')
+    expect((modal.get('[data-test="continuar-emitir"]').element as HTMLButtonElement).disabled).toBe(true)
+    await modal.get('[data-test="consumidor-final"] input').setValue(true)
+
+    expect((modal.get('[data-test="continuar-emitir"]').element as HTMLButtonElement).disabled).toBe(false)
+    await modal.get('[data-test="continuar-emitir"]').trigger('click')
     expect(wrapper.get('[data-test="confirm-msg"]').text()).toContain('a nombre de Consumidor Final')
     await wrapper.get('[data-test="confirm-si"]').trigger('click')
     await flushPromises()
