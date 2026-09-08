@@ -13,6 +13,7 @@ import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { FilaIngreso } from '@/services/ingreso_carga.api'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import CajaManualModal from './IngresoCarga/CajaManualModal.vue'
 import IngresoCargaTabla from './IngresoCarga/IngresoCargaTabla.vue'
 import VincularClienteModal from './IngresoCarga/VincularClienteModal.vue'
 import { useIngresoCarga } from './IngresoCarga/useIngresoCarga'
@@ -54,15 +55,20 @@ function mensajeConfirmacion() {
           mano lo que no cuadre; nada se guarda hasta que confirmes.
         </p>
       </div>
-      <Transition name="fade-up">
-        <button v-if="ic.archivo.value" type="button" class="btn ghost" :disabled="ic.aplicando.value" @click="ic.reiniciar">
-          <i class="fa-solid fa-rotate-left" aria-hidden="true" /> Otro archivo
+      <div class="head__acciones">
+        <button v-if="!ic.aplicado.value" type="button" class="btn primary" data-test="abrir-manual" @click="ic.cajaModalAbierta.value = true">
+          <i class="fa-solid fa-plus" aria-hidden="true" /> Ingresar caja una a una
         </button>
-      </Transition>
+        <Transition name="fade-up">
+          <button v-if="ic.archivo.value || ic.cajasManuales.value.length || ic.aplicado.value" type="button" class="btn ghost" :disabled="ic.aplicando.value" @click="ic.reiniciar">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true" /> {{ ic.aplicado.value ? 'Nuevo ingreso' : 'Empezar de nuevo' }}
+          </button>
+        </Transition>
+      </div>
     </header>
 
     <Transition name="fade-up" mode="out-in">
-      <section v-if="!ic.aplicado.value" class="panel" key="upload">
+      <section v-if="!ic.aplicado.value && ic.modo.value === 'archivo'" class="panel" key="upload">
         <AppFileUpload
           v-model="ic.archivo.value"
           label="Manifiesto de ingreso de carga"
@@ -71,6 +77,17 @@ function mensajeConfirmacion() {
           :disabled="ic.cargando.value || ic.aplicando.value"
           :error="ic.errorArchivo.value"
         />
+      </section>
+    </Transition>
+
+    <Transition name="fade-up">
+      <section v-if="ic.modo.value === 'manual' && !ic.aplicado.value && ic.cajasManuales.value.length" class="banner manual" data-test="manual-resumen">
+        <i class="fa-solid fa-pen-to-square" aria-hidden="true" />
+        <div>
+          <strong>{{ ic.cajasManuales.value.length }} caja(s) ingresadas a mano.</strong>
+          Revísalas abajo igual que un Excel; puedes agregar más o vincular clientes antes de confirmar.
+          <span class="banner__acciones"><button type="button" class="btn ghost sm" @click="ic.cajaModalAbierta.value = true"><i class="fa-solid fa-plus" aria-hidden="true" /> Agregar otra caja</button></span>
+        </div>
       </section>
     </Transition>
 
@@ -183,6 +200,16 @@ function mensajeConfirmacion() {
       </div>
     </Transition>
 
+
+    <CajaManualModal
+      :open="ic.cajaModalAbierta.value"
+      :cajas="ic.cajasManuales.value"
+      @close="ic.cajaModalAbierta.value = false"
+      @agregar="ic.agregarCajaManual"
+      @quitar="(i) => { ic.quitarCajaManual(i); if (ic.modo.value === 'manual') ic.previsualizarManual() }"
+      @ver="() => { ic.cajaModalAbierta.value = false; ic.previsualizarManual() }"
+    />
+
     <VincularClienteModal
       :fila="ic.filaEnEdicion.value"
       @close="ic.cerrarVincular"
@@ -231,6 +258,8 @@ function mensajeConfirmacion() {
   gap: $space-4;
   flex-wrap: wrap;
 
+  &__acciones { display: flex; gap: $space-3; flex-wrap: wrap; }
+
   h1 { margin: 0 0 $space-1; font-size: 1.5rem; }
   p { margin: 0; color: $ink-400; font-size: 0.9rem; max-width: 66ch; }
 }
@@ -241,6 +270,8 @@ function mensajeConfirmacion() {
   border: 1px solid rgba($ink-500, 0.15);
   background: $ink-900;
 }
+
+.banner.manual { border-color: rgba($brand-orange, 0.35); background: rgba($brand-orange, 0.06); > i { color: $brand-orange; } }
 
 .banner {
   display: flex;

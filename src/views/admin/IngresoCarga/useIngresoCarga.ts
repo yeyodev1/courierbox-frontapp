@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue'
 import {
   ingresoCargaApi,
   type AccionFila,
+  type CajaManual,
   type Decisiones,
   type FilaIngreso,
   type ResultadoIngreso,
@@ -33,6 +34,22 @@ export function sePuedeVincular(fila: FilaIngreso): boolean {
   return ['creado', 'aproximado', 'vinculado', 'sin_cliente'].includes(fila.accion)
 }
 
+export function cajaManualVacia(): CajaManual {
+  return { fecha: new Date().toISOString().slice(0, 10), mg: '', wr: '', origen: '', cliente: '', agencia: '', ciudad: '', direccion: '', tracking: '', contenido: '', peso: '', reempaque: null }
+}
+
+/** Mismas reglas que el manifiesto, para avisar antes de mandar nada. */
+export function validarCajaManual(c: CajaManual): Partial<Record<keyof CajaManual, string>> {
+  const e: Partial<Record<keyof CajaManual, string>> = {}
+  if (!/^WR\s*\d+$/i.test(c.wr.trim())) e.wr = 'Debe ser WR seguido de números, ej. WR839943'
+  if (c.mg.trim() && !/^MG\s*\d+$/i.test(c.mg.trim())) e.mg = 'Debe ser MG seguido de números, ej. MG002516'
+  const peso = Number(String(c.peso).replace(',', '.'))
+  if (!(peso > 0)) e.peso = 'Peso en libras, mayor que 0'
+  if (!c.fecha) e.fecha = 'Indica la fecha de ingreso'
+  if (!c.cliente.trim()) e.cliente = 'Escribe el nombre del cliente (como en el manifiesto)'
+  return e
+}
+
 export function sugerenciaToCliente(s: SugerenciaCliente): ClienteMaster {
   return { _id: s.masterId, nombreOficial: s.nombreOficial, codigoCasillero: s.casillero }
 }
@@ -55,6 +72,10 @@ export function useIngresoCarga() {
   const errorArchivo = ref('')
 
   const decisiones = ref<Decisiones>({})
+  /** De dónde vienen las cajas: del Excel o escritas una a una. */
+  const modo = ref<'archivo' | 'manual'>('archivo')
+  const cajasManuales = ref<CajaManual[]>([])
+  const cajaModalAbierta = ref(false)
   /** La fila abierta en el modal de vincular. */
   const filaEnEdicion = ref<FilaIngreso | null>(null)
   /** El WR que acaba de cambiar, para resaltarlo un instante. */
@@ -64,7 +85,7 @@ export function useIngresoCarga() {
   const vista = computed(() => resultado.value ?? previsualizacion.value)
   const aplicado = computed(() => !!resultado.value)
   const puedeAplicar = computed(
-    () => !!archivo.value && !!previsualizacion.value && !resultado.value && !cargando.value && !aplicando.value,
+    () => (modo.value === 'manual' ? cajasManuales.value.length > 0 : !!archivo.value) && !!previsualizacion.value && !resultado.value && !cargando.value && !aplicando.value,
   )
 
   /**
@@ -175,11 +196,43 @@ export function useIngresoCarga() {
     resaltar(fila.wr)
   }
 
+  /** Las cajas escritas a mano pasan por la misma previsualización que el Excel. */
+  async function previsualizarManual() {
+    if (!cajasManuales.value.length) {
+      previsualizacion.value = null
+      return
+    }
+    modo.value = 'manual'
+    cargando.value = true
+    errorArchivo.value = ''
+    resultado.value = null
+    decisiones.value = {}
+    try {
+      previsualizacion.value = await ingresoCargaApi.previsualizarManual(cajasManuales.value)
+    } catch (error) {
+      previsualizacion.value = null
+      fail(error, 'No se pudieron revisar las cajas')
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  function agregarCajaManual(caja: CajaManual) {
+    cajasManuales.value = [...cajasManuales.value, { ...caja, wr: caja.wr.trim().replace(/\s+/g, '').toUpperCase(), mg: caja.mg.trim().replace(/\s+/g, '').toUpperCase() }]
+  }
+
+  function quitarCajaManual(indice: number) {
+    cajasManuales.value = cajasManuales.value.filter((_, i) => i !== indice)
+  }
+
   async function aplicar(): Promise<boolean> {
-    if (!archivo.value || !puedeAplicar.value) return false
+    if (!puedeAplicar.value) return false
+    if (modo.value === 'archivo' && !archivo.value) return false
     aplicando.value = true
     try {
-      resultado.value = await ingresoCargaApi.aplicar(archivo.value, decisiones.value)
+      resultado.value = modo.value === 'manual'
+        ? await ingresoCargaApi.aplicarManual(cajasManuales.value, decisiones.value)
+        : await ingresoCargaApi.aplicar(archivo.value!, decisiones.value)
       const r = resultado.value
       toast.showNotification(
         `Carga ingresada: ${r.paquetesNuevos + r.paquetesActualizados} cajas, ${r.clientesCreados} clientes nuevos`,
@@ -196,6 +249,9 @@ export function useIngresoCarga() {
   }
 
   function reiniciar() {
+    modo.value = 'archivo'
+    cajasManuales.value = []
+    cajaModalAbierta.value = false
     archivo.value = null
     previsualizacion.value = null
     resultado.value = null
@@ -210,10 +266,20 @@ export function useIngresoCarga() {
     resultado.value = null
     errorArchivo.value = ''
     decisiones.value = {}
-    if (file) previsualizar()
+    if (file) {
+      modo.value = 'archivo'
+      cajasManuales.value = []
+      previsualizar()
+    }
   })
 
   return {
+    modo,
+    cajasManuales,
+    cajaModalAbierta,
+    agregarCajaManual,
+    quitarCajaManual,
+    previsualizarManual,
     archivo,
     previsualizacion,
     resultado,
