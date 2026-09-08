@@ -6,6 +6,8 @@ import type { ResultadoIngreso } from '@/services/ingreso_carga.api'
 const mocks = vi.hoisted(() => ({
   previsualizar: vi.fn(),
   aplicar: vi.fn(),
+  previsualizarManual: vi.fn(),
+  aplicarManual: vi.fn(),
   notify: vi.fn(),
   push: vi.fn(),
 }))
@@ -13,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
 
 vi.mock('@/services/ingreso_carga.api', () => ({
-  ingresoCargaApi: { previsualizar: mocks.previsualizar, aplicar: mocks.aplicar },
+  ingresoCargaApi: { previsualizar: mocks.previsualizar, aplicar: mocks.aplicar, previsualizarManual: mocks.previsualizarManual, aplicarManual: mocks.aplicarManual },
 }))
 
 vi.mock('@/stores/toast.store', () => ({
@@ -86,6 +88,7 @@ function mountView() {
         AppFileUpload: AppFileUploadStub,
         AppConfirmModal: AppConfirmModalStub,
         VincularClienteModal: VincularClienteModalStub,
+        AppOverlay: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
         AppSkeleton: { template: '<div data-test="skeleton" />' },
         RouterLink: { template: '<a><slot /></a>' },
       },
@@ -262,6 +265,43 @@ describe('AdminIngresoCargaView', () => {
 
     await wrapper.get('[data-test="ir-facturacion"]').trigger('click')
     expect(mocks.push).toHaveBeenLastCalledWith({ path: '/admin/facturacion' })
+  })
+
+  /** El pedido: ingresar cajas una a una, con el formato del manifiesto, y que caigan en la misma vista. */
+  it('ingresar cajas a mano exige el formato, las manda a la misma previsualización y se confirman igual', async () => {
+    mocks.previsualizarManual.mockResolvedValue(resultado({ totalFilas: 1, filas: [resultado().filas[0]!] }))
+    mocks.aplicarManual.mockResolvedValue(resultado({ aplicado: true, totalFilas: 1, filas: [resultado().filas[0]!] }))
+    const wrapper = mountView()
+
+    await wrapper.get('[data-test="abrir-manual"]').trigger('click')
+    const m = wrapper.get('[data-test="caja-manual-modal"]')
+    await m.get('[data-test="m-wr"]').setValue('839943')
+    await m.get('[data-test="m-peso"]').setValue('0')
+    await m.get('[data-test="m-agregar"]').trigger('submit')
+    expect(m.text()).toContain('Debe ser WR seguido de números')
+    expect(m.text()).toContain('mayor que 0')
+    expect(wrapper.find('[data-test="m-cola"]').exists()).toBe(false)
+
+    await m.get('[data-test="m-wr"]').setValue('wr 839943')
+    await m.get('[data-test="m-mg"]').setValue('MG002516')
+    await m.get('[data-test="m-peso"]').setValue('8')
+    await m.get('[data-test="m-cliente"]').setValue('MARIA ELIZABETH GILER')
+    await m.get('[data-test="m-contenido"]').setValue('5 suplementos')
+    await m.get('[data-test="m-agregar"]').trigger('submit')
+    expect(wrapper.get('[data-test="m-cola"]').text()).toContain('WR839943')
+
+    await wrapper.get('[data-test="m-ver"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.previsualizarManual).toHaveBeenCalledWith([expect.objectContaining({ wr: 'WR839943', mg: 'MG002516', cliente: 'MARIA ELIZABETH GILER', peso: 8 })])
+    expect(wrapper.get('[data-test="manual-resumen"]').text()).toContain('1 caja(s) ingresadas a mano')
+    expect(wrapper.get('[data-test="accion-creado"]').text()).toBe('Se creará')
+
+    await confirmar(wrapper)
+    expect(mocks.aplicarManual).toHaveBeenCalledWith([expect.objectContaining({ wr: 'WR839943' })], {})
+    expect(mocks.aplicar).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-test="banner-aplicado"]').text()).toContain('Carga ingresada')
+    expect(wrapper.find('[data-test="facturar-WR839943"]').exists()).toBe(true)
   })
 
   it('lista los errores por fila que el backend reporta', async () => {
