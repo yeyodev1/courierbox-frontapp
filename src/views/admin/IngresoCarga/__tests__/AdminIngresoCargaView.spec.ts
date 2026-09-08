@@ -7,7 +7,10 @@ const mocks = vi.hoisted(() => ({
   previsualizar: vi.fn(),
   aplicar: vi.fn(),
   notify: vi.fn(),
+  push: vi.fn(),
 }))
+
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
 
 vi.mock('@/services/ingreso_carga.api', () => ({
   ingresoCargaApi: { previsualizar: mocks.previsualizar, aplicar: mocks.aplicar },
@@ -228,6 +231,37 @@ describe('AdminIngresoCargaView', () => {
 
     expect(wrapper.get('[data-test="error-archivo"]').text()).toContain('BOX ID')
     expect(wrapper.find('[data-test="confirmar"]').exists()).toBe(false)
+  })
+
+  /** Lo que pidió el cliente al ver "Actualizado": que un archivo ya cargado se note antes de confirmar. */
+  it('marca las cajas que ya existían como "Ya registrada" y avisa arriba, sin duplicar', async () => {
+    const filas = resultado().filas.map((f, i) => (i < 2 ? { ...f, paquete: 'actualizado' as const } : f))
+    mocks.previsualizar.mockResolvedValue(resultado({ filas, paquetesNuevos: 1, paquetesActualizados: 2 }))
+    const wrapper = mountView()
+    await elegirArchivo(wrapper)
+
+    expect(wrapper.get('[data-test="aviso-duplicados"]').text()).toContain('2 de 3 cajas ya estaban registradas')
+    expect(wrapper.get('[data-test="aviso-duplicados"]').text()).toContain('no se duplican')
+    expect(wrapper.get('[data-test="caja-existente-WR839943"]').text()).toBe('Ya registrada')
+    expect(wrapper.get('[data-test="fila-WR839943"]').classes()).toContain('is-duplicada')
+
+    await wrapper.get('[data-test="confirmar"]').trigger('click')
+    expect(wrapper.get('[data-test="confirm-mensaje"]').text()).toContain('se actualizan 2 que ya existían (no se duplican)')
+  })
+
+  it('tras ingresar, "Facturar" lleva a Facturación con el cliente buscado y la caja marcada', async () => {
+    mocks.aplicar.mockResolvedValue(resultado({ aplicado: true, filas: resultado().filas.map((f) => (f.wr === 'WR874096' ? { ...f, casillero: 'CBX111111' } : f)) }))
+    const wrapper = mountView()
+    await elegirArchivo(wrapper)
+    expect(wrapper.find('[data-test="facturar-WR874096"]').exists()).toBe(false)
+
+    await confirmar(wrapper)
+    await wrapper.get('[data-test="facturar-WR874096"]').trigger('click')
+
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/bodega/facturacion', query: { q: 'CBX111111', sel: 'WR874096' } })
+
+    await wrapper.get('[data-test="ir-facturacion"]').trigger('click')
+    expect(mocks.push).toHaveBeenLastCalledWith({ path: '/bodega/facturacion', query: { q: 'WR' } })
   })
 
   it('lista los errores por fila que el backend reporta', async () => {

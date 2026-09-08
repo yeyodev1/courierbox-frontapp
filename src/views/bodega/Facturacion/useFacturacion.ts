@@ -101,6 +101,16 @@ export function useFacturacion() {
       (validacion.value?.yaFacturados.length ?? 0) === 0,
   )
 
+  /** WR que deben quedar marcados en cuanto lleguen los resultados (viene de Ingreso de carga). */
+  let preseleccion: Set<string> | null = null
+
+  /** Arranca con una búsqueda y, si viene, con cajas ya marcadas. */
+  function iniciarDesde(params: { q?: string; sel?: string }) {
+    const wrs = String(params.sel ?? '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+    preseleccion = wrs.length ? new Set(wrs) : null
+    if (params.q) query.value = String(params.q)
+  }
+
   let timer: number | undefined
 
   watch(query, (value) => {
@@ -138,6 +148,11 @@ export function useFacturacion() {
       paquetes.value = data.paquetes
       tarifas.value = data.tarifas
       searched.value = true
+      if (preseleccion) {
+        const ids = data.paquetes.filter((p) => preseleccion!.has(String(p.wr ?? '').toUpperCase())).map((p) => p._id)
+        if (ids.length) selectedIds.value = new Set(ids)
+        preseleccion = null
+      }
     } catch (error) {
       fail(error, 'No se pudo buscar paquetes')
     } finally {
@@ -267,6 +282,7 @@ export function useFacturacion() {
     toggle,
     seleccionarTodos,
     limpiar,
+    iniciarDesde,
     validar,
     completarCliente,
     emitir,
