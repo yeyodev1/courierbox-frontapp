@@ -43,6 +43,7 @@ vi.mock('@/services/facturacion.api', () => ({
 }))
 
 vi.mock('@/services/homologacion.api', () => ({ homologacionApi: apiStub, default: apiStub }))
+vi.mock('@/services/ingreso_carga.api', () => ({ ingresoCargaApi: apiStub, default: apiStub }))
 
 vi.mock('@/services/solicitudes.api', () => ({ solicitudesApi: apiStub, default: apiStub }))
 
@@ -63,6 +64,7 @@ const VIEWS: Array<[string, () => Promise<any>]> = [
   ['PersonalShopperView.vue', () => import('@/views/PersonalShopperView.vue')],
   ['bodega/BodegaFacturacionView.vue', () => import('@/views/bodega/BodegaFacturacionView.vue')],
   ['admin/AdminHomologacionView.vue', () => import('@/views/admin/AdminHomologacionView.vue')],
+  ['admin/AdminIngresoCargaView.vue', () => import('@/views/admin/AdminIngresoCargaView.vue')],
   ['AboutView.vue', () => import('@/views/AboutView.vue')],
   ['ContactView.vue', () => import('@/views/ContactView.vue')],
   ['HomeView.vue', () => import('@/views/HomeView.vue')],
