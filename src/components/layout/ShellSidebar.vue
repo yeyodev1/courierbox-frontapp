@@ -65,7 +65,7 @@ onBeforeUnmount(persistScroll)
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'mobile-open': mobileOpen }" aria-label="Barra de navegación">
+  <aside class="sidebar" :class="{ 'mobile-open': mobileOpen, collapsed: !expanded }" aria-label="Barra de navegación">
     <div class="sidebar-brand">
       <BrandMark :size="30" :with-word="expanded" :subtitle="expanded ? brandSubtitle : ''" variant="plate" />
       <button
@@ -138,7 +138,13 @@ onBeforeUnmount(persistScroll)
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 
-  :global(.sidebar-collapsed) & { width: 72px; }
+  /* The collapsed state is a class on this very element, set from the
+     `expanded` prop. It used to key off the shell's root class through a
+     global selector, but Vue's scoped-CSS compiler replaces the WHOLE selector
+     with the global part, so the rule landed on the shell root (72px wide,
+     padded) instead of here: the rail stayed at 280px and the content pane
+     shrank to zero width. */
+  &.collapsed { width: 72px; }
 
   @media (max-width: 768px) {
     left: -280px;
@@ -150,7 +156,9 @@ onBeforeUnmount(persistScroll)
       box-shadow: 20px 0 40px rgba(0, 0, 0, 0.5);
     }
 
-    :global(.sidebar-collapsed) & { left: -280px; width: 280px; }
+    /* On mobile the rail is a drawer; a desktop collapse must not shrink it. */
+    &.collapsed { left: -280px; width: 280px; }
+    &.collapsed.mobile-open { left: 0; }
   }
 }
 
@@ -163,12 +171,17 @@ onBeforeUnmount(persistScroll)
   position: relative;
 
   /* At 72px there is no room for mark and button side by side. */
-  :global(.sidebar-collapsed) & {
+  .sidebar.collapsed & {
     flex-direction: column;
     gap: $space-3;
     padding: $space-5 $space-2;
 
     .collapse-btn { margin-left: 0; }
+
+    @media (max-width: 768px) {
+      flex-direction: row;
+      padding: $space-6 $space-4;
+    }
   }
 }
 
