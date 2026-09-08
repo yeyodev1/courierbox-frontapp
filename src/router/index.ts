@@ -71,7 +71,11 @@ router.beforeEach((to, _from, next) => {
     return;
   }
 
-  if ((to.meta as any).requiresBodega && role !== "bodega") {
+  // El counter (facturación, compras, retiros) lo opera bodega, pero admin,
+  // gerencia y superadmin también facturan: el backend ya los deja y el menú
+  // del admin enlaza ahí. Con el guard sólo para bodega, un admin que abría
+  // Facturación era devuelto a su dashboard sin explicación.
+  if ((to.meta as any).requiresBodega && !["bodega", "admin", "gerencia", "superadmin"].includes(String(role || ""))) {
     next(homeForRole(role));
     return;
   }
