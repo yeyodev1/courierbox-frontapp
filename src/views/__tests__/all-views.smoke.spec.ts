@@ -10,10 +10,68 @@ import { createPinia, setActivePinia } from 'pinia'
  * and are covered by their own specs.
  */
 
+/**
+ * What a stubbed request resolves to. The views read many shapes out of a
+ * response (`res.data.total.toFixed(2)`, `res.items.filter(...)`,
+ * `res.cliente.nombre.toUpperCase()`), and a fixed `{ data: [] }` object made
+ * every other path blow up asynchronously, after mount, as an unhandled
+ * rejection that vitest reported as an error even though every test passed.
+ * This value answers any property with itself, behaves as an empty array for
+ * array methods, as 0 for numbers and as '' for strings, so no data shape can
+ * crash a view — which is the point: the smoke test looks for setup/template
+ * crashes, not for data contracts, which the per-view specs cover.
+ */
+function valorCamaleon(): any {
+  const objetivo = function () {}
+  const p: any = new Proxy(objetivo, {
+    get(_t, prop) {
+      if (prop === 'then') return undefined // never mistaken for a thenable
+      if (prop === Symbol.toPrimitive) return () => 0
+      if (prop === Symbol.iterator) return [][Symbol.iterator]
+      if (prop === 'length') return 0
+      if (prop === 'toString' || prop === 'toLocaleString' || prop === 'toISOString') return () => ''
+      if (prop === 'toFixed') return () => '0.00'
+      if (prop === 'valueOf') return () => 0
+      if (typeof prop === 'string' && typeof (Array.prototype as any)[prop] === 'function') {
+        // Booleans, numbers and strings come out real (`some`, `indexOf`,
+        // `join`, `reduce` with a seed); an array or nothing comes back as the
+        // chameleon so that `x.slice(0, 6).toUpperCase()` and `items.filter().map()`
+        // keep working either way.
+        return (...args: any[]) => {
+          const r = ([] as any[])[prop as any](...args)
+          return Array.isArray(r) || r === undefined ? p : r
+        }
+      }
+      return p
+    },
+    apply: () => p, // `x.nombre.toUpperCase()` and friends stay synchronous
+  })
+  return p
+}
+
+const dato = valorCamaleon()
+
+/** A service module: any method, any depth, resolves asynchronously to `dato`. */
 const apiStub: any = new Proxy(function () {} as any, {
   get: (_t, prop) => (prop === 'then' ? undefined : apiStub),
-  apply: () => Promise.resolve({ data: [], items: [], total: 0, results: [], gestiones: [], orders: [], notificaciones: [], retiros: [], paquetes: [], contactos: [], proveedores: [], envios: [], gastos: [], stats: {} }),
+  apply: () => Promise.resolve(dato),
 })
+
+// Direct HTTP users outside the service modules: the wizard's asesor step
+// instantiates httpBase itself, and "Seguir pedido" calls axios straight.
+vi.mock('@/services/httpBase', () => {
+  class APIBase {
+    get = () => Promise.resolve(dato)
+    post = () => Promise.resolve(dato)
+    put = () => Promise.resolve(dato)
+    patch = () => Promise.resolve(dato)
+    delete = () => Promise.resolve(dato)
+  }
+  return { default: APIBase, http: new APIBase() }
+})
+vi.mock('axios', () => ({
+  default: { get: apiStub, post: apiStub, put: apiStub, patch: apiStub, delete: apiStub, isAxiosError: () => false, create: () => apiStub },
+}))
 
 vi.mock('@/services/admin.api', () => ({ adminApi: apiStub, default: apiStub }))
 vi.mock('@/services/asesoria.api', () => ({ asesoriaApi: apiStub, default: apiStub }))
