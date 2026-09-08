@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   configuracion: vi.fn(),
   guardarIva: vi.fn(),
   historial: vi.fn(),
+  detalle: vi.fn(),
   perfiles: vi.fn(),
   guardarPerfil: vi.fn(),
   eliminarPerfil: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock('@/services/facturacion.api', async () => {
       configuracion: mocks.configuracion,
       guardarIva: mocks.guardarIva,
       historial: mocks.historial,
+      detalle: mocks.detalle,
       perfiles: mocks.perfiles,
       guardarPerfil: mocks.guardarPerfil,
       eliminarPerfil: mocks.eliminarPerfil,
@@ -157,6 +159,24 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     expect(wrapper.get('[data-test="iva-valor"]').text()).toBe('15 %')
   })
 
+  it('cada caja por facturar se abre con sus detalles y se factura desde ahí', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-test="detalle-p1"]').trigger('click')
+    const d = wrapper.get('[data-test="paquete-detalle"]')
+    expect(d.text()).toContain('WR1')
+    expect(d.text()).toContain('Diego Reyes')
+    expect(d.text()).toContain('Sin cédula (se pide al facturar)')
+
+    await d.get('[data-test="facturar-esta"]').trigger('click')
+    vi.advanceTimersByTime(300)
+    await flushPromises()
+    expect(wrapper.find('[data-test="paquete-detalle"]').exists()).toBe(false)
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+    expect(mocks.validar).toHaveBeenCalledWith(['p1'], 'principal')
+  })
+
   it('al entrar lista lo pendiente de facturar sin escribir nada', async () => {
     const wrapper = mountView()
     await flushPromises()
@@ -270,6 +290,17 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     expect(h.text()).toContain('Ninguna factura con ese estado')
     await wrapper.get('[data-test="chip-todas"]').trigger('click')
     expect(h.text()).toContain('001-001-000000889')
+
+    // Abrir la factura muestra todo: a nombre de quién, cajas, desglose, SRI, pago.
+    mocks.detalle.mockResolvedValue({ _id: 'f9', numeroFactura: '001-001-000000889', estadoSri: 'autorizado', autorizacionSri: '0709…', mensajeSri: '', pdfUrl: 'https://x/r.pdf', xmlUrl: '', totalGeneral: 14.67, pesoTotalLb: 1.55, totalFlete: 10.08, totalArancel: 3.08, iva: 1.51, estado: 'pendiente', referenciaPago: '', comprobanteUrl: '', contificoId: 'c', facturadoA: { perfilId: 'principal', identificacion: '9999999999999', razonSocial: 'Consumidor Final', email: '' }, masterClienteId: { _id: 'c1', nombreOficial: 'Lady Vera', codigoCasillero: 'CBX237935' }, paquetes: [{ ...paquete, wr: 'WR875181', pesoLb: 1.55 }], createdAt: '2026-09-08T03:00:00.000Z' })
+    await wrapper.get('[data-test="abrir-f9"]').trigger('click')
+    await flushPromises()
+    const d = wrapper.get('[data-test="factura-detalle"]')
+    expect(d.text()).toContain('Consumidor Final')
+    expect(d.text()).toContain('WR875181')
+    expect(d.text()).toContain('$10.08')
+    expect(d.text()).toContain('Pendiente de pago')
+    expect(d.find('[data-test="detalle-pdf"]').exists()).toBe(true)
     expect(h.text()).toContain('WR875181')
     expect(h.text()).toContain('Consumidor Final')
     expect(h.text()).toContain('Autorizada por el SRI')

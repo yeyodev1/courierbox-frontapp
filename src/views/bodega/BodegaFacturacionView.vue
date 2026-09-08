@@ -11,6 +11,9 @@ import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
 import { useAuthStore } from '@/stores/auth.store'
 import DatosFacturacionModal from './Facturacion/DatosFacturacionModal.vue'
+import FacturaDetalleModal from './Facturacion/FacturaDetalleModal.vue'
+import PaqueteDetalleModal from './Facturacion/PaqueteDetalleModal.vue'
+import type { PaqueteFacturable } from '@/services/facturacion.api'
 import { formatDate } from '@/utils/format'
 import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
 import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
@@ -102,6 +105,22 @@ function identificacionDe(fx: { facturadoA?: { identificacion: string } | null; 
   return id || (fx.totalGeneral <= 50 ? 'Consumidor final' : 'Sin identificación')
 }
 
+/** WhatsApp para la factura abierta en detalle. */
+const whatsappDetalle = computed(() => {
+  const fx = f.facturaAbierta.value
+  if (!fx) return '#'
+  const nombre = fx.facturadoA?.razonSocial || fx.masterClienteId?.nombreOficial || ''
+  return whatsappUrl(`Hola Courier Box, soy ${nombre}. Recibí mi factura ${fx.numeroFactura} por ${money(fx.totalGeneral)} y quiero coordinar el pago.`)
+})
+
+/** Desde el detalle de una caja: la deja como única selección y va a emitir. */
+function facturarDesdeDetalle(p: PaqueteFacturable) {
+  f.paqueteAbierto.value = null
+  f.limpiar()
+  f.toggle(p._id)
+  f.vista.value = 'pendientes'
+}
+
 const nombreEnFactura = computed(() => (f.consumidorFinal.value && f.sinIdentificacion.value ? 'Consumidor Final' : f.cliente.value.nombre))
 
 async function onEmitir() {
@@ -190,6 +209,7 @@ async function onEmitir() {
                 </span>
               </span>
               <span class="pkg__peso">{{ (Number(p.pesoLb) || 0).toFixed(2) }} lb</span>
+              <button type="button" class="pkg__detalle" :data-test="`detalle-${p._id}`" title="Ver detalles" @click.prevent.stop="f.paqueteAbierto.value = p"><i class="fa-solid fa-circle-info" aria-hidden="true" /> Detalles</button>
             </label>
           </li>
         </ul>
@@ -294,10 +314,10 @@ async function onEmitir() {
       <TransitionGroup v-else name="lista" tag="ul" class="tarjetas">
         <li v-for="fx in f.facturasFiltradas.value" :key="fx._id" class="tarjeta" :class="`tono-${SRI_UI[fx.estadoSri]?.tono ?? 'neutro'}`" :data-test="`factura-${fx._id}`">
           <div class="tarjeta__top">
-            <div>
-              <span class="tarjeta__num">{{ fx.numeroFactura }}</span>
-              <small>{{ formatDate(fx.createdAt) }}</small>
-            </div>
+            <button type="button" class="tarjeta__abrir" :data-test="`abrir-${fx._id}`" @click="f.abrirFactura(fx._id)">
+              <span class="tarjeta__num">{{ fx.numeroFactura }} <i class="fa-solid fa-up-right-from-square" aria-hidden="true" /></span>
+              <small>{{ formatDate(fx.createdAt) }} · abrir detalle</small>
+            </button>
             <span class="sri-pill" :class="`sri-pill--${SRI_UI[fx.estadoSri]?.tono ?? 'neutro'}`">
               <i class="fa-solid" :class="SRI_UI[fx.estadoSri]?.tono === 'ok' ? 'fa-circle-check' : SRI_UI[fx.estadoSri]?.tono === 'error' ? 'fa-circle-xmark' : 'fa-hourglass-half'" aria-hidden="true" />
               {{ SRI_UI[fx.estadoSri]?.label ?? fx.estadoSri }}
@@ -323,6 +343,18 @@ async function onEmitir() {
         </li>
       </TransitionGroup>
     </section>
+
+    <FacturaDetalleModal
+      :open="!!f.facturaAbierta.value || f.cargandoDetalle.value"
+      :factura="f.facturaAbierta.value"
+      :cargando="f.cargandoDetalle.value"
+      :sincronizando="!!f.facturaAbierta.value && f.sincronizandoId.value === f.facturaAbierta.value._id"
+      :whatsapp-url="whatsappDetalle"
+      @close="f.facturaAbierta.value = null"
+      @sri="f.facturaAbierta.value && f.actualizarSriDe(f.facturaAbierta.value._id)"
+    />
+
+    <PaqueteDetalleModal :paquete="f.paqueteAbierto.value" @close="f.paqueteAbierto.value = null" @facturar="facturarDesdeDetalle" />
 
     <AppConfirmModal
       :open="confirming"
@@ -454,6 +486,22 @@ async function onEmitir() {
     color: $ink-300;
     font-size: 0.85rem;
   }
+
+  &__detalle {
+    flex: 0 0 auto;
+    background: none;
+    border: 1px solid rgba($ink-500, 0.25);
+    border-radius: $radius-sm;
+    color: $ink-300;
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    &:hover { color: $brand-orange; border-color: rgba($brand-orange, 0.4); }
+  }
 }
 
 .muted {
@@ -530,7 +578,8 @@ async function onEmitir() {
   border-left-width: 4px;
   &.tono-ok { border-left-color: $signal-green; } &.tono-proceso { border-left-color: $signal-amber; } &.tono-error { border-left-color: $signal-red; } &.tono-neutro { border-left-color: $ink-500; }
   &__top { display: flex; justify-content: space-between; gap: $space-3; align-items: flex-start; > div { display: flex; flex-direction: column; } small { color: $ink-400; font-size: 0.76rem; } }
-  &__num { font-family: inherit; font-weight: 700; font-size: 1.05rem; color: $fg-dark; font-variant-numeric: tabular-nums; }
+  &__num { font-family: inherit; font-weight: 700; font-size: 1.05rem; color: $fg-dark; font-variant-numeric: tabular-nums; i { font-size: 0.7rem; color: $brand-orange; margin-left: 4px; } }
+  &__abrir { display: flex; flex-direction: column; align-items: flex-start; background: none; border: none; padding: 0; font: inherit; text-align: left; cursor: pointer; small { color: $ink-400; font-size: 0.76rem; } &:hover .tarjeta__num { color: $brand-orange; } }
   &__cliente { strong { display: block; color: $fg-dark; font-size: 0.95rem; } small { color: $ink-400; font-size: 0.78rem; } }
   &__cajas { display: flex; flex-wrap: wrap; gap: 6px; .caja { font-size: 0.74rem; padding: 3px 8px; border-radius: $radius-sm; background: rgba($ink-500, 0.25); color: $ink-200; font-variant-numeric: tabular-nums; } }
   &__bottom { display: flex; justify-content: space-between; align-items: center; gap: $space-3; flex-wrap: wrap; border-top: 1px solid rgba($ink-500, 0.15); padding-top: $space-3; }

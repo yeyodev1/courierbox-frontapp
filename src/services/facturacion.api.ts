@@ -4,12 +4,17 @@ export interface PaqueteFacturable {
   _id: string
   wr: string
   sh: string
+  mg?: string
   trackingOriginal: string
   contenido: string
   pesoLb: number
   consigneeNombre: string
   consigneeLimpio: string
   estado: string
+  fechaIngreso?: string | null
+  agencia?: string
+  origen?: string
+  createdAt?: string
   masterClienteId?: {
     _id: string
     nombreOficial?: string
@@ -69,6 +74,20 @@ export interface FacturaHistorial {
   masterClienteId?: { _id: string; nombreOficial: string; codigoCasillero: string; cedulaRuc?: string } | null
   paquetes: Array<{ _id: string; wr: string; sh: string; contenido: string; pesoLb: number }>
   createdAt: string
+}
+
+export interface FacturaDetalle extends Omit<FacturaHistorial, 'paquetes' | 'masterClienteId'> {
+  totalFlete: number
+  totalArancel: number
+  iva: number
+  referenciaPago: string
+  comprobanteUrl: string
+  pagadaEn?: string | null
+  autorizadaEn?: string | null
+  sriRevisadoEn?: string | null
+  contificoId: string
+  paquetes: PaqueteFacturable[]
+  masterClienteId?: { _id: string; nombreOficial: string; codigoCasillero: string; cedulaRuc?: string; email?: string; telefono?: string; direccion?: string } | null
 }
 
 export interface ValidacionFactura {
@@ -201,6 +220,11 @@ class FacturacionAPI extends APIBase {
   /** Vuelve a preguntar al SRI (y reenvía si quedó sin enviar). */
   async sincronizarSri(facturaId: string) {
     const res = await this.post<{ factura: FacturaEmitida }>(`v1/facturacion/${facturaId}/sri`, {}, undefined, { timeout: 60000 })
+    return res.data.factura
+  }
+
+  async detalle(facturaId: string) {
+    const res = await this.get<{ factura: FacturaDetalle }>(`v1/facturacion/detalle/${facturaId}`)
     return res.data.factura
   }
 
