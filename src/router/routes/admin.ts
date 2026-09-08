@@ -109,6 +109,12 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: "Envíos a Domicilio · Courier Box" },
       },
       {
+        path: "ingreso-carga",
+        name: "AdminIngresoCarga",
+        component: () => import("@/views/admin/AdminIngresoCargaView.vue"),
+        meta: { title: "Ingreso de carga · Courier Box" },
+      },
+      {
         path: "homologacion",
         name: "AdminHomologacion",
         component: () => import("@/views/admin/AdminHomologacionView.vue"),
