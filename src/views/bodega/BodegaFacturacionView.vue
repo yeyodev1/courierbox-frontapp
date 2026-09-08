@@ -95,6 +95,13 @@ const motivoBloqueo = computed(() => {
   return req.length === 1 ? req[0]!.mensaje : `Faltan ${req.length} datos del cliente para poder emitir.`
 })
 
+/** Con qué identificación salió: la registrada al emitir, si no la del cliente, si no consumidor final. */
+function identificacionDe(fx: { facturadoA?: { identificacion: string } | null; masterClienteId?: { cedulaRuc?: string } | null; totalGeneral: number }) {
+  const id = fx.facturadoA?.identificacion || fx.masterClienteId?.cedulaRuc || ''
+  if (id === '9999999999999') return 'Consumidor final'
+  return id || (fx.totalGeneral <= 50 ? 'Consumidor final' : 'Sin identificación')
+}
+
 const nombreEnFactura = computed(() => (f.consumidorFinal.value && f.sinIdentificacion.value ? 'Consumidor Final' : f.cliente.value.nombre))
 
 async function onEmitir() {
@@ -298,7 +305,7 @@ async function onEmitir() {
           </div>
           <div class="tarjeta__cliente">
             <strong>{{ fx.facturadoA?.razonSocial || fx.masterClienteId?.nombreOficial || '—' }}</strong>
-            <small>{{ fx.facturadoA?.identificacion || 'sin identificación' }}<template v-if="fx.masterClienteId?.codigoCasillero"> · casillero {{ fx.masterClienteId.codigoCasillero }}</template><template v-if="fx.masterClienteId?.nombreOficial && fx.facturadoA?.razonSocial && fx.facturadoA.razonSocial !== fx.masterClienteId.nombreOficial"> · cliente {{ fx.masterClienteId.nombreOficial }}</template></small>
+            <small>{{ identificacionDe(fx) }}<template v-if="fx.masterClienteId?.codigoCasillero"> · casillero {{ fx.masterClienteId.codigoCasillero }}</template><template v-if="fx.masterClienteId?.nombreOficial && fx.facturadoA?.razonSocial && fx.facturadoA.razonSocial !== fx.masterClienteId.nombreOficial"> · cliente {{ fx.masterClienteId.nombreOficial }}</template></small>
           </div>
           <div class="tarjeta__cajas">
             <span v-for="p in fx.paquetes" :key="p._id" class="caja" :title="p.contenido">{{ p.wr || p.sh }}</span>

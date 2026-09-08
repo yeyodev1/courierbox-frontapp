@@ -66,7 +66,7 @@ export interface FacturaHistorial {
   pesoTotalLb: number
   estado: 'pendiente' | 'verificando' | 'pagada' | 'cancelada'
   facturadoA?: { perfilId: string; identificacion: string; razonSocial: string; email: string }
-  masterClienteId?: { _id: string; nombreOficial: string; codigoCasillero: string } | null
+  masterClienteId?: { _id: string; nombreOficial: string; codigoCasillero: string; cedulaRuc?: string } | null
   paquetes: Array<{ _id: string; wr: string; sh: string; contenido: string; pesoLb: number }>
   createdAt: string
 }
