@@ -60,7 +60,36 @@ export interface ResultadoIngreso {
   filas: FilaIngreso[]
 }
 
+/** Una caja escrita a mano, con las columnas del manifiesto. */
+export interface CajaManual {
+  fecha: string
+  mg: string
+  wr: string
+  origen: string
+  cliente: string
+  agencia: string
+  ciudad: string
+  direccion: string
+  tracking: string
+  contenido: string
+  peso: number | string
+  reempaque: boolean | null
+}
+
 class IngresoCargaAPI extends APIBase {
+  private async enviarManual(filas: CajaManual[], aplicar: boolean, decisiones: Decisiones = {}): Promise<ResultadoIngreso> {
+    const res = await this.post<ResultadoIngreso>(`v1/etl/ingreso-carga/manual${aplicar ? '?aplicar=1' : ''}`, { filas, decisiones }, undefined, { timeout: 120000 })
+    return res.data
+  }
+
+  previsualizarManual(filas: CajaManual[]) {
+    return this.enviarManual(filas, false)
+  }
+
+  aplicarManual(filas: CajaManual[], decisiones: Decisiones = {}) {
+    return this.enviarManual(filas, true, decisiones)
+  }
+
   private async enviar(file: File, aplicar: boolean, decisiones: Decisiones = {}): Promise<ResultadoIngreso> {
     const form = new FormData()
     form.append('file', file)
