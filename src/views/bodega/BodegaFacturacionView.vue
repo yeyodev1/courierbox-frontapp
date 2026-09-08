@@ -22,6 +22,7 @@ onMounted(() => {
   const q = typeof route.query.q === 'string' ? route.query.q : ''
   const sel = typeof route.query.sel === 'string' ? route.query.sel : ''
   if (q || sel) f.iniciarDesde({ q, sel })
+  else f.cargarPendientes()
 })
 
 const whatsappFactura = computed(() => {
@@ -65,8 +66,8 @@ async function onEmitir() {
         <input
           v-model="f.query.value"
           type="search"
-          placeholder="Busca por casillero, WR, tracking o nombre del cliente…"
-          aria-label="Buscar paquetes facturables"
+          placeholder="Filtra por casillero, WR, tracking o nombre del cliente…"
+          aria-label="Filtrar paquetes facturables"
         />
         <span v-if="f.searching.value" class="spin"><i class="fa-solid fa-circle-notch fa-spin" /></span>
       </div>
@@ -77,12 +78,12 @@ async function onEmitir() {
 
       <p v-else-if="f.searched.value && !f.paquetes.value.length" class="empty">
         <i class="fa-solid fa-file-invoice" aria-hidden="true" />
-        No hay paquetes pendientes de facturar con ese criterio.
+        {{ f.query.value.trim() ? 'No hay paquetes pendientes de facturar con ese criterio.' : 'No hay paquetes pendientes de facturar.' }}
       </p>
 
       <template v-else-if="f.paquetes.value.length">
         <div class="results-head">
-          <span>{{ f.paquetes.value.length }} paquete(s) por facturar</span>
+          <span>{{ f.paquetes.value.length }} paquete(s) por facturar<template v-if="!f.query.value.trim()"> · los más recientes</template></span>
           <div>
             <button type="button" class="link" @click="f.seleccionarTodos">Seleccionar todos</button>
             <button type="button" class="link" @click="f.limpiar">Limpiar</button>

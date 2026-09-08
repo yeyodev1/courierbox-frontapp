@@ -109,6 +109,14 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: "Envíos a Domicilio · Courier Box" },
       },
       {
+        // La misma pantalla del counter, pero dentro del panel admin: un admin
+        // no tiene por qué aterrizar en la barra lateral de Bodega.
+        path: "facturacion",
+        name: "AdminFacturacion",
+        component: () => import("@/views/bodega/BodegaFacturacionView.vue"),
+        meta: { title: "Facturación · Courier Box" },
+      },
+      {
         path: "ingreso-carga",
         name: "AdminIngresoCarga",
         component: () => import("@/views/admin/AdminIngresoCargaView.vue"),
