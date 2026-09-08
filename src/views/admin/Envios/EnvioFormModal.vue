@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 /**
  * Creation form for a last-mile delivery.
  *
@@ -154,10 +155,7 @@ async function submit() {
       <div class="modal-body">
         <section>
           <h4>Tipo de envío</h4>
-          <select v-model="form.modo" class="field-input">
-            <option value="local">Local — entrega en la ciudad</option>
-            <option value="interprovincial">Interprovincial — vía proveedor</option>
-          </select>
+          <AppSelect v-model="form.modo" :options="[{ value: 'local', label: 'Local — entrega en la ciudad' }, { value: 'interprovincial', label: 'Interprovincial — vía proveedor' }]" :allow-empty="false" />
         </section>
 
         <section>
@@ -220,12 +218,14 @@ async function submit() {
             <input v-model="form.ciudadDestino" class="field-input" placeholder="Ciudad destino" />
           </div>
           <div class="field-row prov-row">
-            <select v-model="form.proveedorUtilizado" class="field-input">
-              <option value="">Seleccionar proveedor...</option>
-              <option v-for="p in props.proveedores" :key="p._id" :value="p.nombre">
-                {{ p.nombre }}{{ p.ciudad ? ` (${p.ciudad})` : '' }}{{ p.tipo ? ` — ${p.tipo}` : '' }}
-              </option>
-            </select>
+            <AppSelect
+              v-model="form.proveedorUtilizado"
+              placeholder="Seleccionar proveedor…"
+              :options="props.proveedores.map((p) => ({ value: p.nombre, label: p.nombre, hint: [p.ciudad, p.tipo].filter(Boolean).join(' · ') }))"
+              action-label="Agregar nuevo proveedor"
+              clearable
+              @action="emit('create-proveedor')"
+            />
             <button class="btn-add-prov" type="button" title="Agregar nuevo proveedor" @click="emit('create-proveedor')">
               <i class="fa-solid fa-plus" />
             </button>
@@ -238,10 +238,7 @@ async function submit() {
 
         <section>
           <h4>Asignar a motorizado <span class="badge badge-gray">opcional</span></h4>
-          <select v-model="form.asignadoA" class="field-input">
-            <option value="">Sin asignar — queda pendiente</option>
-            <option v-for="m in props.motorizados" :key="m._id" :value="m._id">{{ m.name || m.email }}</option>
-          </select>
+          <AppSelect v-model="form.asignadoA" :options="[{ value: '', label: 'Sin asignar — queda pendiente' }, ...props.motorizados.map((m) => ({ value: m._id, label: m.name || m.email }))]" />
         </section>
 
         <textarea v-model="form.notas" class="field-input" rows="2" placeholder="Notas adicionales..." />

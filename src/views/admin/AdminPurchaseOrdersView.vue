@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 import { computed, onMounted, ref } from 'vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { asesoriaApi, type PurchaseOrder } from '@/services/asesoria.api'
@@ -54,10 +55,11 @@ onMounted(load)
 
     <section class="filters">
       <input v-model="search" placeholder="Buscar cliente, correo o producto" />
-      <select v-model="status">
-        <option value="">Todos los estados</option>
-        <option v-for="item in ['borrador', 'pendiente', 'en_proceso', 'comprado', 'en_envio', 'entregado', 'cancelado']" :key="item" :value="item">{{ item }}</option>
-      </select>
+      <AppSelect
+        v-model="status"
+        class="status-select"
+        :options="[{ value: '', label: 'Todos los estados' }, ...['borrador', 'pendiente', 'en_proceso', 'comprado', 'en_envio', 'entregado', 'cancelado'].map((s) => ({ value: s, label: s }))]"
+      />
     </section>
 
     <div v-if="loading" class="state state--loading" aria-busy="true" aria-live="polite">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 import { computed, ref } from 'vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import ClienteQuickCreate from './ClienteQuickCreate.vue'
@@ -6,6 +7,10 @@ import { useToastStore } from '@/stores/toast.store'
 import type { ClienteLite, useVentasProductos } from './useVentasProductos'
 
 const props = defineProps<{ vp: ReturnType<typeof useVentasProductos> }>()
+const emit = defineEmits<{ 'crear-producto': [nombre: string] }>()
+
+const vendedorOptions = computed(() => props.vp.vendedores.map((v) => ({ value: v._id, label: v.name || v.email })))
+const productoOptions = computed(() => props.vp.inventario.map((p) => ({ value: p._id, label: p.nombre, hint: money(p.precio) })))
 const toast = useToastStore()
 const money = (v: unknown) => `$${(Number(v) || 0).toFixed(2)}`
 
@@ -55,8 +60,7 @@ function onClienteCreado(c: ClienteLite) {
   elegirCliente(c)
   mostrarNuevoCliente.value = false
 }
-function onVendedorChange(e: Event) {
-  const id = (e.target as HTMLSelectElement).value
+function onVendedorChange(id: string) {
   const v = props.vp.vendedores.find((x) => x._id === id)
   props.vp.ventaForm.vendedorId = id
   props.vp.ventaForm.vendedorNombre = v ? v.name || v.email : ''
@@ -105,10 +109,7 @@ async function guardar() {
     <div class="form-grid">
       <label class="field">
         <span>Vendedor</span>
-        <select class="field-input" :value="vp.ventaForm.vendedorId" @change="onVendedorChange">
-          <option value="">Selecciona…</option>
-          <option v-for="v in vp.vendedores" :key="v._id" :value="v._id">{{ v.name || v.email }}</option>
-        </select>
+        <AppSelect :model-value="vp.ventaForm.vendedorId" :options="vendedorOptions" placeholder="Selecciona…" @update:model-value="onVendedorChange" />
       </label>
 
       <label class="field cliente-field">
@@ -150,10 +151,16 @@ async function guardar() {
 
       <label class="field">
         <span>Producto</span>
-        <select v-model="vp.ventaForm.productoId" class="field-input">
-          <option value="">Selecciona…</option>
-          <option v-for="p in vp.inventario" :key="p._id" :value="p._id">{{ p.nombre }} — {{ money(p.precio) }}</option>
-        </select>
+        <AppSelect
+          v-model="vp.ventaForm.productoId"
+          :options="productoOptions"
+          placeholder="Busca o elige un producto…"
+          search-placeholder="Buscar producto…"
+          searchable
+          action-label="Crear producto nuevo"
+          empty-text="No hay ningún producto con ese nombre"
+          @action="(q) => emit('crear-producto', q)"
+        />
       </label>
 
       <label class="field">
@@ -202,10 +209,7 @@ async function guardar() {
 
       <label class="field">
         <span>Método de pago</span>
-        <select v-model="vp.ventaForm.metodoPago" class="field-input">
-          <option value="">Selecciona…</option>
-          <option v-for="m in METODOS_PAGO" :key="m" :value="m">{{ m }}</option>
-        </select>
+        <AppSelect v-model="vp.ventaForm.metodoPago" :options="METODOS_PAGO" placeholder="Selecciona…" />
       </label>
 
       <label class="field">
