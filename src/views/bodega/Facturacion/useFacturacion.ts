@@ -6,6 +6,7 @@ import {
   type DatoFaltante,
   type DatosPerfil,
   type EstadoSri,
+  type FacturaDetalle,
   type FacturaEmitida,
   type FacturaHistorial,
   type PerfilFacturacion,
@@ -72,6 +73,23 @@ export function useFacturacion() {
   const cargandoHistorial = ref(false)
   const filtroHistorial = ref('')
   const sincronizandoId = ref<string | null>(null)
+  /** La factura abierta en detalle y la caja abierta en detalle. */
+  const facturaAbierta = ref<FacturaDetalle | null>(null)
+  const cargandoDetalle = ref(false)
+  const paqueteAbierto = ref<PaqueteFacturable | null>(null)
+
+  async function abrirFactura(facturaId: string) {
+    cargandoDetalle.value = true
+    facturaAbierta.value = null
+    try {
+      facturaAbierta.value = await facturacionApi.detalle(facturaId)
+    } catch (error) {
+      fail(error, 'No se pudo abrir la factura')
+    } finally {
+      cargandoDetalle.value = false
+    }
+  }
+
   /** Qué se ve: las cajas por facturar o las facturas ya emitidas. */
   const vista = ref<'pendientes' | 'facturadas'>('pendientes')
   /** Filtro por estado en el SRI dentro de «Facturadas». */
@@ -341,6 +359,7 @@ export function useFacturacion() {
       const f = await facturacionApi.sincronizarSri(facturaId)
       facturas.value = facturas.value.map((x) => (x._id === facturaId ? { ...x, estadoSri: f.estadoSri, autorizacionSri: f.autorizacionSri, pdfUrl: f.pdfUrl, xmlUrl: f.xmlUrl, mensajeSri: f.mensajeSri, numeroFactura: f.numeroFactura } : x))
       if (lastFactura.value?.facturaId === facturaId) lastFactura.value = f
+      if (facturaAbierta.value?._id === facturaId) facturaAbierta.value = { ...facturaAbierta.value, estadoSri: f.estadoSri, autorizacionSri: f.autorizacionSri, pdfUrl: f.pdfUrl, xmlUrl: f.xmlUrl, mensajeSri: f.mensajeSri, numeroFactura: f.numeroFactura }
     } catch (error) {
       fail(error, 'No se pudo consultar el SRI')
     } finally {
@@ -431,6 +450,10 @@ export function useFacturacion() {
     guardarPerfil,
     eliminarPerfil,
     facturas,
+    facturaAbierta,
+    cargandoDetalle,
+    abrirFactura,
+    paqueteAbierto,
     facturasFiltradas,
     conteoSri,
     vista,
