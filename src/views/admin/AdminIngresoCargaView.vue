@@ -22,11 +22,11 @@ const router = useRouter()
 
 /** A Facturación con el cliente ya buscado y esa caja marcada. */
 function facturar(fila: FilaIngreso) {
-  router.push({ path: '/bodega/facturacion', query: { q: fila.casillero, sel: fila.wr } })
+  router.push({ path: '/admin/facturacion', query: { q: fila.casillero, sel: fila.wr } })
 }
 
 function irAFacturacion() {
-  router.push({ path: '/bodega/facturacion', query: { q: 'WR' } })
+  router.push({ path: '/admin/facturacion' })
 }
 
 function mensajeConfirmacion() {

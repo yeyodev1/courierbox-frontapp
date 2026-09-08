@@ -33,6 +33,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin/ventas-productos': { title: 'Ventas de productos', sub: 'Inventario propio, ventas, crédito y recordatorios' },
   '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
   '/admin/ingreso-carga': { title: 'Ingreso de carga', sub: 'Sube el manifiesto del vuelo y cada caja queda con su cliente' },
+  '/admin/facturacion': { title: 'Facturación', sub: 'Cajas pendientes de facturar y emisión de la factura electrónica' },
   '/admin/homologacion': { title: 'Homologación de clientes', sub: 'Vincula los paquetes del manifiesto con su dueño' },
   '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
   '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
@@ -80,7 +81,7 @@ export function useAdminMenu() {
           items: [
             { path: '/admin/ingreso-carga', label: 'Ingreso de carga', icon: 'fa-solid fa-file-arrow-up', match: under('/admin/ingreso-carga') },
             { path: '/admin/homologacion', label: 'Homologación', icon: 'fa-solid fa-people-arrows', match: under('/admin/homologacion') },
-            { path: '/bodega/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: under('/bodega/facturacion') },
+            { path: '/admin/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: under('/admin/facturacion') },
             { path: '/admin/envios', label: 'Envíos', icon: 'fa-solid fa-truck', match: under('/admin/envios') },
             { path: '/admin/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: under('/admin/contactos') },
           ],
@@ -113,7 +114,7 @@ export function useAdminMenu() {
       {
         label: 'Finanzas',
         items: [
-          { path: '/bodega/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: under('/bodega/facturacion') },
+          { path: '/admin/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: under('/admin/facturacion') },
           { path: p('/centro-costos'), label: 'Centro de Costos', icon: 'fa-solid fa-coins', match: under(`${base}/centro-costos`) },
           { path: p('/proveedores'), label: 'Proveedores', icon: 'fa-solid fa-truck-fast', match: under(`${base}/proveedores`) },
           { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: under(`${base}/caja`) },
