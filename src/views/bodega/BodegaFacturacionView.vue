@@ -3,7 +3,8 @@
  * Counter invoicing — the step the proposal calls "facturar en el counter".
  * The client gets the invoice by email plus a ready-to-send WhatsApp message.
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
@@ -12,7 +13,16 @@ import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
 import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
 
 const f = useFacturacion()
+const route = useRoute()
 const confirming = ref(false)
+
+// Desde Ingreso de carga se llega con ?q=<casillero>&sel=<WR>: el cliente ya
+// buscado y la caja marcada, para facturar sin volver a escribir nada.
+onMounted(() => {
+  const q = typeof route.query.q === 'string' ? route.query.q : ''
+  const sel = typeof route.query.sel === 'string' ? route.query.sel : ''
+  if (q || sel) f.iniciarDesde({ q, sel })
+})
 
 const whatsappFactura = computed(() => {
   const factura = f.lastFactura.value

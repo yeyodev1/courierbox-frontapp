@@ -8,7 +8,9 @@
  * archivo muestra primero qué va a pasar; donde el nombre no cuadró solo, el
  * operador lo vincula a mano; nada se escribe hasta confirmar.
  */
+import { useRouter } from 'vue-router'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
+import type { FilaIngreso } from '@/services/ingreso_carga.api'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import IngresoCargaTabla from './IngresoCarga/IngresoCargaTabla.vue'
@@ -16,11 +18,23 @@ import VincularClienteModal from './IngresoCarga/VincularClienteModal.vue'
 import { useIngresoCarga } from './IngresoCarga/useIngresoCarga'
 
 const ic = useIngresoCarga()
+const router = useRouter()
+
+/** A Facturación con el cliente ya buscado y esa caja marcada. */
+function facturar(fila: FilaIngreso) {
+  router.push({ path: '/bodega/facturacion', query: { q: fila.casillero, sel: fila.wr } })
+}
+
+function irAFacturacion() {
+  router.push({ path: '/bodega/facturacion', query: { q: 'WR' } })
+}
 
 function mensajeConfirmacion() {
   const r = ic.resumen.value
   const partes = [
-    `Se registran ${r.cajas} cajas`,
+    r.paquetesActualizados
+      ? `Se registran ${r.paquetesNuevos} cajas nuevas y se actualizan ${r.paquetesActualizados} que ya existían (no se duplican)`
+      : `Se registran ${r.cajas} cajas`,
     r.clientesCreados ? `se crean ${r.clientesCreados} clientes nuevos` : '',
     r.vinculados ? `${r.vinculados} quedan vinculadas a mano` : '',
     r.sinCliente ? `${r.sinCliente} van a Homologación` : '',
@@ -81,6 +95,24 @@ function mensajeConfirmacion() {
                 {{ ic.resumen.value.sinCliente }} cajas venían sin nombre de cliente y esperan en
                 <RouterLink to="/admin/homologacion">Homologación</RouterLink>.
               </template>
+              <span class="banner__acciones">
+                <button type="button" class="btn primary sm" data-test="ir-facturacion" @click="irAFacturacion">
+                  <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true" /> Ir a Facturación
+                </button>
+                <small>O pulsa «Facturar» en la caja que quieras: te lleva con el cliente ya buscado.</small>
+              </span>
+            </div>
+          </section>
+        </Transition>
+
+        <Transition name="fade-up">
+          <section v-if="!ic.aplicado.value && ic.resumen.value.paquetesActualizados > 0" class="banner con-pendientes" data-test="aviso-duplicados">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" />
+            <div>
+              <strong>{{ ic.resumen.value.paquetesActualizados }} de {{ ic.resumen.value.totalFilas }} cajas ya estaban registradas.</strong>
+              <template v-if="ic.resumen.value.paquetesNuevos === 0">Este archivo ya se cargó antes.</template>
+              <template v-else>Parte de este archivo ya se cargó antes.</template>
+              Están marcadas como <em>Ya registrada</em>: al confirmar se actualizan con lo que trae el Excel, <strong>no se duplican</strong>. Si ya tienen factura, no se tocan.
             </div>
           </section>
         </Transition>
@@ -127,6 +159,7 @@ function mensajeConfirmacion() {
           :aplicado="ic.aplicado.value"
           :resaltada="ic.recienCambiada.value"
           @vincular="ic.abrirVincular"
+          @facturar="facturar"
         />
 
         <Transition name="fade-up">
@@ -223,6 +256,8 @@ function mensajeConfirmacion() {
   > i { color: $signal-green; margin-top: 3px; }
   strong { color: $fg-dark; }
   a { color: $brand-orange; }
+  > div { display: flex; flex-direction: column; gap: $space-2; }
+  &__acciones { display: flex; align-items: center; gap: $space-3; flex-wrap: wrap; margin-top: $space-1; small { color: $ink-400; } }
 
   &.con-pendientes {
     border-color: rgba($signal-amber, 0.4);

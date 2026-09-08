@@ -4,6 +4,7 @@ import BodegaFacturacionView from '../BodegaFacturacionView.vue'
 import type { FacturaEmitida, PaqueteFacturable, ValidacionFactura } from '@/services/facturacion.api'
 
 const mocks = vi.hoisted(() => ({
+  routeQuery: {} as Record<string, string>,
   facturables: vi.fn(),
   validar: vi.fn(),
   completarCliente: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('@/services/facturacion.api', async () => {
 })
 
 vi.mock('@/stores/toast.store', () => ({ useToastStore: () => ({ showNotification: mocks.notify }) }))
+vi.mock('vue-router', () => ({ useRoute: () => ({ query: mocks.routeQuery }) }))
 vi.mock('@/config/contact', () => ({ WHATSAPP_DISPLAY: '+1 347', whatsappUrl: (t: string) => `https://wa.me/?text=${encodeURIComponent(t)}` }))
 
 const AppConfirmModalStub = {
@@ -76,9 +78,27 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    mocks.routeQuery = {}
     mocks.facturables.mockResolvedValue({ paquetes: [paquete], tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0.15 } })
     mocks.validar.mockResolvedValue(validacion())
     mocks.generar.mockResolvedValue({ message: 'ok', facturaId: 'f1', factura: emitida })
+  })
+
+  /** Llegando desde Ingreso de carga con «Facturar»: el cliente ya buscado y la caja marcada. */
+  it('con ?q y ?sel busca solo y deja la caja marcada', async () => {
+    mocks.routeQuery = { q: 'CBX9', sel: 'WR1' }
+    const wrapper = mountView()
+    // El watcher de la búsqueda corre en el siguiente tick; recién ahí arma el debounce.
+    await flushPromises()
+    vi.advanceTimersByTime(400)
+    await flushPromises()
+    vi.advanceTimersByTime(300)
+    await flushPromises()
+
+    expect(mocks.facturables).toHaveBeenCalledWith('CBX9')
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+    expect(mocks.validar).toHaveBeenCalledWith(['p1'])
+    expect(wrapper.find('[data-test="datos-faltantes"]').exists()).toBe(true)
   })
 
   it('al elegir paquetes revisa al cliente y bloquea emitir hasta completar la cédula', async () => {
