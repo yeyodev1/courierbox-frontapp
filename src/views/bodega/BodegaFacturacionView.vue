@@ -7,8 +7,9 @@ import { computed, ref } from 'vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
+import DatosFaltantes from './Facturacion/DatosFaltantes.vue'
 import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
-import { money, useFacturacion } from './Facturacion/useFacturacion'
+import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
 
 const f = useFacturacion()
 const confirming = ref(false)
@@ -17,9 +18,22 @@ const whatsappFactura = computed(() => {
   const factura = f.lastFactura.value
   if (!factura) return '#'
   return whatsappUrl(
-    `Hola Courier Box, soy ${factura.cliente}. Recibí mi factura por ${money(factura.total)} y quiero coordinar el pago.`,
+    `Hola Courier Box, soy ${factura.clienteNombre}. Recibí mi factura ${factura.numeroFactura} por ${money(factura.totalGeneral)} y quiero coordinar el pago.`,
   )
 })
+
+const sri = computed(() => (f.lastFactura.value ? SRI_UI[f.lastFactura.value.estadoSri] : null))
+
+/** Por qué no se puede emitir todavía, en una frase. */
+const motivoBloqueo = computed(() => {
+  if (!f.validacion.value) return ''
+  if (f.validacion.value.yaFacturados.length) return `Ya tienen factura: ${f.validacion.value.yaFacturados.join(', ')}.`
+  const req = f.faltantesRequeridos.value
+  if (!req.length) return ''
+  return req.length === 1 ? req[0]!.mensaje : `Faltan ${req.length} datos del cliente para poder emitir.`
+})
+
+const nombreEnFactura = computed(() => (f.consumidorFinal.value && f.sinIdentificacion.value ? 'Consumidor Final' : f.cliente.value.nombre))
 
 async function onEmitir() {
   if (await f.emitir()) confirming.value = false
@@ -87,34 +101,76 @@ async function onEmitir() {
     </section>
 
     <Transition name="bar">
+      <DatosFaltantes
+        v-if="f.seleccionados.value.length && !f.clientesDistintos.value && f.faltantes.value.length"
+        v-model:consumidor-final="f.consumidorFinal.value"
+        :cliente="f.cliente.value"
+        :faltantes="f.faltantes.value"
+        :consumidor-final-posible="f.consumidorFinalPosible.value"
+        :guardando="f.guardandoCliente.value"
+        @guardar="f.completarCliente"
+      />
+    </Transition>
+
+    <Transition name="bar">
       <FacturacionTotales
         v-if="f.seleccionados.value.length"
         :cliente="f.cliente.value"
         :totales="f.totales.value"
         :clientes-distintos="f.clientesDistintos.value"
         :puede-facturar="f.puedeFacturar.value"
+        :validando="f.validando.value"
+        :motivo-bloqueo="motivoBloqueo"
+        :consumidor-final="f.consumidorFinal.value && f.sinIdentificacion.value"
         @emitir="confirming = true"
       />
     </Transition>
 
-    <section v-if="f.lastFactura.value" class="panel receipt">
-      <div class="receipt__icon"><i class="fa-solid fa-circle-check" aria-hidden="true" /></div>
-      <div class="receipt__body">
-        <strong>Factura emitida · {{ money(f.lastFactura.value.total) }}</strong>
-        <span>Cliente {{ f.lastFactura.value.cliente }}. Enviada por correo y lista para WhatsApp.</span>
-      </div>
-      <a class="btn wa" :href="whatsappFactura" target="_blank" rel="noopener" :title="WHATSAPP_DISPLAY">
-        <i class="fa-brands fa-whatsapp" aria-hidden="true" /> Enviar por WhatsApp
-      </a>
-    </section>
+    <Transition name="bar">
+      <section v-if="f.lastFactura.value && sri" class="panel receipt" :class="`sri-${sri.tono}`" data-test="recibo">
+        <div class="receipt__icon">
+          <i class="fa-solid" :class="sri.tono === 'ok' ? 'fa-circle-check' : sri.tono === 'error' ? 'fa-circle-xmark' : 'fa-hourglass-half'" aria-hidden="true" />
+        </div>
+        <div class="receipt__body">
+          <strong>Factura {{ f.lastFactura.value.numeroFactura }} · {{ money(f.lastFactura.value.totalGeneral) }}</strong>
+          <Transition name="swap" mode="out-in">
+            <span :key="f.lastFactura.value.estadoSri" class="sri-pill" :class="`sri-pill--${sri.tono}`" data-test="sri-estado">{{ sri.label }}</span>
+          </Transition>
+          <span class="muted">
+            Cliente {{ f.lastFactura.value.clienteNombre }}.
+            <template v-if="f.lastFactura.value.autorizacionSri">Autorización {{ f.lastFactura.value.autorizacionSri }}.</template>
+            <template v-else-if="f.lastFactura.value.mensajeSri && sri.tono !== 'ok'">{{ f.lastFactura.value.mensajeSri }}</template>
+          </span>
+          <span class="receipt__links">
+            <a v-if="f.lastFactura.value.pdfUrl" :href="f.lastFactura.value.pdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true" /> RIDE (PDF)</a>
+            <a v-if="f.lastFactura.value.xmlUrl" :href="f.lastFactura.value.xmlUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-code" aria-hidden="true" /> XML</a>
+          </span>
+        </div>
+        <div class="receipt__actions">
+          <button
+            v-if="f.lastFactura.value.estadoSri !== 'autorizado' && f.lastFactura.value.estadoSri !== 'simulado'"
+            type="button"
+            class="btn ghost"
+            :disabled="f.sincronizando.value"
+            data-test="actualizar-sri"
+            @click="f.actualizarSri"
+          >
+            <i class="fa-solid fa-rotate" :class="{ 'fa-spin': f.sincronizando.value }" aria-hidden="true" /> Consultar SRI
+          </button>
+          <a class="btn wa" :href="whatsappFactura" target="_blank" rel="noopener" :title="WHATSAPP_DISPLAY">
+            <i class="fa-brands fa-whatsapp" aria-hidden="true" /> Enviar por WhatsApp
+          </a>
+        </div>
+      </section>
+    </Transition>
 
     <AppConfirmModal
       :open="confirming"
       title="Emitir factura electrónica"
-      :message="`Se emitirá una factura por ${money(f.totales.value.totalGeneral)} a nombre de ${f.cliente.value.nombre}. Se envía a Contifico y no se puede deshacer desde aquí.`"
+      :message="`Se emitirá una factura por ${money(f.totales.value.totalGeneral)} a nombre de ${nombreEnFactura}. Se firma, se envía al SRI y no se puede deshacer desde aquí.`"
       confirm-label="Emitir factura"
       variant="info"
-      loading-label="Emitiendo…"
+      loading-label="Emitiendo y enviando al SRI…"
       :confirm-loading="f.emitting.value"
       @cancel="confirming = false"
       @confirm="onEmitir"
@@ -230,14 +286,40 @@ async function onEmitir() {
 .receipt {
   flex-direction: row;
   align-items: center;
+  flex-wrap: wrap;
   gap: $space-4;
   border-color: rgba($signal-green, 0.35);
   background: rgba($signal-green, 0.06);
+  transition: border-color $dur-base ease, background $dur-base ease;
 
   &__icon { font-size: 1.6rem; color: $signal-green; }
-  &__body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-  &__body span { color: $ink-300; font-size: 0.85rem; }
+  &__body { flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  &__body .muted { white-space: normal; }
+  &__links { display: flex; gap: $space-4; font-size: 0.82rem; a { color: $brand-orange; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; } }
+  &__actions { display: flex; gap: $space-3; flex-wrap: wrap; }
+
+  &.sri-proceso { border-color: rgba($signal-amber, 0.4); background: rgba($signal-amber, 0.06); .receipt__icon { color: $signal-amber; } }
+  &.sri-error { border-color: rgba($signal-red, 0.4); background: rgba($signal-red, 0.06); .receipt__icon { color: $signal-red; } }
+  &.sri-neutro { border-color: rgba($ink-500, 0.3); background: $ink-900; .receipt__icon { color: $ink-400; } }
 }
+
+.sri-pill {
+  align-self: flex-start;
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: $radius-pill;
+  font-size: 0.74rem;
+  font-weight: 700;
+  &--ok { background: rgba($signal-green, 0.14); color: $signal-green; }
+  &--proceso { background: rgba($signal-amber, 0.16); color: $signal-amber; }
+  &--error { background: rgba($signal-red, 0.16); color: $signal-red; }
+  &--neutro { background: rgba($ink-500, 0.25); color: $ink-300; }
+}
+
+.swap-enter-active { transition: opacity $dur-base ease, transform $dur-base $ease-spring; }
+.swap-leave-active { transition: opacity $dur-fast ease; }
+.swap-enter-from { opacity: 0; transform: translateY(6px); }
+.swap-leave-to { opacity: 0; }
 
 .empty {
   display: flex;
@@ -283,6 +365,9 @@ async function onEmitir() {
 
     &:hover { background: rgba(37, 211, 102, 0.22); }
   }
+
+  &.ghost { background: rgba($ink-700, 0.8); border-color: rgba($ink-500, 0.25); color: $ink-200; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .bar-enter-active,
@@ -295,6 +380,9 @@ async function onEmitir() {
 
 @media (prefers-reduced-motion: reduce) {
   .pkg,
+  .receipt,
+  .swap-enter-active,
+  .swap-leave-active,
   .bar-enter-active,
   .bar-leave-active { transition: none; }
 }
