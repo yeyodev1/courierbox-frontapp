@@ -10,8 +10,8 @@ import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
 import { useAuthStore } from '@/stores/auth.store'
-import CompletarClienteModal from './Facturacion/CompletarClienteModal.vue'
-import DatosFaltantes from './Facturacion/DatosFaltantes.vue'
+import DatosFacturacionModal from './Facturacion/DatosFacturacionModal.vue'
+import { formatDate } from '@/utils/format'
 import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
 import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
 
@@ -39,17 +39,25 @@ const faltanDatos = computed(
 
 /** «Emitir»: si falta algo, primero el formulario; si no, directo a confirmar. */
 function onEmitirClick() {
-  if (faltanDatos.value) completando.value = true
+  if (faltanDatos.value) abrirDatos(true)
   else confirming.value = true
 }
 
-/** Guardar desde el modal: si con eso ya se puede emitir, pasa solo a la confirmación. */
-async function onGuardarDesdeModal(datos: Parameters<typeof f.completarCliente>[0]) {
-  const ok = await f.completarCliente(datos)
-  if (ok && f.puedeFacturar.value) {
+/** Guardar un perfil (nuevo o editado) desde el modal de datos de facturación. */
+async function onGuardarPerfil(perfilId: string | null, datos: Parameters<typeof f.guardarPerfil>[1]) {
+  const ok = await f.guardarPerfil(perfilId, datos)
+  if (ok && f.puedeFacturar.value && abiertoPorFalta.value) {
     completando.value = false
     confirming.value = true
   }
+}
+
+/** Si el modal se abrió porque faltaba algo, al resolverlo sigue solo a emitir. */
+const abiertoPorFalta = ref(false)
+
+function abrirDatos(porFalta: boolean) {
+  abiertoPorFalta.value = porFalta
+  completando.value = true
 }
 
 function continuarDesdeModal() {
@@ -65,6 +73,7 @@ onMounted(() => {
   const sel = typeof route.query.sel === 'string' ? route.query.sel : ''
   if (q || sel) f.iniciarDesde({ q, sel })
   else f.cargarPendientes()
+  f.cargarHistorial()
 })
 
 const whatsappFactura = computed(() => {
@@ -116,7 +125,20 @@ async function onEmitir() {
       </div>
     </header>
 
-    <section class="panel">
+    <nav class="tabs" aria-label="Vista">
+      <button type="button" class="tab" :class="{ active: f.vista.value === 'pendientes' }" data-test="tab-pendientes" @click="f.vista.value = 'pendientes'">
+        <i class="fa-solid fa-box-open" aria-hidden="true" />
+        <span>Por facturar</span>
+        <b>{{ f.paquetes.value.length }}</b>
+      </button>
+      <button type="button" class="tab" :class="{ active: f.vista.value === 'facturadas' }" data-test="tab-facturadas" @click="f.vista.value = 'facturadas'">
+        <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true" />
+        <span>Facturadas</span>
+        <b>{{ f.facturas.value.length }}</b>
+      </button>
+    </nav>
+
+    <section v-show="f.vista.value === 'pendientes'" class="panel" data-test="vista-pendientes">
       <div class="search">
         <i class="fa-solid fa-magnifying-glass" aria-hidden="true" />
         <input
@@ -168,20 +190,8 @@ async function onEmitir() {
     </section>
 
     <Transition name="bar">
-      <DatosFaltantes
-        v-if="f.seleccionados.value.length && !f.clientesDistintos.value && f.faltantes.value.length"
-        v-model:consumidor-final="f.consumidorFinal.value"
-        :cliente="f.cliente.value"
-        :faltantes="f.faltantes.value"
-        :consumidor-final-posible="f.consumidorFinalPosible.value"
-        :guardando="f.guardandoCliente.value"
-        @guardar="f.completarCliente"
-      />
-    </Transition>
-
-    <Transition name="bar">
       <FacturacionTotales
-        v-if="f.seleccionados.value.length"
+        v-if="f.seleccionados.value.length && f.vista.value === 'pendientes'"
         :cliente="f.cliente.value"
         :totales="f.totales.value"
         :clientes-distintos="f.clientesDistintos.value"
@@ -192,6 +202,7 @@ async function onEmitir() {
         :consumidor-final="f.consumidorFinal.value && f.sinIdentificacion.value"
         :iva-porcentaje="f.ivaPorcentaje.value"
         @emitir="onEmitirClick"
+        @datos="abrirDatos(false)"
       />
     </Transition>
 
@@ -233,20 +244,78 @@ async function onEmitir() {
       </section>
     </Transition>
 
-    <CompletarClienteModal
+    <DatosFacturacionModal
       :open="completando"
       v-model:consumidor-final="f.consumidorFinal.value"
-      :cliente="f.cliente.value"
+      :perfiles="f.perfiles.value"
+      :perfil-id="f.perfilId.value"
       :faltantes="f.faltantes.value"
       :consumidor-final-posible="f.consumidorFinalPosible.value"
       :guardando="f.guardandoCliente.value"
       :validando="f.validando.value"
       :listo="f.puedeFacturar.value"
       :total="money(f.totales.value.totalGeneral)"
+      :casillero="f.cliente.value.casillero"
       @close="completando = false"
-      @guardar="onGuardarDesdeModal"
+      @elegir="f.elegirPerfil"
+      @guardar="onGuardarPerfil"
+      @eliminar="f.eliminarPerfil"
       @continuar="continuarDesdeModal"
     />
+
+    <section v-show="f.vista.value === 'facturadas'" class="panel historial" data-test="historial">
+      <div class="historial__head">
+        <div>
+          <h2>Facturas emitidas</h2>
+          <p>Cada factura con sus cajas, su estado en el SRI y el PDF. Toca una caja facturada aquí y sabes a qué factura pertenece.</p>
+        </div>
+        <div class="search small">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true" />
+          <input v-model="f.filtroHistorial.value" type="search" placeholder="Buscar por número, cliente, cédula o casillero…" aria-label="Buscar facturas" data-test="buscar-facturas" />
+        </div>
+      </div>
+
+      <div class="chips" role="group" aria-label="Filtrar por estado">
+        <button type="button" class="chip" :class="{ active: f.filtroSri.value === 'todas' }" data-test="chip-todas" @click="f.filtroSri.value = 'todas'">Todas <b>{{ f.conteoSri.value.todas }}</b></button>
+        <button type="button" class="chip ok" :class="{ active: f.filtroSri.value === 'autorizadas' }" data-test="chip-autorizadas" @click="f.filtroSri.value = 'autorizadas'"><i class="fa-solid fa-circle-check" aria-hidden="true" /> Autorizadas <b>{{ f.conteoSri.value.autorizadas }}</b></button>
+        <button type="button" class="chip proceso" :class="{ active: f.filtroSri.value === 'proceso' }" data-test="chip-proceso" @click="f.filtroSri.value = 'proceso'"><i class="fa-solid fa-hourglass-half" aria-hidden="true" /> En proceso <b>{{ f.conteoSri.value.proceso }}</b></button>
+        <button type="button" class="chip error" :class="{ active: f.filtroSri.value === 'rechazadas' }" data-test="chip-rechazadas" @click="f.filtroSri.value = 'rechazadas'"><i class="fa-solid fa-circle-xmark" aria-hidden="true" /> Rechazadas <b>{{ f.conteoSri.value.rechazadas }}</b></button>
+      </div>
+
+      <div v-if="f.cargandoHistorial.value && !f.facturas.value.length" aria-busy="true"><AppSkeleton variant="card" height="120px" :count="3" gap="0.75rem" /></div>
+      <p v-else-if="!f.facturasFiltradas.value.length" class="empty"><i class="fa-solid fa-file-invoice" aria-hidden="true" /> {{ f.facturas.value.length ? 'Ninguna factura con ese estado.' : 'Todavía no hay facturas emitidas.' }}</p>
+      <TransitionGroup v-else name="lista" tag="ul" class="tarjetas">
+        <li v-for="fx in f.facturasFiltradas.value" :key="fx._id" class="tarjeta" :class="`tono-${SRI_UI[fx.estadoSri]?.tono ?? 'neutro'}`" :data-test="`factura-${fx._id}`">
+          <div class="tarjeta__top">
+            <div>
+              <span class="tarjeta__num">{{ fx.numeroFactura }}</span>
+              <small>{{ formatDate(fx.createdAt) }}</small>
+            </div>
+            <span class="sri-pill" :class="`sri-pill--${SRI_UI[fx.estadoSri]?.tono ?? 'neutro'}`">
+              <i class="fa-solid" :class="SRI_UI[fx.estadoSri]?.tono === 'ok' ? 'fa-circle-check' : SRI_UI[fx.estadoSri]?.tono === 'error' ? 'fa-circle-xmark' : 'fa-hourglass-half'" aria-hidden="true" />
+              {{ SRI_UI[fx.estadoSri]?.label ?? fx.estadoSri }}
+            </span>
+          </div>
+          <div class="tarjeta__cliente">
+            <strong>{{ fx.facturadoA?.razonSocial || fx.masterClienteId?.nombreOficial || '—' }}</strong>
+            <small>{{ fx.facturadoA?.identificacion || 'sin identificación' }}<template v-if="fx.masterClienteId?.codigoCasillero"> · casillero {{ fx.masterClienteId.codigoCasillero }}</template><template v-if="fx.masterClienteId?.nombreOficial && fx.facturadoA?.razonSocial && fx.facturadoA.razonSocial !== fx.masterClienteId.nombreOficial"> · cliente {{ fx.masterClienteId.nombreOficial }}</template></small>
+          </div>
+          <div class="tarjeta__cajas">
+            <span v-for="p in fx.paquetes" :key="p._id" class="caja" :title="p.contenido">{{ p.wr || p.sh }}</span>
+          </div>
+          <div class="tarjeta__bottom">
+            <span class="tarjeta__total">{{ money(fx.totalGeneral) }} <small>{{ fx.pesoTotalLb.toFixed(2) }} lb</small><small v-if="fx.estado === 'pagada'" class="pagada"> · Pagada</small></span>
+            <span class="tarjeta__acciones">
+              <a v-if="fx.pdfUrl" :href="fx.pdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true" /> PDF</a>
+              <a v-if="fx.xmlUrl" :href="fx.xmlUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-code" aria-hidden="true" /> XML</a>
+              <button v-if="fx.estadoSri !== 'autorizado' && fx.estadoSri !== 'simulado'" type="button" class="link" :disabled="f.sincronizandoId.value === fx._id" :data-test="`sri-${fx._id}`" @click="f.actualizarSriDe(fx._id)">
+                <i class="fa-solid fa-rotate" :class="{ 'fa-spin': f.sincronizandoId.value === fx._id }" aria-hidden="true" /> Consultar SRI
+              </button>
+            </span>
+          </div>
+        </li>
+      </TransitionGroup>
+    </section>
 
     <AppConfirmModal
       :open="confirming"
@@ -406,6 +475,80 @@ async function onEmitir() {
   &.sri-proceso { border-color: rgba($signal-amber, 0.4); background: rgba($signal-amber, 0.06); .receipt__icon { color: $signal-amber; } }
   &.sri-error { border-color: rgba($signal-red, 0.4); background: rgba($signal-red, 0.06); .receipt__icon { color: $signal-red; } }
   &.sri-neutro { border-color: rgba($ink-500, 0.3); background: $ink-900; .receipt__icon { color: $ink-400; } }
+}
+
+.tabs {
+  display: flex;
+  gap: $space-2;
+  padding: 4px;
+  border-radius: $radius-lg;
+  background: $ink-900;
+  border: 1px solid rgba($ink-500, 0.15);
+}
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  min-height: 52px;
+  border: none;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $ink-300;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background $dur-fast ease, color $dur-fast ease;
+  b { font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: $radius-pill; background: rgba($ink-500, 0.3); color: $ink-200; font-size: 0.82rem; }
+  &:hover { color: $fg-dark; }
+  &.active { background: rgba($brand-orange, 0.15); color: $brand-orange; b { background: $brand-orange; color: $ink-1000; } }
+}
+
+.chips { display: flex; gap: $space-2; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 $space-3;
+  border-radius: $radius-pill; border: 1px solid rgba($ink-500, 0.3); background: $ink-850; color: $ink-300;
+  font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: all $dur-fast ease;
+  b { padding: 1px 8px; border-radius: $radius-pill; background: rgba($ink-500, 0.3); font-size: 0.76rem; color: $ink-200; }
+  &.ok i { color: $signal-green; } &.proceso i { color: $signal-amber; } &.error i { color: $signal-red; }
+  &.active { border-color: $brand-orange; background: rgba($brand-orange, 0.12); color: $fg-dark; b { background: $brand-orange; color: $ink-1000; } }
+}
+
+.tarjetas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: $space-3; }
+.tarjeta {
+  display: flex; flex-direction: column; gap: $space-3; padding: $space-4;
+  border-radius: $radius-lg; border: 1px solid rgba($ink-500, 0.2); background: $ink-850;
+  border-left-width: 4px;
+  &.tono-ok { border-left-color: $signal-green; } &.tono-proceso { border-left-color: $signal-amber; } &.tono-error { border-left-color: $signal-red; } &.tono-neutro { border-left-color: $ink-500; }
+  &__top { display: flex; justify-content: space-between; gap: $space-3; align-items: flex-start; > div { display: flex; flex-direction: column; } small { color: $ink-400; font-size: 0.76rem; } }
+  &__num { font-family: inherit; font-weight: 700; font-size: 1.05rem; color: $fg-dark; font-variant-numeric: tabular-nums; }
+  &__cliente { strong { display: block; color: $fg-dark; font-size: 0.95rem; } small { color: $ink-400; font-size: 0.78rem; } }
+  &__cajas { display: flex; flex-wrap: wrap; gap: 6px; .caja { font-size: 0.74rem; padding: 3px 8px; border-radius: $radius-sm; background: rgba($ink-500, 0.25); color: $ink-200; font-variant-numeric: tabular-nums; } }
+  &__bottom { display: flex; justify-content: space-between; align-items: center; gap: $space-3; flex-wrap: wrap; border-top: 1px solid rgba($ink-500, 0.15); padding-top: $space-3; }
+  &__total { color: $brand-orange; font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; small { color: $ink-400; font-weight: 400; font-size: 0.78rem; } .pagada { color: $signal-green; } }
+  &__acciones { display: flex; gap: $space-3; align-items: center; a { color: $brand-orange; text-decoration: none; font-size: 0.84rem; display: inline-flex; gap: 5px; align-items: center; } }
+}
+.lista-enter-active { transition: opacity $dur-base ease, transform $dur-base $ease-spring; }
+.lista-leave-active { transition: opacity $dur-fast ease; position: absolute; }
+.lista-enter-from { opacity: 0; transform: translateY(6px); }
+.lista-leave-to { opacity: 0; }
+
+.historial {
+  &__head { display: flex; align-items: flex-start; justify-content: space-between; gap: $space-4; flex-wrap: wrap;
+    h2 { margin: 0 0 2px; font-size: 1.1rem; } p { margin: 0; color: $ink-400; font-size: 0.85rem; max-width: 60ch; } }
+  .search.small { flex: 0 1 320px; input { min-height: 40px; } }
+}
+.facturas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: $space-2; }
+.factura {
+  display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1.4fr) auto minmax(150px, 1fr) auto;
+  gap: $space-4; align-items: center; padding: $space-3 $space-4; border-radius: $radius-md; border: 1px solid rgba($ink-500, 0.2); background: $ink-850;
+  @media (max-width: 860px) { grid-template-columns: 1fr 1fr; }
+  strong { display: block; color: $fg-dark; font-size: 0.9rem; } small { display: block; color: $ink-400; font-size: 0.76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__total { font-variant-numeric: tabular-nums; color: $brand-orange; font-weight: 700; }
+  &__sri { display: flex; flex-direction: column; gap: 4px; .pagada { color: $signal-green; } }
+  &__acciones { display: flex; gap: $space-3; align-items: center; a { color: $brand-orange; text-decoration: none; font-size: 0.82rem; display: inline-flex; gap: 5px; align-items: center; } }
 }
 
 .sri-pill {
