@@ -5,6 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import AppSelect from '@/components/ui/AppSelect.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
@@ -22,9 +23,12 @@ const confirming = ref(false)
 /** Cambiar el IVA es cosa de finanzas; el counter lo ve pero no lo toca. */
 const puedeCambiarIva = computed(() => ['admin', 'gerencia', 'superadmin'].includes(auth.userRole ?? ''))
 
-function onCambiarIva(event: Event) {
-  const pct = Number((event.target as HTMLSelectElement).value)
-  if (pct !== f.ivaPorcentaje.value) f.cambiarIva(pct)
+/** Opciones del selector propio de la app (nada de desplegables del navegador). */
+const ivaOpciones = computed(() => f.ivaOpciones.value.map((pct) => ({ value: String(pct), label: `${pct} %` })))
+
+function onCambiarIva(value: string) {
+  const pct = Number(value)
+  if (Number.isFinite(pct) && pct !== f.ivaPorcentaje.value) f.cambiarIva(pct)
 }
 const completando = ref(false)
 
@@ -98,9 +102,15 @@ async function onEmitir() {
       </div>
       <div class="iva" data-test="iva-global">
         <span class="iva__label">IVA del flete</span>
-        <select v-if="puedeCambiarIva" class="iva__select" :value="f.ivaPorcentaje.value" :disabled="f.guardandoIva.value" aria-label="IVA del flete" data-test="iva-select" @change="onCambiarIva">
-          <option v-for="pct in f.ivaOpciones.value" :key="pct" :value="pct">{{ pct }} %</option>
-        </select>
+        <AppSelect
+          v-if="puedeCambiarIva"
+          class="iva__select"
+          :model-value="String(f.ivaPorcentaje.value)"
+          :options="ivaOpciones"
+          :disabled="f.guardandoIva.value"
+          data-test="iva-select"
+          @update:model-value="onCambiarIva"
+        />
         <strong v-else class="iva__valor" data-test="iva-valor">{{ f.ivaPorcentaje.value }} %</strong>
         <small>Global: aplica a todas las facturas. El arancel no lleva IVA.</small>
       </div>
@@ -284,12 +294,7 @@ async function onEmitir() {
   min-width: 220px;
 
   &__label { color: $ink-400; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
-  &__select {
-    min-height: 40px; padding: 0 $space-3; border-radius: $radius-sm;
-    border: 1px solid rgba($brand-orange, 0.4); background: $ink-850; color: $fg-dark;
-    font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
-    &:disabled { opacity: 0.6; cursor: wait; }
-  }
+  &__select { width: 100%; }
   &__valor { font-size: 1.2rem; color: $brand-orange; }
   small { color: $ink-500; font-size: 0.74rem; }
 }
