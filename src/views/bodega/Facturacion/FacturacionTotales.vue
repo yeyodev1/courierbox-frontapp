@@ -8,6 +8,10 @@ defineProps<{
   totales: TotalesFactura
   clientesDistintos: boolean
   puedeFacturar: boolean
+  validando: boolean
+  /** Lo que bloquea: sin esto el botón explica por qué no. */
+  motivoBloqueo: string
+  consumidorFinal: boolean
 }>()
 
 const emit = defineEmits<{ emitir: [] }>()
@@ -16,14 +20,13 @@ const emit = defineEmits<{ emitir: [] }>()
 <template>
   <section class="totales">
     <div class="totales__cliente">
-      <span class="muted">Cliente</span>
-      <strong>{{ cliente.nombre || '—' }}</strong>
+      <span class="muted">Factura a</span>
+      <Transition name="swap" mode="out-in">
+        <strong :key="consumidorFinal ? 'cf' : cliente.nombre">{{ consumidorFinal ? 'Consumidor Final' : cliente.nombre || '—' }}</strong>
+      </Transition>
       <span class="muted">
-        {{ cliente.casillero }}<template v-if="cliente.identificacion"> · {{ cliente.identificacion }}</template>
-      </span>
-      <span v-if="!cliente.email" class="warn-inline">
-        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" />
-        Sin correo: la factura no se enviará por email
+        {{ cliente.casillero }}<template v-if="cliente.identificacion && !consumidorFinal"> · {{ cliente.identificacion }}</template>
+        <template v-if="consumidorFinal"> · 9999999999999</template>
       </span>
     </div>
 
@@ -32,16 +35,24 @@ const emit = defineEmits<{ emitir: [] }>()
       <div><dt>Flete</dt><dd>{{ money(totales.totalFlete) }}</dd></div>
       <div><dt>Arancel</dt><dd>{{ money(totales.totalArancel) }}</dd></div>
       <div><dt>IVA</dt><dd>{{ money(totales.totalIva) }}</dd></div>
-      <div class="is-total"><dt>Total</dt><dd>{{ money(totales.totalGeneral) }}</dd></div>
+      <div class="is-total">
+        <dt>Total</dt>
+        <Transition name="swap" mode="out-in"><dd :key="totales.totalGeneral">{{ money(totales.totalGeneral) }}</dd></Transition>
+      </div>
     </dl>
 
     <p v-if="clientesDistintos" class="warn">
       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" />
       Seleccionaste paquetes de clientes distintos. Una factura cubre a un solo cliente.
     </p>
+    <p v-else-if="motivoBloqueo && !validando" class="warn" data-test="motivo-bloqueo">
+      <i class="fa-solid fa-circle-exclamation" aria-hidden="true" />
+      {{ motivoBloqueo }}
+    </p>
 
-    <button type="button" class="btn primary" :disabled="!puedeFacturar" @click="emit('emitir')">
-      <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true" /> Emitir factura
+    <button type="button" class="btn primary" :disabled="!puedeFacturar" :title="motivoBloqueo || undefined" data-test="emitir" @click="emit('emitir')">
+      <i class="fa-solid" :class="validando ? 'fa-circle-notch fa-spin' : 'fa-file-invoice-dollar'" aria-hidden="true" />
+      {{ validando ? 'Revisando datos…' : 'Emitir factura' }}
     </button>
   </section>
 </template>
@@ -49,6 +60,7 @@ const emit = defineEmits<{ emitir: [] }>()
 <style scoped lang="scss">
 @use '@/styles/tokens/colors' as *;
 @use '@/styles/tokens/space' as *;
+@use '@/styles/tokens/motion' as *;
 
 .totales {
   position: sticky;
@@ -96,17 +108,15 @@ const emit = defineEmits<{ emitir: [] }>()
   white-space: nowrap;
 }
 
-.warn,
-.warn-inline {
+.warn {
   display: flex;
   align-items: center;
   gap: $space-2;
   margin: 0;
   color: $signal-amber;
   font-size: 0.8rem;
+  flex: 1 0 100%;
 }
-
-.warn { flex: 1 0 100%; }
 
 .btn {
   display: inline-flex;
@@ -120,8 +130,19 @@ const emit = defineEmits<{ emitir: [] }>()
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+  transition: background $dur-fast ease, opacity $dur-fast ease, transform $dur-fast ease;
 
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
   &.primary { background: $brand-orange; color: $ink-1000; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:active:not(:disabled) { transform: translateY(1px); }
+}
+
+.swap-enter-active { transition: opacity $dur-base ease, transform $dur-base $ease-spring; }
+.swap-leave-active { transition: opacity $dur-fast ease; }
+.swap-enter-from { opacity: 0; transform: translateY(6px); }
+.swap-leave-to { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .swap-enter-active, .swap-leave-active { transition: none; }
 }
 </style>

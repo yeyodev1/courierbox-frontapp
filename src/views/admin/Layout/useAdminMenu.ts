@@ -32,6 +32,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin/produccion': { title: 'Ventas diarias', sub: 'Facturado por courier, gestión de compra y ventas' },
   '/admin/ventas-productos': { title: 'Ventas de productos', sub: 'Inventario propio, ventas, crédito y recordatorios' },
   '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
+  '/admin/ingreso-carga': { title: 'Ingreso de carga', sub: 'Sube el manifiesto del vuelo y cada caja queda con su cliente' },
   '/admin/homologacion': { title: 'Homologación de clientes', sub: 'Vincula los paquetes del manifiesto con su dueño' },
   '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
   '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
@@ -90,6 +91,7 @@ export function useAdminMenu() {
         items: [
           { path: p('/purchase-orders'), label: 'Histórico de Órdenes', icon: 'fa-solid fa-box-archive', match: under(`${base}/purchase-orders`) },
           { path: p('/envios'), label: 'Envíos', icon: 'fa-solid fa-truck', match: under(`${base}/envios`) },
+          { path: p('/ingreso-carga'), label: 'Ingreso de carga', icon: 'fa-solid fa-file-arrow-up', match: under(`${base}/ingreso-carga`) },
           { path: p('/homologacion'), label: 'Homologación', icon: 'fa-solid fa-people-arrows', match: under(`${base}/homologacion`) },
           { path: p('/contactos'), label: 'Contactos', icon: 'fa-solid fa-address-book', match: under(`${base}/contactos`) },
           { path: p('/notificaciones'), label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: under(`${base}/notificaciones`) },
