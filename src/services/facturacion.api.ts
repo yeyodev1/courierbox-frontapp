@@ -64,7 +64,16 @@ export interface FacturaEmitida {
 export interface Tarifas {
   fleteLb: number
   arancelLb: number
+  /** Fracción (0.15) para las cuentas. */
   iva: number
+  /** Porcentaje (15) para mostrar; el que se guarda de forma global. */
+  ivaPorcentaje?: number
+}
+
+export interface ConfiguracionFacturacion {
+  ivaPorcentaje: number
+  ivaOpciones: number[]
+  tarifas: Tarifas
 }
 
 export interface TotalesFactura {
@@ -124,6 +133,17 @@ class FacturacionAPI extends APIBase {
       undefined,
       { timeout: 90000 },
     )
+    return res.data
+  }
+
+  async configuracion() {
+    const res = await this.get<ConfiguracionFacturacion>('v1/facturacion/configuracion')
+    return res.data
+  }
+
+  /** Cambia el IVA global del flete; aplica a todos y a la próxima factura. */
+  async guardarIva(ivaPorcentaje: number) {
+    const res = await this.put<{ ivaPorcentaje: number; tarifas: Tarifas }>('v1/facturacion/configuracion', { ivaPorcentaje })
     return res.data
   }
 

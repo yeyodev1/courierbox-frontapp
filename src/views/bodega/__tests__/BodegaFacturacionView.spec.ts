@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => ({
   completarCliente: vi.fn(),
   generar: vi.fn(),
   sincronizarSri: vi.fn(),
+  configuracion: vi.fn(),
+  guardarIva: vi.fn(),
   notify: vi.fn(),
+  userRole: 'admin',
 }))
 
 vi.mock('@/services/facturacion.api', async () => {
@@ -23,9 +26,12 @@ vi.mock('@/services/facturacion.api', async () => {
       completarCliente: mocks.completarCliente,
       generar: mocks.generar,
       sincronizarSri: mocks.sincronizarSri,
+      configuracion: mocks.configuracion,
+      guardarIva: mocks.guardarIva,
     },
   }
 })
+vi.mock('@/stores/auth.store', () => ({ useAuthStore: () => ({ get userRole() { return mocks.userRole } }) }))
 
 vi.mock('@/stores/toast.store', () => ({ useToastStore: () => ({ showNotification: mocks.notify }) }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: mocks.routeQuery }) }))
@@ -79,7 +85,9 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     vi.clearAllMocks()
     vi.useFakeTimers()
     mocks.routeQuery = {}
-    mocks.facturables.mockResolvedValue({ paquetes: [paquete], tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0.15 } })
+    mocks.userRole = 'admin'
+    mocks.configuracion.mockResolvedValue({ ivaPorcentaje: 15, ivaOpciones: [0, 5, 8, 12, 15], tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0.15, ivaPorcentaje: 15 } })
+    mocks.facturables.mockResolvedValue({ paquetes: [paquete], tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0.15, ivaPorcentaje: 15 } })
     mocks.validar.mockResolvedValue(validacion())
     mocks.generar.mockResolvedValue({ message: 'ok', facturaId: 'f1', factura: emitida })
   })
@@ -99,6 +107,34 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
     expect(mocks.validar).toHaveBeenCalledWith(['p1'])
     expect(wrapper.find('[data-test="datos-faltantes"]').exists()).toBe(true)
+  })
+
+  /** El pedido: IVA global, 15 % por defecto, elegible, y que los totales se recalculen solos. */
+  it('el IVA global arranca en 15 %, se cambia desde la pantalla y recalcula el total', async () => {
+    mocks.guardarIva.mockResolvedValue({ ivaPorcentaje: 0, tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0, ivaPorcentaje: 0 } })
+    const wrapper = mountView()
+    await flushPromises()
+    await buscarYSeleccionar(wrapper)
+
+    expect((wrapper.get('[data-test="iva-select"]').element as HTMLSelectElement).value).toBe('15')
+    expect(wrapper.text()).toContain('$94.65')
+
+    await wrapper.get('[data-test="iva-select"]').setValue('0')
+    await flushPromises()
+
+    expect(mocks.guardarIva).toHaveBeenCalledWith(0)
+    expect(wrapper.text()).toContain('IVA 0 %')
+    expect(wrapper.text()).toContain('$84.90')
+    expect(mocks.notify).toHaveBeenCalledWith(expect.stringContaining('IVA del flete: 0 %'), 'success')
+  })
+
+  it('el rol bodega ve el IVA vigente pero no lo cambia', async () => {
+    mocks.userRole = 'bodega'
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="iva-select"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="iva-valor"]').text()).toBe('15 %')
   })
 
   it('al entrar lista lo pendiente de facturar sin escribir nada', async () => {
