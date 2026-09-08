@@ -16,7 +16,12 @@ defineProps<{
   resaltada?: string | null
 }>()
 
-const emit = defineEmits<{ vincular: [fila: FilaIngreso] }>()
+const emit = defineEmits<{ vincular: [fila: FilaIngreso]; facturar: [fila: FilaIngreso] }>()
+
+/** Una caja ya registrada se puede facturar en cuanto tiene cliente. */
+function sePuedeFacturar(fila: FilaIngreso): boolean {
+  return Boolean(fila.casillero) && !['sin_cliente', 'omitido', 'error'].includes(fila.accion)
+}
 
 function peso(value: number) {
   return `${(Number(value) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} lb`
@@ -35,15 +40,15 @@ function peso(value: number) {
           <th>Resultado</th>
           <th>Contenido</th>
           <th class="num">Peso</th>
-          <th>Paquete</th>
-          <th v-if="!aplicado" class="acc"><span class="sr-only">Acciones</span></th>
+          <th>Caja en el sistema</th>
+          <th class="acc"><span class="sr-only">Acciones</span></th>
         </tr>
       </thead>
       <tbody>
         <tr
           v-for="f in filas"
           :key="`${f.fila}-${f.wr}`"
-          :class="[`tono-${ACCION_UI[f.accion].tono}`, { 'is-recien': resaltada === f.wr }]"
+          :class="[`tono-${ACCION_UI[f.accion].tono}`, { 'is-recien': resaltada === f.wr, 'is-duplicada': f.paquete === 'actualizado' && !aplicado }]"
           :data-test="`fila-${f.wr}`"
         >
           <td>
@@ -80,14 +85,18 @@ function peso(value: number) {
           <td class="contenido" :title="f.contenido">{{ f.contenido || '—' }}</td>
           <td class="num mono">{{ peso(f.pesoLb) }}</td>
           <td>
-            <span v-if="f.paquete" class="paquete" :class="f.paquete">
-              {{ f.paquete === 'nuevo' ? 'Nuevo' : 'Actualizado' }}
-            </span>
+            <template v-if="f.paquete === 'actualizado'">
+              <span class="pill pill--aviso" :data-test="`caja-existente-${f.wr}`">{{ aplicado ? 'Actualizada' : 'Ya registrada' }}</span>
+              <small>{{ aplicado ? 'Ya existía; se actualizó con el Excel' : 'Ya existe; se actualiza, no se duplica' }}</small>
+            </template>
+            <template v-else-if="f.paquete === 'nuevo'">
+              <span class="pill pill--ok">{{ aplicado ? 'Registrada' : 'Nueva' }}</span>
+            </template>
             <span v-else class="muted">—</span>
           </td>
-          <td v-if="!aplicado" class="acc">
+          <td class="acc">
             <button
-              v-if="sePuedeVincular(f)"
+              v-if="!aplicado && sePuedeVincular(f)"
               type="button"
               class="btn ghost sm"
               :data-test="`vincular-${f.wr}`"
@@ -95,6 +104,16 @@ function peso(value: number) {
             >
               <i class="fa-solid fa-link" aria-hidden="true" />
               {{ f.accion === 'vinculado' ? 'Cambiar' : 'Vincular' }}
+            </button>
+            <button
+              v-else-if="aplicado && sePuedeFacturar(f)"
+              type="button"
+              class="btn primary sm"
+              :data-test="`facturar-${f.wr}`"
+              @click="emit('facturar', f)"
+            >
+              <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true" />
+              Facturar
             </button>
           </td>
         </tr>
@@ -188,6 +207,8 @@ function peso(value: number) {
 tr.tono-nuevo td:first-child { box-shadow: inset 3px 0 0 rgba($brand-orange, 0.7); }
 tr.tono-aviso td:first-child { box-shadow: inset 3px 0 0 rgba($signal-amber, 0.7); }
 tr.tono-error td:first-child { box-shadow: inset 3px 0 0 rgba($signal-red, 0.7); }
+// Una caja que ya existía se ve distinta a simple vista, antes de confirmar.
+tr.is-duplicada td:first-child { box-shadow: inset 3px 0 0 rgba($signal-amber, 0.85); }
 
 // El cambio de cliente y de pill se cruzan en lugar de saltar.
 .swap-enter-active { transition: opacity $dur-base ease, transform $dur-base $ease-spring; }
