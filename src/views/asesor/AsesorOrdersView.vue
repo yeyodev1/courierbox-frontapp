@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 import { ref, onMounted, computed } from 'vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import { useRouter } from 'vue-router'
@@ -86,11 +87,7 @@ onMounted(loadOrders)
     <div class="toolbar">
       <label class="filter">
         <span>Estado</span>
-        <select v-model="statusFilter" class="field-input">
-          <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-            {{ opt.label }}
-          </option>
-        </select>
+        <AppSelect v-model="statusFilter" :options="statusOptions" :allow-empty="false" />
       </label>
     </div>
 

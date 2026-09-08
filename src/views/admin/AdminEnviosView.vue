@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 /** Last-mile deliveries screen: summary, deliveries tab and provider catalogue. */
 import { onMounted, ref, watch } from 'vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
@@ -121,10 +122,7 @@ watch([envios.filtroEstado, envios.filtroDesde, envios.filtroHasta], envios.load
       <div class="toolbar">
         <label class="filter">
           <span>Estado</span>
-          <select v-model="envios.filtroEstado.value" class="field-input">
-            <option value="">Todos</option>
-            <option v-for="(label, key) in ESTADO_LABEL" :key="key" :value="key">{{ label }}</option>
-          </select>
+          <AppSelect v-model="envios.filtroEstado.value" :options="[{ value: '', label: 'Todos' }, ...Object.entries(ESTADO_LABEL).map(([value, label]) => ({ value, label }))]" />
         </label>
         <AppDatePicker v-model="envios.filtroDesde.value" label="Desde" />
         <AppDatePicker v-model="envios.filtroHasta.value" label="Hasta" />

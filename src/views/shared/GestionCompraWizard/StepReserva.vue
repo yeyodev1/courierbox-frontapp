@@ -73,10 +73,7 @@
             <AppInput v-model="createForm.titular" label="Titular *" placeholder="Courier Box SAC" />
             <label class="field-block">
               <span class="field-label">Tipo de cuenta</span>
-              <select v-model="createForm.tipoCuenta" class="select-input">
-                <option value="corriente">Corriente</option>
-                <option value="ahorros">Ahorros</option>
-              </select>
+              <AppSelect v-model="createForm.tipoCuenta" :options="[{ value: 'corriente', label: 'Corriente' }, { value: 'ahorros', label: 'Ahorros' }]" :allow-empty="false" />
             </label>
           </div>
 
@@ -109,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 import { computed, ref, onMounted } from 'vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppOverlay from '@/components/ui/AppOverlay.vue'

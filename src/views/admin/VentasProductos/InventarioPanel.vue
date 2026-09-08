@@ -44,7 +44,7 @@ async function toggle(p: any) {
       <div class="form-grid">
         <label class="field full">
           <span>Producto</span>
-          <input v-model="vp.productoForm.nombre" class="field-input" placeholder="Ej. iPhone 17 Pro Max 256GB" />
+          <input id="producto-nombre" v-model="vp.productoForm.nombre" class="field-input" placeholder="Ej. iPhone 17 Pro Max 256GB" />
         </label>
         <label class="field">
           <span>Precio $</span>

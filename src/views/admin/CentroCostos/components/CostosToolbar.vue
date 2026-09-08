@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppSelect from "@/components/ui/AppSelect.vue";
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
@@ -50,10 +51,7 @@ const localHasta = computed({
   <div class="toolbar">
     <div class="filter">
       <span>Categoría</span>
-      <select v-model="localCategoria" class="field-input">
-        <option value="">Todas</option>
-        <option v-for="cat in (categoriasDisponibles as string[])" :key="cat" :value="cat">{{ cat }}</option>
-      </select>
+      <AppSelect v-model="localCategoria" :options="[{ value: '', label: 'Todas' }, ...(categoriasDisponibles as string[]).map((c) => ({ value: c, label: c }))]" />
     </div>
     <div class="filter grow">
       <span>Proveedor</span>

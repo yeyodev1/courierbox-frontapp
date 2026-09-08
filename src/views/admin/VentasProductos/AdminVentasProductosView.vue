@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useToastStore } from '@/stores/toast.store'
 import { useVentasProductos, type FiltroCobro, type Venta } from './useVentasProductos'
 import InventarioPanel from './InventarioPanel.vue'
@@ -10,6 +10,16 @@ import { formatDate } from '@/utils/format'
 const toast = useToastStore()
 const vp = useVentasProductos()
 const tab = ref<'vender' | 'inventario'>('vender')
+
+/** Desde el selector de producto: salta a Inventario con el nombre ya escrito. */
+async function irACrearProducto(nombre: string) {
+  tab.value = 'inventario'
+  if (nombre) vp.productoForm.nombre = nombre
+  await nextTick()
+  const input = document.getElementById('producto-nombre') as HTMLInputElement | null
+  input?.focus()
+  input?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
 const money = (v: unknown) => `$${(Number(v) || 0).toFixed(2)}`
 /**
  * Sale dates are days, not instants: the API stores them at UTC midnight, so
@@ -123,7 +133,7 @@ onMounted(async () => {
     </nav>
 
     <template v-if="tab === 'vender'">
-      <VentaForm :vp="vp" />
+      <VentaForm :vp="vp" @crear-producto="irACrearProducto" />
 
       <section v-if="vp.recordatorios.length" class="panel">
         <div class="panel-head">
