@@ -37,6 +37,12 @@ vi.mock('@/stores/toast.store', () => ({ useToastStore: () => ({ showNotificatio
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: mocks.routeQuery }) }))
 vi.mock('@/config/contact', () => ({ WHATSAPP_DISPLAY: '+1 347', whatsappUrl: (t: string) => `https://wa.me/?text=${encodeURIComponent(t)}` }))
 
+const AppSelectStub = {
+  props: ['modelValue', 'options', 'label', 'disabled'],
+  emits: ['update:modelValue'],
+  template: `<select :value="modelValue" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)"><option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>`,
+}
+
 const AppConfirmModalStub = {
   props: ['open', 'title', 'message', 'confirmLabel', 'confirmLoading', 'variant'],
   emits: ['cancel', 'confirm'],
@@ -67,7 +73,7 @@ const emitida: FacturaEmitida = {
 
 function mountView() {
   return mount(BodegaFacturacionView, {
-    global: { stubs: { AppConfirmModal: AppConfirmModalStub, AppSkeleton: true } },
+    global: { stubs: { AppConfirmModal: AppConfirmModalStub, AppSelect: AppSelectStub, AppSkeleton: true } },
   })
 }
 
