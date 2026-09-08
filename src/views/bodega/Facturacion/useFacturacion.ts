@@ -42,7 +42,9 @@ export function useFacturacion() {
   const searching = ref(false)
   const searched = ref(false)
   const paquetes = ref<PaqueteFacturable[]>([])
-  const tarifas = ref<Tarifas>({ fleteLb: 0, arancelLb: 0, iva: 0 })
+  const tarifas = ref<Tarifas>({ fleteLb: 0, arancelLb: 0, iva: 0.15, ivaPorcentaje: 15 })
+  const ivaOpciones = ref<number[]>([0, 5, 8, 12, 15])
+  const guardandoIva = ref(false)
   const selectedIds = ref<Set<string>>(new Set())
 
   const emitting = ref(false)
@@ -75,6 +77,9 @@ export function useFacturacion() {
   const clientesDistintos = computed(
     () => new Set(seleccionados.value.map((p) => p.masterClienteId?._id ?? '')).size > 1,
   )
+
+  /** El IVA vigente en porcentaje, para mostrarlo y elegirlo. */
+  const ivaPorcentaje = computed(() => tarifas.value.ivaPorcentaje ?? Math.round(tarifas.value.iva * 100))
 
   const totales = computed<TotalesFactura>(() =>
     calcularTotalesLocal(
@@ -137,6 +142,33 @@ export function useFacturacion() {
   function fail(error: unknown, fallback: string) {
     const e = error as { data?: { error?: string }; message?: string }
     toast.showNotification(e?.data?.error || e?.message || fallback, 'error')
+  }
+
+  async function cargarConfiguracion() {
+    try {
+      const c = await facturacionApi.configuracion()
+      tarifas.value = c.tarifas
+      ivaOpciones.value = c.ivaOpciones
+    } catch {
+      // Las tarifas también llegan con cada búsqueda; no vale la pena molestar.
+    }
+  }
+
+  /** Cambia el IVA para todos. Los totales en pantalla se recalculan solos. */
+  async function cambiarIva(pct: number): Promise<boolean> {
+    guardandoIva.value = true
+    try {
+      const r = await facturacionApi.guardarIva(pct)
+      tarifas.value = r.tarifas
+      toast.showNotification(`IVA del flete: ${r.ivaPorcentaje} %. Aplica a todas las facturas desde ahora.`, 'success')
+      if (seleccionados.value.length) await validar()
+      return true
+    } catch (error) {
+      fail(error, 'No se pudo cambiar el IVA')
+      return false
+    } finally {
+      guardandoIva.value = false
+    }
   }
 
   async function buscar() {
@@ -260,9 +292,16 @@ export function useFacturacion() {
     return buscar()
   }
 
+  cargarConfiguracion()
+
   return {
     query,
     cargarPendientes,
+    tarifas,
+    ivaPorcentaje,
+    ivaOpciones,
+    guardandoIva,
+    cambiarIva,
     searching,
     searched,
     paquetes,

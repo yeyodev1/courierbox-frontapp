@@ -14,6 +14,7 @@ defineProps<{
   /** Lo que bloquea: sin esto el botón explica por qué no. */
   motivoBloqueo: string
   consumidorFinal: boolean
+  ivaPorcentaje: number
 }>()
 
 const emit = defineEmits<{ emitir: [] }>()
@@ -36,7 +37,7 @@ const emit = defineEmits<{ emitir: [] }>()
       <div><dt>Peso</dt><dd>{{ totales.pesoTotalLb.toFixed(2) }} lb</dd></div>
       <div><dt>Flete</dt><dd>{{ money(totales.totalFlete) }}</dd></div>
       <div><dt>Arancel</dt><dd>{{ money(totales.totalArancel) }}</dd></div>
-      <div><dt>IVA</dt><dd>{{ money(totales.totalIva) }}</dd></div>
+      <div><dt>IVA {{ ivaPorcentaje }} %</dt><dd>{{ money(totales.totalIva) }}</dd></div>
       <div class="is-total">
         <dt>Total</dt>
         <Transition name="swap" mode="out-in"><dd :key="totales.totalGeneral">{{ money(totales.totalGeneral) }}</dd></Transition>
