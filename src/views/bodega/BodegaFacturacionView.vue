@@ -8,6 +8,7 @@ import { useRoute } from 'vue-router'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { WHATSAPP_DISPLAY, whatsappUrl } from '@/config/contact'
+import { useAuthStore } from '@/stores/auth.store'
 import CompletarClienteModal from './Facturacion/CompletarClienteModal.vue'
 import DatosFaltantes from './Facturacion/DatosFaltantes.vue'
 import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
@@ -15,7 +16,16 @@ import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
 
 const f = useFacturacion()
 const route = useRoute()
+const auth = useAuthStore()
 const confirming = ref(false)
+
+/** Cambiar el IVA es cosa de finanzas; el counter lo ve pero no lo toca. */
+const puedeCambiarIva = computed(() => ['admin', 'gerencia', 'superadmin'].includes(auth.userRole ?? ''))
+
+function onCambiarIva(event: Event) {
+  const pct = Number((event.target as HTMLSelectElement).value)
+  if (pct !== f.ivaPorcentaje.value) f.cambiarIva(pct)
+}
 const completando = ref(false)
 
 /** Hay una selección válida de un solo cliente, pero le falta algo obligatorio. */
@@ -85,6 +95,14 @@ async function onEmitir() {
       <div>
         <h1>Facturación en counter</h1>
         <p>Selecciona los paquetes, revisa el total y emite la factura electrónica a Contifico.</p>
+      </div>
+      <div class="iva" data-test="iva-global">
+        <span class="iva__label">IVA del flete</span>
+        <select v-if="puedeCambiarIva" class="iva__select" :value="f.ivaPorcentaje.value" :disabled="f.guardandoIva.value" aria-label="IVA del flete" data-test="iva-select" @change="onCambiarIva">
+          <option v-for="pct in f.ivaOpciones.value" :key="pct" :value="pct">{{ pct }} %</option>
+        </select>
+        <strong v-else class="iva__valor" data-test="iva-valor">{{ f.ivaPorcentaje.value }} %</strong>
+        <small>Global: aplica a todas las facturas. El arancel no lleva IVA.</small>
       </div>
     </header>
 
@@ -162,6 +180,7 @@ async function onEmitir() {
         :validando="f.validando.value"
         :motivo-bloqueo="motivoBloqueo"
         :consumidor-final="f.consumidorFinal.value && f.sinIdentificacion.value"
+        :iva-porcentaje="f.ivaPorcentaje.value"
         @emitir="onEmitirClick"
       />
     </Transition>
@@ -222,7 +241,7 @@ async function onEmitir() {
     <AppConfirmModal
       :open="confirming"
       title="Emitir factura electrónica"
-      :message="`Se emitirá una factura por ${money(f.totales.value.totalGeneral)} a nombre de ${nombreEnFactura}. Se firma, se envía al SRI y no se puede deshacer desde aquí.`"
+      :message="`Se emitirá una factura por ${money(f.totales.value.totalGeneral)} a nombre de ${nombreEnFactura} (IVA ${f.ivaPorcentaje.value} % sobre el flete). Se firma, se envía al SRI y no se puede deshacer desde aquí.`"
       confirm-label="Emitir factura"
       variant="info"
       loading-label="Emitiendo y enviando al SRI…"
@@ -245,8 +264,34 @@ async function onEmitir() {
 }
 
 .head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-4;
+  flex-wrap: wrap;
   h1 { margin: 0 0 $space-1; font-size: 1.5rem; }
   p { margin: 0; color: $ink-400; font-size: 0.9rem; }
+}
+
+.iva {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  border: 1px solid rgba($brand-orange, 0.3);
+  background: rgba($brand-orange, 0.06);
+  min-width: 220px;
+
+  &__label { color: $ink-400; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  &__select {
+    min-height: 40px; padding: 0 $space-3; border-radius: $radius-sm;
+    border: 1px solid rgba($brand-orange, 0.4); background: $ink-850; color: $fg-dark;
+    font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
+    &:disabled { opacity: 0.6; cursor: wait; }
+  }
+  &__valor { font-size: 1.2rem; color: $brand-orange; }
+  small { color: $ink-500; font-size: 0.74rem; }
 }
 
 .panel {
