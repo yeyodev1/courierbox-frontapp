@@ -4,14 +4,20 @@ import {
   facturacionApi,
   type ClienteFacturable,
   type DatoFaltante,
+  type DatosPerfil,
   type EstadoSri,
   type FacturaEmitida,
+  type FacturaHistorial,
+  type PerfilFacturacion,
   type PaqueteFacturable,
   type Tarifas,
   type TotalesFactura,
   type ValidacionFactura,
 } from '@/services/facturacion.api'
 import { useToastStore } from '@/stores/toast.store'
+
+/** Valor centinela de `perfilId` mientras el counter escribe un perfil nuevo. */
+export const NUEVO_PERFIL = '__nuevo__'
 
 export function money(value: number) {
   return `$${(Number(value) || 0).toFixed(2)}`
@@ -56,6 +62,37 @@ export function useFacturacion() {
   const validando = ref(false)
   const guardandoCliente = ref(false)
   const consumidorFinal = ref(false)
+
+  /** A quién se factura: 'principal' (los datos del cliente), un perfil alterno, o NUEVO_PERFIL mientras se crea uno. */
+  const perfilId = ref('principal')
+  const perfiles = ref<PerfilFacturacion[]>([])
+
+  /** Facturas ya emitidas, para que el counter vea número, estado SRI y PDF sin salir. */
+  const facturas = ref<FacturaHistorial[]>([])
+  const cargandoHistorial = ref(false)
+  const filtroHistorial = ref('')
+  const sincronizandoId = ref<string | null>(null)
+  /** Qué se ve: las cajas por facturar o las facturas ya emitidas. */
+  const vista = ref<'pendientes' | 'facturadas'>('pendientes')
+  /** Filtro por estado en el SRI dentro de «Facturadas». */
+  const filtroSri = ref<'todas' | 'autorizadas' | 'proceso' | 'rechazadas'>('todas')
+
+  const facturasFiltradas = computed(() => {
+    const f = filtroSri.value
+    if (f === 'todas') return facturas.value
+    return facturas.value.filter((x) => {
+      const t = SRI_UI[x.estadoSri]?.tono
+      if (f === 'autorizadas') return x.estadoSri === 'autorizado'
+      if (f === 'rechazadas') return t === 'error'
+      return t === 'proceso'
+    })
+  })
+  const conteoSri = computed(() => ({
+    todas: facturas.value.length,
+    autorizadas: facturas.value.filter((x) => x.estadoSri === 'autorizado').length,
+    proceso: facturas.value.filter((x) => SRI_UI[x.estadoSri]?.tono === 'proceso').length,
+    rechazadas: facturas.value.filter((x) => SRI_UI[x.estadoSri]?.tono === 'error').length,
+  }))
 
   const seleccionados = computed(() => paquetes.value.filter((p) => selectedIds.value.has(p._id)))
 
@@ -194,7 +231,10 @@ export function useFacturacion() {
     if (!seleccionados.value.length) return
     validando.value = true
     try {
-      validacion.value = await facturacionApi.validar(seleccionados.value.map((p) => p._id))
+      const creando = perfilId.value === NUEVO_PERFIL
+      validacion.value = await facturacionApi.validar(seleccionados.value.map((p) => p._id), creando ? 'principal' : perfilId.value)
+      perfiles.value = validacion.value.perfiles
+      if (!creando) perfilId.value = validacion.value.perfilId
     } catch (error) {
       validacion.value = null
       fail(error, 'No se pudo revisar los datos del cliente')
@@ -203,12 +243,24 @@ export function useFacturacion() {
     }
   }
 
-  /** Guarda lo que el counter completó y vuelve a validar con eso. */
+  /** Guarda lo que el counter completó (en el perfil elegido) y vuelve a validar con eso. */
   async function completarCliente(datos: Partial<FormularioCliente>): Promise<boolean> {
-    if (!cliente.value.id) return false
+    if (perfilId.value !== 'principal' && perfilId.value !== NUEVO_PERFIL) {
+      const actual = perfiles.value.find((p) => p.id === perfilId.value)
+      return guardarPerfil(perfilId.value, {
+        etiqueta: actual?.etiqueta ?? '',
+        razonSocial: datos.nombreOficial ?? actual?.razonSocial ?? '',
+        identificacion: datos.cedulaRuc ?? actual?.identificacion ?? '',
+        email: datos.email ?? actual?.email ?? '',
+        telefono: datos.telefono ?? actual?.telefono ?? '',
+        direccion: datos.direccion ?? actual?.direccion ?? '',
+      })
+    }
+    const clienteId = validacion.value?.cliente.id || seleccionados.value[0]?.masterClienteId?._id
+    if (!clienteId) return false
     guardandoCliente.value = true
     try {
-      const actualizado = await facturacionApi.completarCliente(cliente.value.id, datos)
+      const actualizado = await facturacionApi.completarCliente(clienteId, datos)
       // Que la lista también muestre el dato nuevo, sin volver a buscar.
       for (const p of paquetes.value) {
         if (p.masterClienteId?._id === actualizado.id) Object.assign(p.masterClienteId, actualizado)
@@ -221,6 +273,78 @@ export function useFacturacion() {
       return false
     } finally {
       guardandoCliente.value = false
+    }
+  }
+
+  /** Cambia a quién se factura y vuelve a revisar qué falta con esos datos. */
+  async function elegirPerfil(id: string) {
+    perfilId.value = id
+    consumidorFinal.value = false
+    // Mientras se escribe un perfil nuevo no hay nada que validar todavía.
+    if (id !== NUEVO_PERFIL) await validar()
+  }
+
+  /** Crea (perfilId vacío) o edita un perfil de facturación, y lo deja elegido. */
+  async function guardarPerfil(id: string | null, datos: Partial<DatosPerfil>): Promise<boolean> {
+    const clienteId = validacion.value?.cliente.id || seleccionados.value[0]?.masterClienteId?._id
+    if (!clienteId) return false
+    guardandoCliente.value = true
+    try {
+      const r = await facturacionApi.guardarPerfil(clienteId, id, datos)
+      perfiles.value = r.perfiles
+      perfilId.value = r.perfil.id
+      if (r.perfil.principal) {
+        for (const p of paquetes.value) {
+          if (p.masterClienteId?._id === clienteId) Object.assign(p.masterClienteId, { nombreOficial: r.perfil.razonSocial, cedulaRuc: r.perfil.identificacion, email: r.perfil.email, telefono: r.perfil.telefono, direccion: r.perfil.direccion })
+        }
+      }
+      toast.showNotification(id ? 'Datos de facturación guardados' : 'Datos de facturación agregados', 'success')
+      await validar()
+      return true
+    } catch (error) {
+      fail(error, 'No se pudieron guardar los datos de facturación')
+      return false
+    } finally {
+      guardandoCliente.value = false
+    }
+  }
+
+  async function eliminarPerfil(id: string): Promise<boolean> {
+    const clienteId = validacion.value?.cliente.id
+    if (!clienteId || id === 'principal') return false
+    try {
+      perfiles.value = await facturacionApi.eliminarPerfil(clienteId, id)
+      if (perfilId.value === id) perfilId.value = 'principal'
+      await validar()
+      return true
+    } catch (error) {
+      fail(error, 'No se pudo eliminar')
+      return false
+    }
+  }
+
+  async function cargarHistorial() {
+    cargandoHistorial.value = true
+    try {
+      facturas.value = await facturacionApi.historial(filtroHistorial.value.trim())
+    } catch {
+      // El counter sigue pudiendo facturar aunque el historial no cargue.
+    } finally {
+      cargandoHistorial.value = false
+    }
+  }
+
+  /** Vuelve a preguntar al SRI por una factura del historial. */
+  async function actualizarSriDe(facturaId: string) {
+    sincronizandoId.value = facturaId
+    try {
+      const f = await facturacionApi.sincronizarSri(facturaId)
+      facturas.value = facturas.value.map((x) => (x._id === facturaId ? { ...x, estadoSri: f.estadoSri, autorizacionSri: f.autorizacionSri, pdfUrl: f.pdfUrl, xmlUrl: f.xmlUrl, mensajeSri: f.mensajeSri, numeroFactura: f.numeroFactura } : x))
+      if (lastFactura.value?.facturaId === facturaId) lastFactura.value = f
+    } catch (error) {
+      fail(error, 'No se pudo consultar el SRI')
+    } finally {
+      sincronizandoId.value = null
     }
   }
 
@@ -245,7 +369,7 @@ export function useFacturacion() {
     try {
       const res = await facturacionApi.generar(
         seleccionados.value.map((p) => p._id),
-        { consumidorFinal: consumidorFinal.value && sinIdentificacion.value },
+        { consumidorFinal: consumidorFinal.value && sinIdentificacion.value, perfilId: perfilId.value === NUEVO_PERFIL ? 'principal' : perfilId.value },
       )
       lastFactura.value = res.factura
       const estado = SRI_UI[res.factura.estadoSri]
@@ -256,10 +380,10 @@ export function useFacturacion() {
         res.factura.estadoSri === 'rechazado' || res.factura.estadoSri === 'error' ? 'error' : 'success',
       )
       limpiar()
-      paquetes.value = []
-      query.value = ''
-      searched.value = false
       validacion.value = null
+      perfilId.value = 'principal'
+      // La lista de pendientes y el historial se refrescan solos: la caja ya no está, la factura sí.
+      await Promise.all([buscar(), cargarHistorial()])
       return true
     } catch (error) {
       const e = error as { status?: number; data?: { error?: string; faltantes?: DatoFaltante[] } }
@@ -294,7 +418,28 @@ export function useFacturacion() {
 
   cargarConfiguracion()
 
+  let historialTimer: number | undefined
+  watch(filtroHistorial, () => {
+    window.clearTimeout(historialTimer)
+    historialTimer = window.setTimeout(cargarHistorial, 350)
+  })
+
   return {
+    perfilId,
+    perfiles,
+    elegirPerfil,
+    guardarPerfil,
+    eliminarPerfil,
+    facturas,
+    facturasFiltradas,
+    conteoSri,
+    vista,
+    filtroSri,
+    cargandoHistorial,
+    filtroHistorial,
+    sincronizandoId,
+    cargarHistorial,
+    actualizarSriDe,
     query,
     cargarPendientes,
     tarifas,

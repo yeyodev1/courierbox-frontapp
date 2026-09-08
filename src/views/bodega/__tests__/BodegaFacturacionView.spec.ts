@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   sincronizarSri: vi.fn(),
   configuracion: vi.fn(),
   guardarIva: vi.fn(),
+  historial: vi.fn(),
+  perfiles: vi.fn(),
+  guardarPerfil: vi.fn(),
+  eliminarPerfil: vi.fn(),
   notify: vi.fn(),
   userRole: 'admin',
 }))
@@ -28,6 +32,10 @@ vi.mock('@/services/facturacion.api', async () => {
       sincronizarSri: mocks.sincronizarSri,
       configuracion: mocks.configuracion,
       guardarIva: mocks.guardarIva,
+      historial: mocks.historial,
+      perfiles: mocks.perfiles,
+      guardarPerfil: mocks.guardarPerfil,
+      eliminarPerfil: mocks.eliminarPerfil,
     },
   }
 })
@@ -52,9 +60,14 @@ const AppConfirmModalStub = {
 const cliente = { _id: 'c1', nombreOficial: 'Diego Reyes', cedulaRuc: '', email: '', telefono: '099', direccion: '', codigoCasillero: 'CBX9' }
 const paquete: PaqueteFacturable = { _id: 'p1', wr: 'WR1', sh: '', trackingOriginal: '', contenido: 'ropa', pesoLb: 10, consigneeNombre: 'Diego', consigneeLimpio: 'Diego', estado: 'validado', masterClienteId: cliente }
 
+const perfilPrincipal = { id: 'principal', etiqueta: 'Datos del cliente', razonSocial: 'Diego Reyes', identificacion: '', email: '', telefono: '099', direccion: '', principal: true }
+const perfilEmpresa = { id: 'p2', etiqueta: 'Mi empresa', razonSocial: 'Courier Box S.A.S.', identificacion: '0993388549001', email: 'f@cb.com', telefono: '', direccion: 'Gye', principal: false }
+
 function validacion(overrides: Partial<ValidacionFactura> = {}): ValidacionFactura {
   return {
     cliente: { id: 'c1', nombreOficial: 'Diego Reyes', cedulaRuc: '', email: '', telefono: '099', direccion: '', codigoCasillero: 'CBX9' },
+    perfilId: 'principal',
+    perfiles: [perfilPrincipal, perfilEmpresa],
     totales: { pesoTotalLb: 10, totalFlete: 65, totalArancel: 19.9, subtotal: 84.9, totalIva: 9.75, totalGeneral: 94.65 },
     faltantes: [
       { campo: 'cedulaRuc', requerido: true, mensaje: 'Sin cédula o RUC. El SRI no admite consumidor final por más de $50.' },
@@ -93,6 +106,7 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     mocks.routeQuery = {}
     mocks.userRole = 'admin'
     mocks.configuracion.mockResolvedValue({ ivaPorcentaje: 15, ivaOpciones: [0, 5, 8, 12, 15], tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0.15, ivaPorcentaje: 15 } })
+    mocks.historial.mockResolvedValue([])
     mocks.facturables.mockResolvedValue({ paquetes: [paquete], tarifas: { fleteLb: 6.5, arancelLb: 1.99, iva: 0.15, ivaPorcentaje: 15 } })
     mocks.validar.mockResolvedValue(validacion())
     mocks.generar.mockResolvedValue({ message: 'ok', facturaId: 'f1', factura: emitida })
@@ -111,8 +125,8 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
 
     expect(mocks.facturables).toHaveBeenCalledWith('CBX9')
     expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
-    expect(mocks.validar).toHaveBeenCalledWith(['p1'])
-    expect(wrapper.find('[data-test="datos-faltantes"]').exists()).toBe(true)
+    expect(mocks.validar).toHaveBeenCalledWith(['p1'], 'principal')
+    expect(wrapper.get('[data-test="emitir"]').text()).toContain('Completar datos y emitir')
   })
 
   /** El pedido: IVA global, 15 % por defecto, elegible, y que los totales se recalculen solos. */
@@ -156,7 +170,7 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     const wrapper = mountView()
     await buscarYSeleccionar(wrapper)
 
-    expect(mocks.validar).toHaveBeenCalledWith(['p1'])
+    expect(mocks.validar).toHaveBeenCalledWith(['p1'], 'principal')
     const boton = wrapper.get('[data-test="emitir"]')
     expect(boton.text()).toContain('Completar datos y emitir')
     expect((boton.element as HTMLButtonElement).disabled).toBe(false)
@@ -166,7 +180,8 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     await boton.trigger('click')
 
     const modal = wrapper.get('[data-test="completar-modal"]')
-    expect(modal.text()).toContain('Datos de Diego Reyes')
+    expect(modal.text()).toContain('¿A nombre de quién sale la factura?')
+    expect(modal.get('[data-test="perfil-principal"]').classes()).toContain('selected')
     expect(modal.get('[data-test="faltante-cedulaRuc"]').text()).toContain('Sin cédula o RUC')
     expect((modal.get('[data-test="continuar-emitir"]').element as HTMLButtonElement).disabled).toBe(true)
     // Por más de $50 no se ofrece consumidor final.
@@ -176,7 +191,7 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
 
   /** El pedido del cliente: completar y guardar desde ahí mismo, y seguir a emitir. */
   it('guardar la cédula desde el formulario la deja en el cliente y pasa solo a la confirmación', async () => {
-    mocks.completarCliente.mockResolvedValue({ ...validacion().cliente, cedulaRuc: '0954227641' })
+    mocks.guardarPerfil.mockResolvedValue({ perfil: { ...perfilPrincipal, identificacion: '0954227641' }, perfiles: [{ ...perfilPrincipal, identificacion: '0954227641' }, perfilEmpresa] })
     const wrapper = mountView()
     await buscarYSeleccionar(wrapper)
     await wrapper.get('[data-test="emitir"]').trigger('click')
@@ -187,14 +202,78 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     await modal.get('[data-test="guardar-cliente"]').trigger('submit')
     await flushPromises()
 
-    expect(mocks.completarCliente).toHaveBeenCalledWith('c1', { cedulaRuc: '0954227641' })
+    expect(mocks.guardarPerfil).toHaveBeenCalledWith('c1', 'principal', expect.objectContaining({ identificacion: '0954227641', razonSocial: 'Diego Reyes' }))
     expect(mocks.validar).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[data-test="completar-modal"]').exists()).toBe(false)
     expect(wrapper.get('[data-test="confirm-msg"]').text()).toContain('a nombre de Diego Reyes')
 
     await wrapper.get('[data-test="confirm-si"]').trigger('click')
     await flushPromises()
-    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: false })
+    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: false, perfilId: 'principal' })
+  })
+
+  /** El pedido: elegir a nombre de quién sale (p. ej. la empresa del cliente) y agregar otros datos. */
+  it('se puede facturar a un perfil alterno del cliente y agregar uno nuevo', async () => {
+    mocks.validar.mockImplementation(async (_ids: string[], perfilId?: string) =>
+      perfilId === 'p2'
+        ? validacion({ perfilId: 'p2', cliente: { ...validacion().cliente, nombreOficial: 'Courier Box S.A.S.', cedulaRuc: '0993388549001', email: 'f@cb.com' }, faltantes: [], listo: true })
+        : validacion(),
+    )
+    const wrapper = mountView()
+    await buscarYSeleccionar(wrapper)
+
+    await wrapper.get('[data-test="datos-facturacion"]').trigger('click')
+    await wrapper.get('[data-test="perfil-p2"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.validar).toHaveBeenLastCalledWith(['p1'], 'p2')
+    expect(wrapper.text()).toContain('Courier Box S.A.S.')
+    expect((wrapper.get('[data-test="continuar-emitir"]').element as HTMLButtonElement).disabled).toBe(false)
+
+    await wrapper.get('[data-test="continuar-emitir"]').trigger('click')
+    expect(wrapper.get('[data-test="confirm-msg"]').text()).toContain('a nombre de Courier Box S.A.S.')
+    await wrapper.get('[data-test="confirm-si"]').trigger('click')
+    await flushPromises()
+    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: false, perfilId: 'p2' })
+  })
+
+  it('agregar otros datos de facturación los crea y los deja elegidos', async () => {
+    const nuevo = { id: 'p3', etiqueta: 'Mi mamá', razonSocial: 'Rosa Lema', identificacion: '1710034065', email: '', telefono: '', direccion: '', principal: false }
+    mocks.guardarPerfil.mockResolvedValue({ perfil: nuevo, perfiles: [perfilPrincipal, perfilEmpresa, nuevo] })
+    const wrapper = mountView()
+    await buscarYSeleccionar(wrapper)
+    await wrapper.get('[data-test="datos-facturacion"]').trigger('click')
+    await wrapper.get('[data-test="perfil-nuevo"]').trigger('click')
+
+    const modal = wrapper.get('[data-test="completar-modal"]')
+    await modal.get('[data-test="input-etiqueta"]').setValue('Mi mamá')
+    await modal.get('[data-test="input-nombreOficial"]').setValue('Rosa Lema')
+    await modal.get('[data-test="input-cedulaRuc"]').setValue('1710034065')
+    await modal.get('[data-test="guardar-cliente"]').trigger('submit')
+    await flushPromises()
+
+    expect(mocks.guardarPerfil).toHaveBeenCalledWith('c1', null, expect.objectContaining({ etiqueta: 'Mi mamá', razonSocial: 'Rosa Lema', identificacion: '1710034065' }))
+    expect(mocks.validar).toHaveBeenLastCalledWith(['p1'], 'p3')
+  })
+
+  it('muestra las facturas emitidas con su estado SRI y sus cajas', async () => {
+    mocks.historial.mockResolvedValue([{ _id: 'f9', numeroFactura: '001-001-000000889', estadoSri: 'autorizado', autorizacionSri: '', mensajeSri: '', pdfUrl: 'https://x/r.pdf', xmlUrl: '', totalGeneral: 14.67, pesoTotalLb: 1.55, estado: 'pendiente', facturadoA: { perfilId: 'principal', identificacion: '9999999999999', razonSocial: 'Consumidor Final', email: '' }, masterClienteId: { _id: 'c1', nombreOficial: 'Lady Vera', codigoCasillero: 'CBX237935' }, paquetes: [{ _id: 'p1', wr: 'WR875181', sh: '', contenido: '', pesoLb: 1.55 }], createdAt: '2026-09-08T03:00:00.000Z' }])
+    const wrapper = mountView()
+    await flushPromises()
+
+    // Está en su pestaña, con el conteo, y se filtra por estado.
+    expect(wrapper.get('[data-test="tab-facturadas"]').text()).toContain('1')
+    await wrapper.get('[data-test="tab-facturadas"]').trigger('click')
+    const h = wrapper.get('[data-test="historial"]')
+    expect(wrapper.get('[data-test="chip-autorizadas"]').text()).toContain('1')
+    await wrapper.get('[data-test="chip-rechazadas"]').trigger('click')
+    expect(h.text()).toContain('Ninguna factura con ese estado')
+    await wrapper.get('[data-test="chip-todas"]').trigger('click')
+    expect(h.text()).toContain('001-001-000000889')
+    expect(h.text()).toContain('WR875181')
+    expect(h.text()).toContain('Consumidor Final')
+    expect(h.text()).toContain('Autorizada por el SRI')
+    expect(h.find('a[href="https://x/r.pdf"]').exists()).toBe(true)
   })
 
   it('hasta $50 sin cédula ofrece consumidor final y con eso deja emitir', async () => {
@@ -214,7 +293,7 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     await wrapper.get('[data-test="confirm-si"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: true })
+    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: true, perfilId: 'principal' })
   })
 
   it('tras emitir muestra el estado del SRI, el RIDE, y permite volver a consultar', async () => {
@@ -227,7 +306,7 @@ describe('BodegaFacturacionView — datos faltantes y SRI', () => {
     await wrapper.get('[data-test="confirm-si"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: false })
+    expect(mocks.generar).toHaveBeenCalledWith(['p1'], { consumidorFinal: false, perfilId: 'principal' })
     const recibo = wrapper.get('[data-test="recibo"]')
     expect(recibo.text()).toContain('001-001-000000889')
     expect(recibo.get('[data-test="sri-estado"]').text()).toContain('Enviada al SRI')
