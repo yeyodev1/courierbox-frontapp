@@ -1,5 +1,6 @@
 import APIBase from './httpBase'
 import type { ServiceType } from '@/services/asesoria.api'
+import { imagenParaSubir } from '@/utils/comprimirImagen'
 
 export interface Contacto {
   _id: string
@@ -248,9 +249,10 @@ class GestionesCompraAPI extends APIBase {
   }
 
   async uploadImagen(file: File): Promise<string> {
+    // Las fotos de cámara pasan del límite de 4,5 MB de Vercel; se achican antes.
     const form = new FormData()
-    form.append('imagen', file)
-    const res = await this.post<{ url: string }>(`${this.base}/upload-imagen`, form)
+    form.append('imagen', await imagenParaSubir(file))
+    const res = await this.post<{ url: string }>(`${this.base}/upload-imagen`, form, undefined, { timeout: 60000 })
     return res.data.url
   }
 
