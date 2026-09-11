@@ -11,6 +11,7 @@ defineProps<{
   saving: boolean
   uploadingFoto: boolean
   fotoPreview: string
+  fotoError?: string
   error: string
   puedeEntregar: boolean
 }>()
@@ -32,8 +33,11 @@ const emit = defineEmits<{
 const fileInput = ref<HTMLInputElement | null>(null)
 
 function onFoto(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (file) emit('foto', file)
+  // Sin esto, volver a elegir la misma foto tras un fallo no dispara @change.
+  input.value = ''
 }
 </script>
 
@@ -53,13 +57,15 @@ function onFoto(event: Event) {
     <template v-if="estado === 'en_ruta'">
       <div class="field">
         <label>Foto de la entrega *</label>
-        <div class="photo-box" @click="fileInput?.click()">
+        <div class="photo-box" :class="{ subiendo: uploadingFoto && fotoPreview }" @click="fileInput?.click()">
           <img v-if="fotoPreview" :src="fotoPreview" alt="Foto" />
           <div v-else class="photo-placeholder">
             <i class="fa-solid fa-camera" aria-hidden="true" />
             <span>{{ uploadingFoto ? 'Subiendo...' : 'Tomar / subir foto' }}</span>
           </div>
+          <span v-if="uploadingFoto && fotoPreview" class="photo-status">Subiendo foto...</span>
         </div>
+        <p v-if="fotoError" class="error" role="alert" data-test="foto-error">{{ fotoError }}</p>
         <input ref="fileInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFoto" />
       </div>
 
@@ -143,6 +149,7 @@ function onFoto(event: Event) {
 .hidden { display: none; }
 
 .photo-box {
+  position: relative;
   border: 2px dashed $ink-500;
   border-radius: 14px;
   min-height: 180px;
@@ -154,6 +161,21 @@ function onFoto(event: Event) {
   background: $ink-1000;
 
   img { width: 100%; max-height: 320px; object-fit: contain; }
+
+  &.subiendo img { opacity: 0.55; }
+}
+
+.photo-status {
+  position: absolute;
+  bottom: $space-2;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba($ink-1000, 0.85);
+  color: $fg-dark;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
 }
 
 .photo-placeholder {
