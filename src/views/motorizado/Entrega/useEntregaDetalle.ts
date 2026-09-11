@@ -37,6 +37,8 @@ export function useEntregaDetalle(id: string) {
   const error = ref('')
 
   const fotoPreview = ref('')
+  /** Error de la foto, mostrado junto a la foto: el general queda abajo, fuera de la vista. */
+  const fotoError = ref('')
   const fotoUrl = ref('')
   const firmaUrl = ref('')
   const firmaDataUrl = ref('')
@@ -76,16 +78,24 @@ export function useEntregaDetalle(id: string) {
     error.value = (err as Error)?.message ?? fallback
   }
 
+  function soltarPreview() {
+    if (fotoPreview.value.startsWith('blob:')) URL.revokeObjectURL(fotoPreview.value)
+  }
+
   async function subirFoto(file: File) {
+    soltarPreview()
     fotoPreview.value = URL.createObjectURL(file)
+    fotoUrl.value = ''
     uploadingFoto.value = true
+    fotoError.value = ''
     error.value = ''
     try {
       const res = await enviosApi.uploadArchivo(id, 'foto', file)
       fotoUrl.value = res.envio.fotoEntregaUrl || res.upload.url || ''
-      if (!fotoUrl.value) error.value = 'La foto no se subió (revisa Cloudinary). Intenta de nuevo.'
+      if (!fotoUrl.value) throw new Error('La foto no se guardó. Intenta de nuevo.')
     } catch (err) {
-      fail(err, 'No se pudo subir la foto')
+      fotoError.value = `${(err as Error)?.message || 'No se pudo subir la foto'} Toca el recuadro para intentar de nuevo.`
+      soltarPreview()
       fotoPreview.value = ''
     } finally {
       uploadingFoto.value = false
@@ -193,6 +203,7 @@ export function useEntregaDetalle(id: string) {
     uploadingFoto,
     error,
     fotoPreview,
+    fotoError,
     firmaDataUrl,
     novedad,
     motivoFallido,
