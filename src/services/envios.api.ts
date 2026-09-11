@@ -1,4 +1,5 @@
 import APIBase from './httpBase'
+import { imagenParaSubir } from '@/utils/comprimirImagen'
 
 export interface TrayectoPago {
   proveedorId?: string
@@ -166,10 +167,17 @@ class EnviosAPI extends APIBase {
   }
 
   async uploadArchivo(id: string, tipo: 'foto' | 'firma' | 'guia', file: File) {
+    // Las fotos de cámara pasan del límite de 4,5 MB de Vercel; se achican antes.
+    const archivo = file.type.startsWith('image/') ? await imagenParaSubir(file) : file
     const form = new FormData()
     form.append('tipo', tipo)
-    form.append('file', file)
-    const res = await this.post<{ envio: EnvioDomicilio; upload: { url: string; publicId: string } }>(`v1/envios/${id}/upload`, form)
+    form.append('file', archivo)
+    const res = await this.post<{ envio: EnvioDomicilio; upload: { url: string; publicId: string } }>(
+      `v1/envios/${id}/upload`,
+      form,
+      undefined,
+      { timeout: 60000 },
+    )
     return res.data
   }
 
