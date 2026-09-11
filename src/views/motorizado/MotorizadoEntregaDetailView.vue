@@ -88,6 +88,7 @@ onMounted(e.load)
         :saving="e.saving.value"
         :uploading-foto="e.uploadingFoto.value"
         :foto-preview="e.fotoPreview.value"
+        :foto-error="e.fotoError.value"
         :error="e.error.value"
         :puede-entregar="e.puedeEntregar.value"
         @foto="e.subirFoto"
