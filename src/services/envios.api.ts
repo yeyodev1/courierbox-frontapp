@@ -76,17 +76,43 @@ export interface PaqueteSimple {
   contenido: string
 }
 
+/** Filters the listing and its exports share. `asignadoA: 'none'` means unassigned. */
+export interface EnviosFiltros {
+  estado?: string
+  modo?: string
+  paqueteId?: string
+  asignadoA?: string
+  desde?: string
+  hasta?: string
+  q?: string
+}
+
+function filtrosQuery(params?: EnviosFiltros) {
+  const searchParams = new URLSearchParams()
+  if (params?.estado) searchParams.set('estado', params.estado)
+  if (params?.modo) searchParams.set('modo', params.modo)
+  if (params?.paqueteId) searchParams.set('paqueteId', params.paqueteId)
+  if (params?.asignadoA) searchParams.set('asignadoA', params.asignadoA)
+  if (params?.desde) searchParams.set('desde', params.desde)
+  if (params?.hasta) searchParams.set('hasta', params.hasta)
+  if (params?.q) searchParams.set('q', params.q)
+  return searchParams
+}
+
 class EnviosAPI extends APIBase {
-  async list(params?: { estado?: string; paqueteId?: string; asignadoA?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
-    const searchParams = new URLSearchParams()
-    if (params?.estado) searchParams.set('estado', params.estado)
-    if (params?.paqueteId) searchParams.set('paqueteId', params.paqueteId)
-    if (params?.asignadoA) searchParams.set('asignadoA', params.asignadoA)
-    if (params?.desde) searchParams.set('desde', params.desde)
-    if (params?.hasta) searchParams.set('hasta', params.hasta)
+  async list(params?: EnviosFiltros & { limit?: number; offset?: number }) {
+    const searchParams = filtrosQuery(params)
     if (params?.limit) searchParams.set('limit', String(params.limit))
     if (params?.offset) searchParams.set('offset', String(params.offset))
     const res = await this.get<{ envios: EnvioDomicilio[]; total: number }>(`v1/envios?${searchParams.toString()}`)
+    return res.data
+  }
+
+  async downloadExport(format: 'excel' | 'pdf', params?: EnviosFiltros): Promise<Blob> {
+    const res = await this.get<Blob>(`v1/envios/export/${format}?${filtrosQuery(params).toString()}`, undefined, {
+      responseType: 'blob',
+      timeout: 90000,
+    })
     return res.data
   }
 

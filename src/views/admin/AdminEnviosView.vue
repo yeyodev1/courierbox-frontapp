@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import AppSelect from "@/components/ui/AppSelect.vue";
 /** Last-mile deliveries screen: summary, deliveries tab and provider catalogue. */
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { watchDebounced } from '@vueuse/core'
+import AppButton from '@/components/ui/AppButton.vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import type { Proveedor } from '@/services/proveedores.api'
 import EnviosTable from './Envios/EnviosTable.vue'
@@ -78,7 +80,27 @@ onMounted(() => {
   proveedores.load()
 })
 
-watch([envios.filtroEstado, envios.filtroDesde, envios.filtroHasta], envios.load)
+const estadoOptions = [{ value: '', label: 'Todos' }, ...Object.entries(ESTADO_LABEL).map(([value, label]) => ({ value, label }))]
+const modoOptions = [
+  { value: '', label: 'Todos' },
+  { value: 'local', label: 'Local' },
+  { value: 'interprovincial', label: 'Interprovincial' },
+]
+const motorizadoOptions = computed(() => [
+  { value: '', label: 'Todos' },
+  { value: 'none', label: 'Sin asignar' },
+  ...envios.motorizados.value.map((m) => ({ value: m._id, label: m.name || m.email })),
+])
+
+const hayFiltros = computed(
+  () => !!(envios.filtroEstado.value || envios.filtroModo.value || envios.filtroMotorizado.value || envios.filtroBusqueda.value),
+)
+
+watch(
+  [envios.filtroEstado, envios.filtroModo, envios.filtroMotorizado, envios.filtroDesde, envios.filtroHasta],
+  envios.load,
+)
+watchDebounced(envios.filtroBusqueda, envios.load, { debounce: 350 })
 </script>
 
 <template>
@@ -120,13 +142,43 @@ watch([envios.filtroEstado, envios.filtroDesde, envios.filtroHasta], envios.load
 
     <template v-if="activeTab === 'envios'">
       <div class="toolbar">
+        <label class="filter search-filter">
+          <span>Buscar</span>
+          <input
+            v-model="envios.filtroBusqueda.value"
+            class="field-input"
+            type="search"
+            placeholder="Cliente, dirección, teléfono, ciudad, proveedor..."
+          />
+        </label>
         <label class="filter">
           <span>Estado</span>
-          <AppSelect v-model="envios.filtroEstado.value" :options="[{ value: '', label: 'Todos' }, ...Object.entries(ESTADO_LABEL).map(([value, label]) => ({ value, label }))]" />
+          <AppSelect v-model="envios.filtroEstado.value" :options="estadoOptions" />
+        </label>
+        <label class="filter">
+          <span>Modo</span>
+          <AppSelect v-model="envios.filtroModo.value" :options="modoOptions" />
+        </label>
+        <label class="filter">
+          <span>Motorizado</span>
+          <AppSelect v-model="envios.filtroMotorizado.value" :options="motorizadoOptions" />
         </label>
         <AppDatePicker v-model="envios.filtroDesde.value" label="Desde" />
         <AppDatePicker v-model="envios.filtroHasta.value" label="Hasta" />
-        <button class="btn-primary" @click="openCreate"><i class="fa-solid fa-plus" /> Nuevo envío</button>
+        <button v-if="hayFiltros" class="btn-link" type="button" @click="envios.limpiarFiltros">Limpiar filtros</button>
+      </div>
+
+      <div class="toolbar actions-bar">
+        <span class="result-count">{{ envios.filtered.value.length }} envíos</span>
+        <div class="actions">
+          <AppButton variant="outline" :disabled="envios.exporting.value" @click="envios.exportar('excel')">
+            <i class="fa-solid fa-file-excel" /> Excel
+          </AppButton>
+          <AppButton variant="outline" :disabled="envios.exporting.value" @click="envios.exportar('pdf')">
+            <i class="fa-solid fa-file-pdf" /> PDF
+          </AppButton>
+          <button class="btn-primary" @click="openCreate"><i class="fa-solid fa-plus" /> Nuevo envío</button>
+        </div>
       </div>
 
       <div v-if="envios.loading.value" class="skeleton-list">
@@ -188,6 +240,22 @@ watch([envios.filtroEstado, envios.filtroDesde, envios.filtroHasta], envios.load
 @include ui.toolbar;
 
 .envios-page { display: flex; flex-direction: column; gap: $space-6; }
+
+.search-filter { flex: 1 1 260px; }
+
+.actions-bar {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-wrap: wrap;
+}
+
+.result-count { color: $ink-400; font-size: 0.85rem; }
 
 .tabs {
   display: flex;

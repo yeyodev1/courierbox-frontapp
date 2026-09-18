@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { enviosApi, type EnvioDomicilio, type Motorizado } from '@/services/envios.api'
+import { enviosApi, type EnvioDomicilio, type EnviosFiltros, type Motorizado } from '@/services/envios.api'
 import { useToastStore } from '@/stores/toast.store'
 
 export const ESTADO_LABEL: Record<string, string> = {
@@ -49,10 +49,34 @@ export function useEnvios() {
   const filtroEstado = ref('')
   const filtroDesde = ref(startOfMonth())
   const filtroHasta = ref(new Date().toISOString().slice(0, 10))
+  const filtroModo = ref('')
+  /** A motorizado id, or 'none' for deliveries nobody has been assigned to. */
+  const filtroMotorizado = ref('')
+  const filtroBusqueda = ref('')
+  const exporting = ref(false)
 
   const filtered = computed(() =>
     filtroEstado.value ? envios.value.filter((e) => e.estado === filtroEstado.value) : envios.value,
   )
+
+  /** What the API receives, for the listing and for the exports alike. */
+  function filtros(): EnviosFiltros {
+    return {
+      estado: filtroEstado.value || undefined,
+      modo: filtroModo.value || undefined,
+      asignadoA: filtroMotorizado.value || undefined,
+      desde: filtroDesde.value || undefined,
+      hasta: filtroHasta.value || undefined,
+      q: filtroBusqueda.value.trim() || undefined,
+    }
+  }
+
+  function limpiarFiltros() {
+    filtroEstado.value = ''
+    filtroModo.value = ''
+    filtroMotorizado.value = ''
+    filtroBusqueda.value = ''
+  }
 
   function fail(error: unknown, fallback: string) {
     toastStore.showNotification((error as Error)?.message || fallback, 'error')
@@ -62,12 +86,7 @@ export function useEnvios() {
     loading.value = true
     try {
       const [data, sum] = await Promise.all([
-        enviosApi.list({
-          estado: filtroEstado.value || undefined,
-          desde: filtroDesde.value || undefined,
-          hasta: filtroHasta.value || undefined,
-          limit: 200,
-        }),
+        enviosApi.list({ ...filtros(), limit: 200 }),
         enviosApi.resumen({ desde: filtroDesde.value || undefined, hasta: filtroHasta.value || undefined }),
       ])
       envios.value = data.envios
@@ -119,6 +138,30 @@ export function useEnvios() {
     }
   }
 
+  async function exportar(format: 'excel' | 'pdf') {
+    exporting.value = true
+    try {
+      const blob = await enviosApi.downloadExport(format, filtros())
+      if (!blob.size) throw new Error('El servidor devolvió un archivo vacío')
+
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = `envios_domicilio_${filtroDesde.value}_${filtroHasta.value}.${format === 'excel' ? 'xlsx' : 'pdf'}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      // Revoking immediately can cancel the download in some browsers.
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+
+      toastStore.showNotification(`${format === 'excel' ? 'Excel' : 'PDF'} descargado correctamente`, 'success')
+    } catch (error) {
+      fail(error, 'No se pudo exportar el archivo')
+    } finally {
+      exporting.value = false
+    }
+  }
+
   function openGuide(envio: EnvioDomicilio) {
     if (!envio.guiaUrl || !envio.clienteTelefono) return
     const message = encodeURIComponent(`Hola ${envio.clienteNombre}, te comparto la guía de tu envío: ${envio.guiaUrl}`)
@@ -134,8 +177,14 @@ export function useEnvios() {
     filtroEstado,
     filtroDesde,
     filtroHasta,
+    filtroModo,
+    filtroMotorizado,
+    filtroBusqueda,
+    exporting,
     filtered,
     load,
+    limpiarFiltros,
+    exportar,
     loadMotorizados,
     reasignar,
     updateStatus,
