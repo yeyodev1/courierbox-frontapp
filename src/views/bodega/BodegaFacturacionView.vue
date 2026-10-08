@@ -13,7 +13,8 @@ import { useAuthStore } from '@/stores/auth.store'
 import DatosFacturacionModal from './Facturacion/DatosFacturacionModal.vue'
 import FacturaDetalleModal from './Facturacion/FacturaDetalleModal.vue'
 import PaqueteDetalleModal from './Facturacion/PaqueteDetalleModal.vue'
-import type { PaqueteFacturable } from '@/services/facturacion.api'
+import AnularFacturaModal from './Facturacion/AnularFacturaModal.vue'
+import type { FacturaHistorial, PaqueteFacturable } from '@/services/facturacion.api'
 import { formatDate } from '@/utils/format'
 import FacturacionTotales from './Facturacion/FacturacionTotales.vue'
 import { money, SRI_UI, useFacturacion } from './Facturacion/useFacturacion'
@@ -34,6 +35,15 @@ function onCambiarIva(value: string) {
   if (Number.isFinite(pct) && pct !== f.ivaPorcentaje.value) f.cambiarIva(pct)
 }
 const completando = ref(false)
+
+/** Anular libera cajas ya cobrables: lo decide finanzas, no el counter. */
+const puedeAnular = computed(() => ['admin', 'gerencia', 'superadmin'].includes(auth.userRole ?? ''))
+const anulable = (fx: FacturaHistorial) => fx.estado === 'pendiente' || fx.estado === 'verificando'
+const porAnular = ref<FacturaHistorial | null>(null)
+
+async function onAnular(motivo: string) {
+  if (porAnular.value && (await f.anular(porAnular.value._id, motivo))) porAnular.value = null
+}
 
 /** Hay una selección válida de un solo cliente, pero le falta algo obligatorio. */
 const faltanDatos = computed(
@@ -162,6 +172,11 @@ async function onEmitir() {
         <span>Facturadas</span>
         <b>{{ f.facturas.value.length }}</b>
       </button>
+      <button type="button" class="tab" :class="{ active: f.vista.value === 'anuladas' }" data-test="tab-anuladas" @click="f.vista.value = 'anuladas'">
+        <i class="fa-solid fa-ban" aria-hidden="true" />
+        <span>Anuladas</span>
+        <b>{{ f.anuladas.value.length }}</b>
+      </button>
     </nav>
 
     <section v-show="f.vista.value === 'pendientes'" class="panel" data-test="vista-pendientes">
@@ -206,6 +221,10 @@ async function onEmitir() {
                   <template v-if="p.masterClienteId?.codigoCasillero">
                     · {{ p.masterClienteId.codigoCasillero }}
                   </template>
+                </span>
+                <span v-if="p.tarifa?.especial" class="pkg__tarifa" :data-test="`tarifa-${p._id}`">
+                  <i class="fa-solid fa-tag" aria-hidden="true" />
+                  {{ p.tarifa.aliado }} · flete ${{ p.tarifa.fleteLb.toFixed(2) }}/lb · arancel ${{ p.tarifa.arancelLb.toFixed(2) }}/lb
                 </span>
               </span>
               <span class="pkg__peso">{{ (Number(p.pesoLb) || 0).toFixed(2) }} lb</span>
@@ -338,11 +357,47 @@ async function onEmitir() {
               <button v-if="fx.estadoSri !== 'autorizado' && fx.estadoSri !== 'simulado'" type="button" class="link" :disabled="f.sincronizandoId.value === fx._id" :data-test="`sri-${fx._id}`" @click="f.actualizarSriDe(fx._id)">
                 <i class="fa-solid fa-rotate" :class="{ 'fa-spin': f.sincronizandoId.value === fx._id }" aria-hidden="true" /> Consultar SRI
               </button>
+              <button v-if="puedeAnular && anulable(fx)" type="button" class="link link--peligro" :data-test="`anular-${fx._id}`" @click="porAnular = fx">
+                <i class="fa-solid fa-ban" aria-hidden="true" /> Anular
+              </button>
             </span>
           </div>
         </li>
       </TransitionGroup>
     </section>
+
+    <section v-show="f.vista.value === 'anuladas'" class="panel historial" data-test="anuladas">
+      <div class="historial__head">
+        <div>
+          <h2>Facturas anuladas</h2>
+          <p>Lo anulado en el sistema, con el motivo, quién lo hizo y cuándo. Sus cajas volvieron a «Por facturar».</p>
+        </div>
+      </div>
+      <p v-if="!f.anuladas.value.length" class="empty"><i class="fa-solid fa-ban" aria-hidden="true" /> No hay facturas anuladas.</p>
+      <ul v-else class="tarjetas">
+        <li v-for="fx in f.anuladas.value" :key="fx._id" class="tarjeta tono-neutro" :data-test="`anulada-${fx._id}`">
+          <div class="tarjeta__top">
+            <button type="button" class="tarjeta__abrir" @click="f.abrirFactura(fx._id)">
+              <span class="tarjeta__num">{{ fx.numeroFactura }} <i class="fa-solid fa-up-right-from-square" aria-hidden="true" /></span>
+              <small>Emitida {{ formatDate(fx.createdAt) }} · anulada {{ fx.anuladaEn ? formatDate(fx.anuladaEn) : '—' }}</small>
+            </button>
+            <span class="sri-pill sri-pill--error">Anulada</span>
+          </div>
+          <div class="tarjeta__cliente">
+            <strong>{{ fx.facturadoA?.razonSocial || fx.masterClienteId?.nombreOficial || '—' }}</strong>
+            <small>{{ fx.anuladaMotivo || 'Sin motivo' }}<template v-if="fx.anuladaPor?.name"> · {{ fx.anuladaPor.name }}</template></small>
+          </div>
+          <div class="tarjeta__bottom">
+            <span class="tarjeta__total">{{ money(fx.totalGeneral) }} <small>{{ fx.pesoTotalLb.toFixed(2) }} lb · SRI: {{ SRI_UI[fx.estadoSri]?.label ?? fx.estadoSri }}</small></span>
+            <span class="tarjeta__acciones">
+              <a v-if="fx.pdfUrl" :href="fx.pdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true" /> PDF</a>
+            </span>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <AnularFacturaModal :factura="porAnular" :anulando="f.anulando.value" @close="porAnular = null" @confirmar="onAnular" />
 
     <FacturaDetalleModal
       :open="!!f.facturaAbierta.value || f.cargandoDetalle.value"
@@ -479,6 +534,7 @@ async function onEmitir() {
   input { width: 20px; height: 20px; accent-color: $brand-orange; flex: 0 0 auto; }
 
   &__body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  &__tarifa { display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin-top: 2px; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; color: $brand-orange; background: rgba($brand-orange, 0.12); }
 
   &__peso {
     flex: 0 0 auto;
@@ -646,6 +702,7 @@ async function onEmitir() {
   cursor: pointer;
 
   &:hover { text-decoration: underline; }
+  &--peligro { color: $signal-red; }
 }
 
 .btn {

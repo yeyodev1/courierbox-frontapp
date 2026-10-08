@@ -117,6 +117,18 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: "Facturación · Courier Box" },
       },
       {
+        path: "warehouses",
+        name: "AdminWarehouses",
+        component: () => import("@/views/admin/AdminWarehousesView.vue"),
+        meta: { title: "Warehouses · Courier Box" },
+      },
+      {
+        path: "aliados",
+        name: "AdminAliados",
+        component: () => import("@/views/admin/AdminAliadosView.vue"),
+        meta: { title: "Aliados y tarifas · Courier Box" },
+      },
+      {
         path: "ingreso-carga",
         name: "AdminIngresoCarga",
         component: () => import("@/views/admin/AdminIngresoCargaView.vue"),

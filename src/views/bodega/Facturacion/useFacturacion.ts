@@ -91,7 +91,7 @@ export function useFacturacion() {
   }
 
   /** Qué se ve: las cajas por facturar o las facturas ya emitidas. */
-  const vista = ref<'pendientes' | 'facturadas'>('pendientes')
+  const vista = ref<'pendientes' | 'facturadas' | 'anuladas'>('pendientes')
   /** Filtro por estado en el SRI dentro de «Facturadas». */
   const filtroSri = ref<'todas' | 'autorizadas' | 'proceso' | 'rechazadas'>('todas')
 
@@ -138,7 +138,7 @@ export function useFacturacion() {
 
   const totales = computed<TotalesFactura>(() =>
     calcularTotalesLocal(
-      seleccionados.value.map((p) => Number(p.pesoLb) || 0),
+      seleccionados.value.map((p) => ({ pesoLb: Number(p.pesoLb) || 0, tarifa: p.tarifa })),
       tarifas.value,
     ),
   )
@@ -344,11 +344,34 @@ export function useFacturacion() {
   async function cargarHistorial() {
     cargandoHistorial.value = true
     try {
-      facturas.value = await facturacionApi.historial(filtroHistorial.value.trim())
+      const q = filtroHistorial.value.trim()
+      const [vigentes, nulas] = await Promise.all([facturacionApi.historial(q), facturacionApi.historial(q, 50, 'anuladas')])
+      facturas.value = vigentes
+      anuladas.value = nulas
     } catch {
       // El counter sigue pudiendo facturar aunque el historial no cargue.
     } finally {
       cargandoHistorial.value = false
+    }
+  }
+
+  /** Las facturas anuladas, aparte: como «Facturas anuladas» en la plataforma anterior. */
+  const anuladas = ref<FacturaHistorial[]>([])
+  const anulando = ref(false)
+
+  /** Anula y refresca: la factura pasa a anuladas y sus cajas vuelven a «Por facturar». */
+  async function anular(facturaId: string, motivo: string) {
+    anulando.value = true
+    try {
+      const r = await facturacionApi.anular(facturaId, motivo)
+      toast.showNotification(`Factura anulada. ${r.paquetesLiberados} caja(s) volvieron a «Por facturar».`, 'success')
+      await Promise.all([cargarHistorial(), buscar()])
+      return true
+    } catch (e: any) {
+      toast.showNotification(e?.data?.error || e?.message || 'No se pudo anular la factura', 'error')
+      return false
+    } finally {
+      anulando.value = false
     }
   }
 
@@ -462,6 +485,9 @@ export function useFacturacion() {
     filtroHistorial,
     sincronizandoId,
     cargarHistorial,
+    anuladas,
+    anulando,
+    anular,
     actualizarSriDe,
     query,
     cargarPendientes,
