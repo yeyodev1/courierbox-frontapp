@@ -45,6 +45,12 @@ export const operacionesRoutes: RouteRecordRaw[] = [
         meta: { title: "Counter digital · Courier Box" },
       },
       {
+        path: "warehouses",
+        name: "BodegaWarehouses",
+        component: () => import("@/views/admin/AdminWarehousesView.vue"),
+        meta: { title: "Bodega · Warehouses · Courier Box" },
+      },
+      {
         path: "facturacion",
         name: "BodegaFacturacion",
         component: () => import("@/views/bodega/BodegaFacturacionView.vue"),
@@ -63,5 +69,12 @@ export const operacionesRoutes: RouteRecordRaw[] = [
         meta: { title: "Bodega · Motorizados · Courier Box" },
       },
     ],
+  },
+  {
+    // Hoja de etiquetas fuera de los layouts: sólo las etiquetas y la barra para imprimir.
+    path: "/etiquetas",
+    name: "EtiquetasPrint",
+    component: () => import("@/views/EtiquetasPrintView.vue"),
+    meta: { requiresAuth: true, requiresBodega: true, hideNavigation: true, title: "Etiquetas · Courier Box" },
   },
 ];
