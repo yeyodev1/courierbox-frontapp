@@ -43,6 +43,8 @@ export interface FilaIngreso {
   detalle?: string
   /** Parecidos para vincular a mano cuando el nombre no cuadró solo. */
   sugerencias?: SugerenciaCliente[]
+  /** Sólo después de aplicar: la caja guardada, para imprimir su etiqueta. */
+  paqueteId?: string
 }
 
 export interface ResultadoIngreso {
