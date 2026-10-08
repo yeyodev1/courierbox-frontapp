@@ -8,6 +8,9 @@
         <router-link to="/bodega" exact-active-class="active" @click="mobileOpen = false">
           <i class="fa-solid fa-box" aria-hidden="true" /> <span>Compras</span>
         </router-link>
+        <router-link to="/bodega/warehouses" active-class="active" @click="mobileOpen = false">
+          <i class="fa-solid fa-boxes-stacked" aria-hidden="true" /> <span>Warehouses</span>
+        </router-link>
         <router-link to="/bodega/counter" active-class="active" @click="mobileOpen = false">
           <i class="fa-solid fa-signature" aria-hidden="true" /> <span>Counter</span>
         </router-link>
