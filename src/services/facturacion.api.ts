@@ -24,6 +24,17 @@ export interface PaqueteFacturable {
     direccion?: string
     codigoCasillero?: string
   } | null
+  /** Lo que se le cobra por libra según su agencia (precio especial del aliado o la base). */
+  tarifa?: TarifaPaquete
+}
+
+export interface TarifaPaquete {
+  fleteLb: number
+  arancelLb: number
+  /** Nombre del aliado de la caja (Courier Box si no es de uno). */
+  aliado: string
+  /** true si sale con precio especial y no con la tarifa base. */
+  especial: boolean
 }
 
 export type EstadoSri = 'sin_enviar' | 'firmado' | 'enviado' | 'autorizado' | 'rechazado' | 'error' | 'simulado'
@@ -69,7 +80,10 @@ export interface FacturaHistorial {
   xmlUrl: string
   totalGeneral: number
   pesoTotalLb: number
-  estado: 'pendiente' | 'verificando' | 'pagada' | 'cancelada'
+  estado: 'pendiente' | 'verificando' | 'pagada' | 'cancelada' | 'anulada'
+  anuladaMotivo?: string
+  anuladaEn?: string | null
+  anuladaPor?: { _id: string; name?: string; email?: string } | null
   facturadoA?: { perfilId: string; identificacion: string; razonSocial: string; email: string }
   masterClienteId?: { _id: string; nombreOficial: string; codigoCasillero: string; cedulaRuc?: string } | null
   paquetes: Array<{ _id: string; wr: string; sh: string; contenido: string; pesoLb: number }>
@@ -142,10 +156,28 @@ export interface TotalesFactura {
  * ticks packages. The server recomputes authoritatively on submit — this is
  * only for the live preview.
  */
-export function calcularTotalesLocal(pesos: number[], t: Tarifas): TotalesFactura {
-  const pesoTotalLb = pesos.reduce((sum, p) => sum + (Number(p) || 0), 0)
-  const totalFlete = Number((pesoTotalLb * t.fleteLb).toFixed(2))
-  const totalArancel = Number((pesoTotalLb * t.arancelLb).toFixed(2))
+/**
+ * Mismas cuentas que el servidor: cada caja a su tarifa (la del aliado o la
+ * base), agrupadas por precio y redondeadas por grupo como las líneas de
+ * Contifico. Acepta pesos sueltos (todo a la tarifa base) o cajas con tarifa.
+ */
+export function calcularTotalesLocal(
+  items: Array<number | { pesoLb: number; tarifa?: Pick<TarifaPaquete, 'fleteLb' | 'arancelLb'> }>,
+  t: Tarifas,
+): TotalesFactura {
+  const filas = items.map((i) =>
+    typeof i === 'number'
+      ? { pesoLb: i, fleteLb: t.fleteLb, arancelLb: t.arancelLb }
+      : { pesoLb: Number(i.pesoLb) || 0, fleteLb: i.tarifa?.fleteLb ?? t.fleteLb, arancelLb: i.tarifa?.arancelLb ?? t.arancelLb },
+  )
+  const porPrecio = (precio: (f: (typeof filas)[number]) => number) => {
+    const grupos = new Map<number, number>()
+    for (const f of filas) grupos.set(precio(f), (grupos.get(precio(f)) ?? 0) + (Number(f.pesoLb) || 0))
+    return [...grupos].reduce((s, [p, lb]) => s + Number((Number(lb.toFixed(2)) * p).toFixed(2)), 0)
+  }
+  const pesoTotalLb = filas.reduce((sum, f) => sum + (Number(f.pesoLb) || 0), 0)
+  const totalFlete = Number(porPrecio((f) => f.fleteLb).toFixed(2))
+  const totalArancel = Number(porPrecio((f) => f.arancelLb).toFixed(2))
   const subtotal = Number((totalFlete + totalArancel).toFixed(2))
   // IVA applies to the freight line only, matching the Contifico item breakdown.
   const totalIva = Number((totalFlete * t.iva).toFixed(2))
@@ -217,6 +249,12 @@ class FacturacionAPI extends APIBase {
     return res.data
   }
 
+  /** Cambia la tarifa base por libra (flete y/o arancel) para todas las cajas sin precio especial. */
+  async guardarTarifasBase(datos: { fleteLb?: number; arancelLb?: number }) {
+    const res = await this.put<{ ivaPorcentaje: number; tarifas: Tarifas }>('v1/facturacion/configuracion', datos)
+    return res.data
+  }
+
   /** Vuelve a preguntar al SRI (y reenvía si quedó sin enviar). */
   async sincronizarSri(facturaId: string) {
     const res = await this.post<{ factura: FacturaEmitida }>(`v1/facturacion/${facturaId}/sri`, {}, undefined, { timeout: 60000 })
@@ -228,9 +266,17 @@ class FacturacionAPI extends APIBase {
     return res.data.factura
   }
 
-  async historial(q = '', limit = 50) {
-    const res = await this.get<{ facturas: FacturaHistorial[] }>(`v1/facturacion/historial?q=${encodeURIComponent(q)}&limit=${limit}`)
+  /** Por defecto trae las vigentes; `anuladas` trae sólo las anuladas. */
+  async historial(q = '', limit = 50, estado: 'vigentes' | 'anuladas' = 'vigentes') {
+    const filtro = estado === 'anuladas' ? '&estado=anuladas' : ''
+    const res = await this.get<{ facturas: FacturaHistorial[] }>(`v1/facturacion/historial?q=${encodeURIComponent(q)}&limit=${limit}${filtro}`)
     return res.data.facturas
+  }
+
+  /** Anula la factura en el sistema y deja sus cajas otra vez por facturar. No anula en el SRI. */
+  async anular(facturaId: string, motivo: string) {
+    const res = await this.post<{ message: string; paquetesLiberados: number }>(`v1/facturacion/${facturaId}/anular`, { motivo })
+    return res.data
   }
 }
 
