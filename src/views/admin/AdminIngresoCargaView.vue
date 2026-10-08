@@ -8,6 +8,7 @@
  * archivo muestra primero qué va a pasar; donde el nombre no cuadró solo, el
  * operador lo vincula a mano; nada se escribe hasta confirmar.
  */
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { FilaIngreso } from '@/services/ingreso_carga.api'
@@ -28,6 +29,15 @@ function facturar(fila: FilaIngreso) {
 
 function irAFacturacion() {
   router.push({ path: '/admin/facturacion' })
+}
+
+/** Las cajas que quedaron guardadas en este ingreso, para sacar sus etiquetas de una. */
+const idsGuardados = computed(() => (ic.vista.value?.filas ?? []).map((f) => f.paqueteId).filter((id): id is string => !!id))
+
+function imprimirEtiquetas() {
+  if (!idsGuardados.value.length) return
+  const url = router.resolve({ name: 'EtiquetasPrint', query: { ids: idsGuardados.value.join(',') } }).href
+  window.open(url, '_blank', 'noopener')
 }
 
 function mensajeConfirmacion() {
@@ -113,6 +123,9 @@ function mensajeConfirmacion() {
                 <RouterLink to="/admin/homologacion">Homologación</RouterLink>.
               </template>
               <span class="banner__acciones">
+                <button v-if="idsGuardados.length" type="button" class="btn primary sm" data-test="imprimir-etiquetas" @click="imprimirEtiquetas">
+                  <i class="fa-solid fa-print" aria-hidden="true" /> Imprimir {{ idsGuardados.length }} etiqueta(s)
+                </button>
                 <button type="button" class="btn primary sm" data-test="ir-facturacion" @click="irAFacturacion">
                   <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true" /> Ir a Facturación
                 </button>
