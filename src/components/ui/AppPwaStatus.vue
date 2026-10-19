@@ -13,9 +13,12 @@ import { useRegisterSW } from 'virtual:pwa-register/vue'
  *  deploy reaches open tabs without waiting for the user to navigate. */
 const UPDATE_CHECK_MS = 60_000
 
+let swRegistration: ServiceWorkerRegistration | undefined
+
 const { needRefresh, updateServiceWorker } = useRegisterSW({
   onRegisteredSW(_url, registration) {
     if (!registration) return
+    swRegistration = registration
     window.setInterval(() => registration.update().catch(() => {}), UPDATE_CHECK_MS)
   },
   onRegisterError(error: unknown) {
@@ -49,15 +52,23 @@ async function applyUpdate() {
   await updateServiceWorker(true)
 }
 
+// Coming back to a tab that sat open during a deploy should show the update
+// gate right away, not on the next one-minute tick.
+function checkOnReturn() {
+  if (document.visibilityState === 'visible') swRegistration?.update().catch(() => {})
+}
+
 onMounted(() => {
   sync()
   window.addEventListener('online', sync)
   window.addEventListener('offline', sync)
+  document.addEventListener('visibilitychange', checkOnReturn)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('online', sync)
   window.removeEventListener('offline', sync)
+  document.removeEventListener('visibilitychange', checkOnReturn)
 })
 </script>
 

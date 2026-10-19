@@ -33,6 +33,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin/ventas-productos': { title: 'Ventas de productos', sub: 'Inventario propio, ventas, crédito y recordatorios' },
   '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
   '/admin/warehouses': { title: 'Warehouses', sub: 'Todas las cajas que entraron: busca, revisa e imprime sus etiquetas' },
+  '/admin/cuentas-por-cobrar': { title: 'Cuentas por cobrar general', sub: 'Cobros, abonos y recordatorios por correo' },
   '/admin/aliados': { title: 'Aliados y tarifas', sub: 'Tarifa por libra, couriers aliados y sus etiquetas' },
   '/admin/ingreso-carga': { title: 'Ingreso de carga', sub: 'Sube el manifiesto del vuelo y cada caja queda con su cliente' },
   '/admin/facturacion': { title: 'Facturación', sub: 'Cajas pendientes de facturar y emisión de la factura electrónica' },
@@ -72,6 +73,7 @@ export function useAdminMenu() {
             { path: p('/produccion'), label: 'Ventas', icon: 'fa-solid fa-cash-register', match: under('/superadmin/produccion') },
             { path: p('/ventas-productos'), label: 'Ventas de Productos', icon: 'fa-solid fa-box-open', match: under('/superadmin/ventas-productos') },
             { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: under('/superadmin/caja') },
+            { path: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar', icon: 'fa-solid fa-hand-holding-dollar', match: under('/admin/cuentas-por-cobrar') },
             { path: '/admin/notificaciones', label: 'Notificaciones', icon: 'fa-solid fa-envelope', match: under('/admin/notificaciones') },
           ],
         },
@@ -121,6 +123,7 @@ export function useAdminMenu() {
         label: 'Finanzas',
         items: [
           { path: '/admin/facturacion', label: 'Facturación', icon: 'fa-solid fa-file-invoice-dollar', match: under('/admin/facturacion') },
+          { path: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar', icon: 'fa-solid fa-hand-holding-dollar', match: under('/admin/cuentas-por-cobrar') },
           { path: p('/centro-costos'), label: 'Centro de Costos', icon: 'fa-solid fa-coins', match: under(`${base}/centro-costos`) },
           { path: p('/proveedores'), label: 'Proveedores', icon: 'fa-solid fa-truck-fast', match: under(`${base}/proveedores`) },
           { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: under(`${base}/caja`) },
