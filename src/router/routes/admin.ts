@@ -123,6 +123,12 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: "Warehouses · Courier Box" },
       },
       {
+        path: "cuentas-por-cobrar",
+        name: "AdminCuentasCobrar",
+        component: () => import("@/views/admin/CuentasCobrar/AdminCuentasCobrarView.vue"),
+        meta: { title: "Cuentas por cobrar · Courier Box" },
+      },
+      {
         path: "aliados",
         name: "AdminAliados",
         component: () => import("@/views/admin/AdminAliadosView.vue"),
